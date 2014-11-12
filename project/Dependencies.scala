@@ -1,9 +1,9 @@
 import sbt._
 
 object Version {
-  val akka             = "2.3.6"
-  val akkaContribExtra = "1.0.1"
-  val akkaHttp         = "0.10"
+  val akka             = "2.3.7"
+  val akkaContribExtra = "1.0.2"
+  val akkaHttp         = "0.11"
   val jansi            = "1.11"
   val jline            = "2.12"
   val play             = "2.4.0-M1"
@@ -25,5 +25,6 @@ object Library {
 }
 
 object Resolver {
+  val patriknw         = "patriknw at bintray" at "http://dl.bintray.com/patriknw/maven"
   val typesafeReleases = "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases"
 }
