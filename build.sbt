@@ -14,7 +14,7 @@ libraryDependencies ++= List(
 )
 addSbtPlugin(Library.sbtBundle)
 
-resolvers += Resolver.typesafeInternalReleases
+resolvers += Resolver.typesafeReleases
 
 sbtPlugin := true
 

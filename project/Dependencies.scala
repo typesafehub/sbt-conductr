@@ -2,7 +2,7 @@ import sbt._
 
 object Version {
   val akka             = "2.3.6"
-  val akkaContribExtra = "1.0.0"
+  val akkaContribExtra = "1.0.1"
   val akkaHttp         = "0.10"
   val jansi            = "1.11"
   val jline            = "2.12"
@@ -25,5 +25,5 @@ object Library {
 }
 
 object Resolver {
-  val typesafeInternalReleases = "typesafe-internal-releases" at "http://repo.typesafe.com/typesafe/internal-maven-releases"
+  val typesafeReleases = "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases"
 }
