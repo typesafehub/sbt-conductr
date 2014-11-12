@@ -14,7 +14,10 @@ libraryDependencies ++= List(
 )
 addSbtPlugin(Library.sbtBundle)
 
-resolvers += Resolver.typesafeReleases
+resolvers ++= List(
+  Resolver.patriknw,
+  Resolver.typesafeReleases
+)
 
 sbtPlugin := true
 
