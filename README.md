@@ -1,7 +1,7 @@
 # sbt-reactive-runtime #
 
 sbt-reactive-runtime is an sbt plugin designed to faciliate the development lifecycle at the stage where deployment
-to [Reactive Runtime](https://github.com/typesafehub/reactive-runtime#reactive-runtime) is considered.
+to Reactive Runtime is considered.
 
 ## Usage
 
