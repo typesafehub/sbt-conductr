@@ -170,7 +170,7 @@ class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef) ex
     val pendingResponse =
       for {
         connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}/started?scale=${startBundle.scale}"), connection)
+        response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}?scale=${startBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse pipeTo sender()
@@ -180,7 +180,7 @@ class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef) ex
     val pendingResponse =
       for {
         connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(DELETE, s"/bundles/${stopBundle.bundleId}/started"), connection)
+        response <- request(HttpRequest(PUT, s"/bundles/${stopBundle.bundleId}?scale=0"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse pipeTo sender()
