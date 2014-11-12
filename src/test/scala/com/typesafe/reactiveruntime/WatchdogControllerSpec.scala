@@ -79,9 +79,9 @@ class WatchdogControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
                 .map {
                   case (request, context) if request.method == HttpMethods.POST && request.uri == Uri("/bundles") =>
                     HttpResponse(entity = "hello") -> context
-                  case (request, context) if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello/started?scale=2") =>
+                  case (request, context) if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=2") =>
                     HttpResponse(entity = "hello back") -> context
-                  case (request, context) if request.method == HttpMethods.DELETE && request.uri == Uri("/bundles/hello/started") =>
+                  case (request, context) if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=0") =>
                     HttpResponse(entity = "hello gone") -> context
                   case (request, context) if request.method == HttpMethods.DELETE && request.uri == Uri("/bundles/hello") =>
                     HttpResponse(entity = "hello really gone") -> context
