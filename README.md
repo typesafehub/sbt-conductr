@@ -40,7 +40,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 Add the `sbt-reactive-runtime` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.1.0-SNAPSHOT")
+addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.1.0")
 ```
 
 If you will be creating bundles then you may override the following native packager properties:
