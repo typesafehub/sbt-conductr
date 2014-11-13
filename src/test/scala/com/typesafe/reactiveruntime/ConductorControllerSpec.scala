@@ -10,12 +10,12 @@ import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Ur
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestActor, TestProbe }
-import com.typesafe.reactiveruntime.WatchdogController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.reactiveruntime.ConductorController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import java.net.InetSocketAddress
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 import scala.concurrent.duration.DurationInt
 
-class WatchdogControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class ConductorControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
   import com.typesafe.reactiveruntime.TestBundle._
 
@@ -101,7 +101,7 @@ class WatchdogControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
         }
     })
 
-    val controller = system.actorOf(WatchdogController.props(Uri(WatchdogAddress), 1 minute, httpIO.testActor))
+    val controller = system.actorOf(ConductorController.props(Uri(WatchdogAddress), 1 minute, httpIO.testActor))
 
     block(controller)
   }

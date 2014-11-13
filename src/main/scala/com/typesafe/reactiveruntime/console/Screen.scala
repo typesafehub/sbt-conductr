@@ -7,13 +7,13 @@ package console
 
 import akka.actor.{ Actor, Props }
 import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Source }
-import com.typesafe.reactiveruntime.WatchdogController
+import com.typesafe.reactiveruntime.ConductorController
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
 
 object Screen {
 
-  private case class Bundles(bundles: Seq[WatchdogController.BundleInfo])
+  private case class Bundles(bundles: Seq[ConductorController.BundleInfo])
 
   private case object CheckSize
 
@@ -22,8 +22,8 @@ object Screen {
 }
 
 /**
- * Draws data to the screen. Data is subscribed from a [[WatchdogController.BundleInfo]] flow,
- * which is received in a [[WatchdogController.BundleInfosSource]] message and then materialized.
+ * Draws data to the screen. Data is subscribed from a [[ConductorController.BundleInfo]] flow,
+ * which is received in a [[ConductorController.BundleInfosSource]] message and then materialized.
  */
 class Screen extends Actor with ImplicitFlowMaterializer {
 
@@ -38,11 +38,11 @@ class Screen extends Actor with ImplicitFlowMaterializer {
 
   private var screenWidth = terminal.getWidth
 
-  private var bundles: Seq[WatchdogController.BundleInfo] =
+  private var bundles: Seq[ConductorController.BundleInfo] =
     Nil
 
   def receive: Receive = {
-    case WatchdogController.BundleInfosSource(source) =>
+    case ConductorController.BundleInfosSource(source) =>
       source.foreach(self ! Bundles(_))
     case Bundles(b) =>
       bundles = b
