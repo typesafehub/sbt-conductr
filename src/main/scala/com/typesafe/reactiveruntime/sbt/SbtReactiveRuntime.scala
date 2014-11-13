@@ -31,9 +31,9 @@ object Import {
   val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
 
   object ReactiveRuntimeKeys {
-    val cpusRequired = SettingKey[Double]("rr-cpus-required", "The number of cpus required to start the bundle.")
-    val memoryRequired = SettingKey[Long]("rr-memory-required", "The amount of memory required to run the bundle.")
-    val totalFileSize = SettingKey[Long]("rr-total-file-size", "The amount of disk space required to host an expanded bundle and configuration.")
+    val nrOfCpus = SettingKey[Double]("rr-nr-of-cpus", "The number of cpus required to run the bundle.")
+    val memory = SettingKey[Long]("rr-memory-space", "The amount of memory required to run the bundle.")
+    val diskSpace = SettingKey[Long]("rr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
     val roles = SettingKey[Set[String]]("rr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
     val discoveredDist = TaskKey[File]("rr-discovered-dist", "Any distribution produced by the current project")
@@ -110,7 +110,7 @@ object SbtReactiveRuntime extends AutoPlugin {
       def get[A](key: SettingKey[A]) =
         Project.extract(state.value).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def loadBundle(cpusRequired: Double, memoryRequired: Long, totalFileSize: Long) = {
+      def loadBundle(nrOfCpus: Double, memory: Long, diskSpace: Long) = {
         val (bundle, config) = Parsers.loadBundle.parsed
         withWatchdog(state.value) { watchdog =>
           streams.value.log.info("Loading bundle to watchdog...")
@@ -118,9 +118,9 @@ object SbtReactiveRuntime extends AutoPlugin {
             LoadBundle(
               HttpUri(bundle.toString),
               config map (u => HttpUri(u.toString)),
-              cpusRequired,
-              memoryRequired,
-              totalFileSize,
+              nrOfCpus,
+              memory,
+              diskSpace,
               roles.value
             )
           val response = (watchdog ? request).mapTo[String]
@@ -134,7 +134,7 @@ object SbtReactiveRuntime extends AutoPlugin {
           }
         }
       }
-      Accumulation.withGood(get(cpusRequired), get(memoryRequired), get(totalFileSize))(loadBundle).fold(
+      Accumulation.withGood(get(nrOfCpus), get(memory), get(diskSpace))(loadBundle).fold(
         identity,
         errors => sys.error(errors.mkString(f"%n"))
       )

@@ -133,7 +133,7 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.cpusRequired.toString)
+        List(bundle.schedulingRequirement.nrOfCpus.toString)
       }
   }
 
@@ -146,7 +146,7 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.memoryRequired.toSize)
+        List(bundle.schedulingRequirement.memory.toSize)
       }
   }
 
@@ -159,7 +159,7 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.totalFileSize.toSize)
+        List(bundle.schedulingRequirement.diskSpace.toSize)
       }
   }
 

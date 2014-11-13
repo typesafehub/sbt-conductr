@@ -4,7 +4,7 @@
 
 package com.typesafe.reactiveruntime
 
-import akka.actor._
+import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
 import akka.contrib.stream.InputStreamPublisher
 import akka.http.Http
 import akka.http.marshalling.Marshal
@@ -37,17 +37,17 @@ object WatchdogController {
    * Load a bundle with optional configuration.
    * @param bundle The address of the bundle.
    * @param config An optional configuration that will override any configuration found within the bundle.
-   * @param cpusRequired the number of cpus required to start.
-   * @param memoryRequired the memory required to start.
-   * @param totalFileSize the amount of disk space required to load.
+   * @param nrOfCpus the number of cpus required to run.
+   * @param memory the memory required to run.
+   * @param diskSpace the amount of disk space required to load.
    * @param roles the types of node that the bundle can run on.
    */
   case class LoadBundle(
     bundle: Uri,
     config: Option[Uri],
-    cpusRequired: Double,
-    memoryRequired: Long,
-    totalFileSize: Long,
+    nrOfCpus: Double,
+    memory: Long,
+    diskSpace: Long,
     roles: Set[String])
 
   /**
@@ -100,9 +100,9 @@ object WatchdogController {
    * Representation of bundle requirements to be scheduled.
    */
   case class SchedulingRequirement(
-    cpusRequired: Double,
-    memoryRequired: Long,
-    totalFileSize: Long,
+    nrOfCpus: Double,
+    memory: Long,
+    diskSpace: Long,
     roles: Set[String])
 
   /**
@@ -110,9 +110,10 @@ object WatchdogController {
    */
   case class NodeBundleFile(address: String, executing: Boolean)
 
-  private val BlockingIoDispatcher = "watchdog-blocking-io-dispatcher"
+  private val blockingIoDispatcher = "watchdog-blocking-io-dispatcher"
 
-  private def absolute(uri: Uri): Uri = if (uri.isAbsolute) uri else uri.withScheme("file")
+  private def absolute(uri: Uri): Uri =
+    if (uri.isAbsolute) uri else uri.withScheme("file")
 
   private def connect(
     httpIO: ActorRef,
@@ -135,7 +136,7 @@ object WatchdogController {
       ActorPublisher[ByteString](
         actorRefFactory.actorOf(
           InputStreamPublisher.props(new URL(absolute(uri).toString()).openStream(), Duration.Undefined)
-            .withDispatcher(BlockingIoDispatcher)
+            .withDispatcher(blockingIoDispatcher)
         )
       )
     )
@@ -152,7 +153,8 @@ object WatchdogController {
 /**
  * An actor that represents the watchdog's control endpoint.
  */
-class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef) extends Actor
+class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
+    extends Actor
     with ImplicitFlowMaterializer {
 
   import WatchdogController._
@@ -160,10 +162,32 @@ class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef) ex
 
   override def receive: Receive = {
     case GetBundleInfoStream   => fetchBundleFlow(sender())
-    case request: LoadBundle   => uploadBundle(request)
+    case request: LoadBundle   => loadBundle(request)
     case request: StartBundle  => startBundle(request)
     case request: StopBundle   => stopBundle(request)
     case request: UnloadBundle => unloadBundle(request)
+  }
+
+  private def loadBundle(loadBundle: LoadBundle): Unit = {
+    val bodyParts =
+      Source(
+        List(
+          FormData.BodyPart.Strict("nr-of-cpus", loadBundle.nrOfCpus.toString),
+          FormData.BodyPart.Strict("memory-space", loadBundle.memory.toString),
+          FormData.BodyPart.Strict("disk-space", loadBundle.diskSpace.toString),
+          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
+          fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
+        ) ++
+          loadBundle.config.map(config => fileBodyPart("config", filename(config), publisher(config)))
+      )
+    val pendingResponse =
+      for {
+        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        entity <- Marshal(FormData(bodyParts)).to[RequestEntity]
+        response <- request(HttpRequest(POST, "/bundles", entity = entity), connection)
+        body <- Unmarshal(response.entity).to[String]
+      } yield bodyOrThrow(response, body)
+    pendingResponse.pipeTo(sender())
   }
 
   private def startBundle(startBundle: StartBundle): Unit = {
@@ -194,28 +218,6 @@ class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef) ex
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse pipeTo sender()
-  }
-
-  private def uploadBundle(loadBundle: LoadBundle): Unit = {
-    val bodyParts =
-      Source(
-        List(
-          FormData.BodyPart.Strict("cpusRequired", loadBundle.cpusRequired.toString),
-          FormData.BodyPart.Strict("memoryRequired", loadBundle.memoryRequired.toString),
-          FormData.BodyPart.Strict("totalFileSize", loadBundle.totalFileSize.toString),
-          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
-          fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
-        ) ++
-          loadBundle.config.map(config => fileBodyPart("config", filename(config), publisher(config)))
-      )
-    val pendingResponse =
-      for {
-        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
-        entity <- Marshal(FormData(bodyParts)).to[RequestEntity]
-        response <- request(HttpRequest(POST, "/bundles", entity = entity), connection)
-        body <- Unmarshal(response.entity).to[String]
-      } yield bodyOrThrow(response, body)
-    pendingResponse.pipeTo(sender())
   }
 
   private def fetchBundleFlow(originalSender: ActorRef): Unit = {

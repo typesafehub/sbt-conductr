@@ -56,19 +56,19 @@ The following `sbt-reactive-runtime` properties will be required if you will be 
 
 Property       | Description
 ---------------|------------
-cpusRequired   | The number of cpus required to start the bundle.
-memoryRequired | The amount of memory required to run the bundle.
-totalFileSize  | The amount of disk space required to host an expanded bundle and configuration.
+nrOfCpus       | The number of cpus required to run the bundle.
+memory         | The amount of memory required to run the bundle.
+diskSpace      | The amount of disk space required to host an expanded bundle and configuration.
 roles          | The types of node in the cluster that this bundle can be deployed to.
 
 An sample section from a build.sbt then setting the above given that loading bundles will be required:
 
 ```scala
-ReactiveRuntimeKeys.cpusRequired := Some(1.0)
+ReactiveRuntimeKeys.nrOfCpus := 1.0
 
-ReactiveRuntimeKeys.memoryRequired := Some(10000000)
+ReactiveRuntimeKeys.memory := 10000000
 
-ReactiveRuntimeKeys.totalFileSize := Some(5000000)
+ReactiveRuntimeKeys.diskSpace := 5000000
 
 ReactiveRuntimeKeys.roles := Set("web-server")
 ```
