@@ -76,7 +76,7 @@ object Column {
   /**
    * Displays bundle id, bundle digest and config digest.
    */
-  case class Id(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn {
+  case class Id(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn {
     val title = "ID/BUNDLE/CONF"
     val width = 27
 
@@ -95,7 +95,7 @@ object Column {
    * Displays address where bundle is running and/or deployed.
    * Address is inverted if bundle is running on the particular host.
    */
-  case class Where(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn {
+  case class Where(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn {
     val title = "WHERE"
     val width = 22
 
@@ -114,7 +114,7 @@ object Column {
   /**
    * Displays the number of hosts where bundle is running.
    */
-  case class Running(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Running(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn with RightJustified {
     val title = "#RUN"
     val width = 7
 
@@ -127,7 +127,7 @@ object Column {
   /**
    * Displays bundle CPU requirement.
    */
-  case class Cpu(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Cpu(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn with RightJustified {
     val title = "#CPU"
     val width = 9
 
@@ -140,7 +140,7 @@ object Column {
   /**
    * Displays bundle memory requirement.
    */
-  case class Memory(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Memory(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn with RightJustified {
     val title = "MEM"
     val width = 8
 
@@ -153,7 +153,7 @@ object Column {
   /**
    * Displays bundle file size.
    */
-  case class FileSize(bundles: Seq[WatchdogController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class FileSize(bundles: Seq[ConductorController.BundleInfo]) extends RegularColumn with RightJustified {
     val title = "FSIZE"
     val width = 8
 
@@ -166,7 +166,7 @@ object Column {
   /**
    * Displays bundle cluster roles requirement.
    */
-  case class Roles(bundles: Seq[WatchdogController.BundleInfo], width: Int = 20) extends RegularColumn {
+  case class Roles(bundles: Seq[ConductorController.BundleInfo], width: Int = 20) extends RegularColumn {
     val title = "ROLES"
 
     val data: Seq[Seq[String]] =

@@ -5,7 +5,7 @@ to [Reactive Runtime](https://github.com/typesafehub/reactive-runtime#reactive-r
 
 ## Usage
 
-With the conductor running you can upload a file using sbt:
+With the Conductor running you can upload a file using sbt:
 
 ```bash
 cd sbt-reactive-runtime-tester/
@@ -77,13 +77,13 @@ Additional `sbt-reactive-runtime` properties are available:
 
 Property         | Description
 -----------------|------------
-conductorAddress | The location of the conductor. Defaults to 'http://127.0.0.1:9005'.
+conductorAddress | The location of the Conductor. Defaults to 'http://127.0.0.1:9005'.
 
 The following `sbt-rr` commands are available:
 
 Property    | Description
 ------------|------------
-loadBundle  | Loads a bundle and an optional configuration to the conductor
+loadBundle  | Loads a bundle and an optional configuration to the Conductor
 startBundle | Starts a bundle given a bundle id with an optional scale
 
 &copy; Typesafe Inc., 2014

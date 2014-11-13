@@ -23,15 +23,15 @@ import play.api.libs.json.{ JsPath, Json }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-object WatchdogController {
+object ConductorController {
   /**
-   * The Props for an actor that represents the watchdog's control endpoint.
-   * @param address The address to reach the watchdog at.
-   * @param connectTimeout The amount of time to wait for establishing a connection with the watchdog's control interface.
+   * The Props for an actor that represents the conductor's control endpoint.
+   * @param address The address to reach the conductor at.
+   * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
    * @param httpIO The IO(Http) actor to use for IO.
    */
   def props(address: Uri, connectTimeout: Timeout, httpIO: ActorRef) =
-    Props(new WatchdogController(address, connectTimeout, httpIO))
+    Props(new ConductorController(address, connectTimeout, httpIO))
 
   /**
    * Load a bundle with optional configuration.
@@ -110,7 +110,7 @@ object WatchdogController {
    */
   case class NodeBundleFile(address: String, executing: Boolean)
 
-  private val blockingIoDispatcher = "watchdog-blocking-io-dispatcher"
+  private val blockingIoDispatcher = "conductor-blocking-io-dispatcher"
 
   private def absolute(uri: Uri): Uri =
     if (uri.isAbsolute) uri else uri.withScheme("file")
@@ -151,13 +151,13 @@ object WatchdogController {
 }
 
 /**
- * An actor that represents the watchdog's control endpoint.
+ * An actor that represents the conductor's control endpoint.
  */
-class WatchdogController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
+class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     extends Actor
     with ImplicitFlowMaterializer {
 
-  import WatchdogController._
+  import ConductorController._
   import context.dispatcher
 
   override def receive: Receive = {

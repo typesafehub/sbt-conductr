@@ -7,20 +7,20 @@ package console
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.{ ask, pipe }
-import com.typesafe.reactiveruntime.WatchdogController.{ BundleInfosSource, GetBundleInfoStream }
+import com.typesafe.reactiveruntime.ConductorController.{ BundleInfosSource, GetBundleInfoStream }
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import scala.concurrent.blocking
 
 object Console {
-  def bundleInfo: ActorRef => ActorSystem => Unit = { implicit watchdog =>
+  def bundleInfo: ActorRef => ActorSystem => Unit = { implicit conductor =>
     { implicit system =>
 
       val screen = system.actorOf(Screen.props, "screen")
 
       import scala.concurrent.duration._
       import system.dispatcher
-      watchdog.ask(GetBundleInfoStream)(1.second).mapTo[BundleInfosSource].pipeTo(screen)
+      conductor.ask(GetBundleInfoStream)(1.second).mapTo[BundleInfosSource].pipeTo(screen)
 
       print(Ansi.ansi().saveCursorPosition())
 

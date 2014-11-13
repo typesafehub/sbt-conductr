@@ -9,8 +9,8 @@ import akka.http.Http
 import akka.http.model.{Uri => HttpUri}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.reactiveruntime.WatchdogController
-import com.typesafe.reactiveruntime.WatchdogController.{LoadBundle, StartBundle, StopBundle, UnloadBundle}
+import com.typesafe.reactiveruntime.ConductorController
+import com.typesafe.reactiveruntime.ConductorController.{LoadBundle, StartBundle, StopBundle, UnloadBundle}
 import com.typesafe.reactiveruntime.console.Console
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
@@ -25,7 +25,7 @@ import scala.util.{Failure, Success}
 
 object Import {
 
-  val loadBundle = inputKey[String]("Loads a bundle and an optional configuration to the watchdog")
+  val loadBundle = inputKey[String]("Loads a bundle and an optional configuration to the conductor")
   val startBundle = inputKey[String]("Starts a bundle given a bundle id with an optional scale")
   val stopBundle = inputKey[String]("Stops a bundle given a bundle id")
   val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
@@ -37,15 +37,15 @@ object Import {
     val roles = SettingKey[Set[String]]("rr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
     val discoveredDist = TaskKey[File]("rr-discovered-dist", "Any distribution produced by the current project")
-    val watchdogAddress = SettingKey[URI]("rr-watchdog-address", "The location of the watchdog. Defaults to 'http://127.0.0.1:9005'.")
-    val watchdogConnectTimeout = SettingKey[Timeout]("rr-watchdog-connect-timeout", "The timeout for watchdog communications when connecting")
-    val watchdogLoadTimeout = SettingKey[Timeout]("rr-watchdog-load-timeout", "The timeout for watchdog communications when loading")
-    val watchdogRequestTimeout = SettingKey[Timeout]("rr-watchdog-request-timeout", "The timeout for watchdog communications when requesting")
+    val conductorAddress = SettingKey[URI]("rr-conductor-address", "The location of the conductor. Defaults to 'http://127.0.0.1:9005'.")
+    val conductorConnectTimeout = SettingKey[Timeout]("rr-conductor-connect-timeout", "The timeout for conductor communications when connecting")
+    val conductorLoadTimeout = SettingKey[Timeout]("rr-conductor-load-timeout", "The timeout for conductor communications when loading")
+    val conductorRequestTimeout = SettingKey[Timeout]("rr-conductor-request-timeout", "The timeout for conductor communications when requesting")
   }
 }
 
 /**
- * An sbt plugin that interact's with Reactive Runtime's watchdog and potentially other components.
+ * An sbt plugin that interact's with Reactive Runtime's conductor and potentially other components.
  */
 object SbtReactiveRuntime extends AutoPlugin {
 
@@ -72,10 +72,10 @@ object SbtReactiveRuntime extends AutoPlugin {
     startBundle := startBundleTask.value.evaluated,
     stopBundle := stopBundleTask.value.evaluated,
     unloadBundle := unloadBundleTask.value.evaluated,
-    watchdogAddress := new URI(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
-    watchdogConnectTimeout := 30.seconds,
-    watchdogLoadTimeout := 10.minutes,
-    watchdogRequestTimeout := 30.seconds
+    conductorAddress := new URI(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
+    conductorConnectTimeout := 30.seconds,
+    conductorLoadTimeout := 10.minutes,
+    conductorRequestTimeout := 30.seconds
   )
 
   // Input parsing and action
@@ -106,14 +106,14 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def loadBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
-      implicit val timeout = watchdogLoadTimeout.value
+      implicit val timeout = conductorLoadTimeout.value
       def get[A](key: SettingKey[A]) =
         Project.extract(state.value).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
       def loadBundle(nrOfCpus: Double, memory: Long, diskSpace: Long) = {
         val (bundle, config) = Parsers.loadBundle.parsed
-        withWatchdog(state.value) { watchdog =>
-          streams.value.log.info("Loading bundle to watchdog...")
+        withWatchdog(state.value) { conductor =>
+          streams.value.log.info("Loading bundle to conductor...")
           val request =
             LoadBundle(
               HttpUri(bundle.toString),
@@ -123,8 +123,8 @@ object SbtReactiveRuntime extends AutoPlugin {
               diskSpace,
               roles.value
             )
-          val response = (watchdog ? request).mapTo[String]
-          Await.ready(response, watchdogLoadTimeout.value.duration)
+          val response = (conductor ? request).mapTo[String]
+          Await.ready(response, conductorLoadTimeout.value.duration)
           response.value.get match {
             case Success(bundleId) =>
               streams.value.log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
@@ -142,12 +142,12 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def startBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
-      implicit val timeout = watchdogRequestTimeout.value
+      implicit val timeout = conductorRequestTimeout.value
       val (bundleId, scale) = Parsers.startBundle.parsed
-      withWatchdog(state.value) { watchdog =>
+      withWatchdog(state.value) { conductor =>
         streams.value.log.info(s"Starting bundle $bundleId...")
-        val response = (watchdog ? StartBundle(bundleId, scale.getOrElse(1))).mapTo[String]
-        Await.ready(response, watchdogRequestTimeout.value.duration)
+        val response = (conductor ? StartBundle(bundleId, scale.getOrElse(1))).mapTo[String]
+        Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
           case Success(requestId) =>
             streams.value.log.info(s"Request for starting has been delivered with id: $requestId")
@@ -160,12 +160,12 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def stopBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
-      implicit val timeout = watchdogRequestTimeout.value
+      implicit val timeout = conductorRequestTimeout.value
       val bundleId = Parsers.stopBundle.parsed
-      withWatchdog(state.value) { watchdog =>
+      withWatchdog(state.value) { conductor =>
         streams.value.log.info(s"Stopping all bundle $bundleId instances...")
-        val response = watchdog.ask(StopBundle(bundleId))(watchdogRequestTimeout.value).mapTo[String]
-        Await.ready(response, watchdogRequestTimeout.value.duration)
+        val response = conductor.ask(StopBundle(bundleId))(conductorRequestTimeout.value).mapTo[String]
+        Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
           case Success(requestId) =>
             streams.value.log.info(s"Request for stopping has been delivered with id: $requestId")
@@ -178,12 +178,12 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def unloadBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
-      implicit val timeout = watchdogRequestTimeout.value
+      implicit val timeout = conductorRequestTimeout.value
       val bundleId = Parsers.stopBundle.parsed
-      withWatchdog(state.value) { watchdog =>
+      withWatchdog(state.value) { conductor =>
         streams.value.log.info(s"Unloading bundle $bundleId...")
-        val response = (watchdog ? UnloadBundle(bundleId)).mapTo[String]
-        Await.ready(response, watchdogRequestTimeout.value.duration)
+        val response = (conductor ? UnloadBundle(bundleId)).mapTo[String]
+        Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
           case Success(requestId) =>
             streams.value.log.info(s"Request for unloading has been delivered with id: $requestId")
@@ -210,29 +210,29 @@ object SbtReactiveRuntime extends AutoPlugin {
       state.remove(actorSystemAttrKey)
     }
 
-  private val watchdogAttrKey = AttributeKey[ActorRef]("sbt-watchdog")
+  private val conductorAttrKey = AttributeKey[ActorRef]("sbt-conductor")
 
   private def loadWatchdog(state: State): State =
-    state.get(watchdogAttrKey).fold {
-      val watchdog = withActorSystem(state) { implicit system =>
+    state.get(conductorAttrKey).fold {
+      val conductor = withActorSystem(state) { implicit system =>
         val extracted = Project.extract(state)
         val settings = extracted.structure.data
-        val watchdog: Option[ActorRef] = for {
-          address <- (watchdogAddress in extracted.currentRef).get(settings)
-          connectTimeout <- (watchdogConnectTimeout in extracted.currentRef).get(settings)
-        } yield system.actorOf(WatchdogController.props(HttpUri(address.toString), connectTimeout, akka.io.IO(Http)))
-        watchdog.getOrElse(sys.error("Cannot establish the watchdog actor. Check that you have watchdogAddress and watchdogConnectTimeout settings."))
+        val conductor: Option[ActorRef] = for {
+          address <- (conductorAddress in extracted.currentRef).get(settings)
+          connectTimeout <- (conductorConnectTimeout in extracted.currentRef).get(settings)
+        } yield system.actorOf(ConductorController.props(HttpUri(address.toString), connectTimeout, akka.io.IO(Http)))
+        conductor.getOrElse(sys.error("Cannot establish the conductor actor. Check that you have conductorAddress and conductorConnectTimeout settings."))
       }
-      state.put(watchdogAttrKey, watchdog)
+      state.put(conductorAttrKey, conductor)
     }(as => state)
 
   private def unloadWatchdog(state: State): State =
-    state.get(watchdogAttrKey).fold(state)(_ => state.remove(watchdogAttrKey))
+    state.get(conductorAttrKey).fold(state)(_ => state.remove(conductorAttrKey))
 
-  // We will get an exception if there is no actor representing the watchdog - which is a good thing because
+  // We will get an exception if there is no actor representing the conductor - which is a good thing because
   // there needs to be and it is probably because the plugin has been mis-configured.
   private def withWatchdog[T](state: State)(block: (ActorRef) => T): T =
-    block(state.get(watchdogAttrKey).get)
+    block(state.get(conductorAttrKey).get)
 
   // We will get an exception if there is no known actor system - which is a good thing because
   // there absolutely has to be at this point.
