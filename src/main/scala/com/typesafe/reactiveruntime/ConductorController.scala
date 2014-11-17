@@ -172,9 +172,9 @@ class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     val bodyParts =
       Source(
         List(
-          FormData.BodyPart.Strict("nr-of-cpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory-space", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("disk-space", loadBundle.diskSpace.toString),
+          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
+          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
+          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
           FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
           fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
         ) ++
@@ -197,7 +197,7 @@ class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
         response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}?scale=${startBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
-    pendingResponse pipeTo sender()
+    pendingResponse.pipeTo(sender())
   }
 
   private def stopBundle(stopBundle: StopBundle): Unit = {
@@ -207,7 +207,7 @@ class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
         response <- request(HttpRequest(PUT, s"/bundles/${stopBundle.bundleId}?scale=0"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
-    pendingResponse pipeTo sender()
+    pendingResponse.pipeTo(sender())
   }
 
   private def unloadBundle(unloadBundle: UnloadBundle): Unit = {
@@ -217,7 +217,7 @@ class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
         response <- request(HttpRequest(DELETE, s"/bundles/${unloadBundle.bundleId}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
-    pendingResponse pipeTo sender()
+    pendingResponse.pipeTo(sender())
   }
 
   private def fetchBundleFlow(originalSender: ActorRef): Unit = {

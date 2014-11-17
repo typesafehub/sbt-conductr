@@ -15,6 +15,7 @@ import com.typesafe.reactiveruntime.console.Console
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{Accumulation, Bad, Good, One, Or}
+import play.api.libs.json.{JsString, Json}
 import sbt.Keys._
 import sbt._
 import sbt.complete.DefaultParsers._
@@ -32,7 +33,7 @@ object Import {
 
   object ReactiveRuntimeKeys {
     val nrOfCpus = SettingKey[Double]("rr-nr-of-cpus", "The number of cpus required to run the bundle.")
-    val memory = SettingKey[Long]("rr-memory-space", "The amount of memory required to run the bundle.")
+    val memory = SettingKey[Long]("rr-memory", "The amount of memory required to run the bundle.")
     val diskSpace = SettingKey[Long]("rr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
     val roles = SettingKey[Set[String]]("rr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
@@ -126,9 +127,14 @@ object SbtReactiveRuntime extends AutoPlugin {
           val response = (conductor ? request).mapTo[String]
           Await.ready(response, conductorLoadTimeout.value.duration)
           response.value.get match {
-            case Success(bundleId) =>
-              streams.value.log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
-              bundleId
+            case Success(s) =>
+              Json.parse(s) \ "bundleId" match {
+                case JsString(bundleId) =>
+                  streams.value.log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
+                  bundleId
+                case other =>
+                  sys.error(s"Unexpected response: $other")
+              }
             case Failure(e) =>
               sys.error(s"Problem loading the bundle: ${e.getMessage}")
           }
@@ -231,12 +237,12 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   // We will get an exception if there is no actor representing the conductor - which is a good thing because
   // there needs to be and it is probably because the plugin has been mis-configured.
-  private def withWatchdog[T](state: State)(block: (ActorRef) => T): T =
+  private def withWatchdog[T](state: State)(block: ActorRef => T): T =
     block(state.get(conductorAttrKey).get)
 
   // We will get an exception if there is no known actor system - which is a good thing because
   // there absolutely has to be at this point.
-  private def withActorSystem[T](state: State)(block: (ActorSystem) => T): T =
+  private def withActorSystem[T](state: State)(block: ActorSystem => T): T =
     block(state.get(actorSystemAttrKey).get)
 
   private def withActorClassloader[A](f: => A): A = {
