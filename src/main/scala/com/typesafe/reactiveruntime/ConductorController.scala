@@ -172,9 +172,9 @@ class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     val bodyParts =
       Source(
         List(
-          FormData.BodyPart.Strict("nr-of-cpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory-space", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("disk-space", loadBundle.diskSpace.toString),
+          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
+          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
+          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
           FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
           fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
         ) ++

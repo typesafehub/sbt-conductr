@@ -32,7 +32,7 @@ object Import {
 
   object ReactiveRuntimeKeys {
     val nrOfCpus = SettingKey[Double]("rr-nr-of-cpus", "The number of cpus required to run the bundle.")
-    val memory = SettingKey[Long]("rr-memory-space", "The amount of memory required to run the bundle.")
+    val memory = SettingKey[Long]("rr-memory", "The amount of memory required to run the bundle.")
     val diskSpace = SettingKey[Long]("rr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
     val roles = SettingKey[Set[String]]("rr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
