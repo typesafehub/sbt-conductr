@@ -63,7 +63,9 @@ object SbtReactiveRuntime extends AutoPlugin {
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductorController),
-      onUnload := (unloadConductorController _).andThen(unloadActorSystem).andThen(onUnload.value)
+      onUnload := (unloadConductorController _).andThen(unloadActorSystem).andThen(onUnload.value),
+      conductorRequestTimeout := 30.seconds,
+      conductorLoadTimeout := 10.minutes
     )
 
   override def projectSettings: Seq[Setting[_]] =
@@ -76,9 +78,7 @@ object SbtReactiveRuntime extends AutoPlugin {
       stopBundle := stopBundleTask.value.evaluated,
       unloadBundle := unloadBundleTask.value.evaluated,
       conductorUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
-      conductorConnectTimeout := 30.seconds,
-      conductorRequestTimeout := 30.seconds,
-      conductorLoadTimeout := 10.minutes
+      conductorConnectTimeout := 30.seconds
     )
 
   // Input parsing and action
@@ -219,7 +219,7 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def loadActorSystem(state: State): State =
     state.get(actorSystemAttrKey).fold {
-      state.log.info(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
+      state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
       val system = withActorSystemClassloader(ActorSystem("sbt-reactive-runtime"))
       state.put(actorSystemAttrKey, system)
     }(_ => state)
@@ -234,7 +234,7 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   private def loadConductorController(state: State): State =
     state.get(conductorAttrKey).fold {
-      state.log.info(s"Creating ConductorController actor and storing it under key [${conductorAttrKey.label}]")
+      state.log.debug(s"Creating ConductorController actor and storing it under key [${conductorAttrKey.label}]")
       val conductor = withActorSystem(state) { implicit system =>
         val extracted = Project.extract(state)
         val settings = extracted.structure.data
@@ -243,7 +243,7 @@ object SbtReactiveRuntime extends AutoPlugin {
             url <- (conductorUrl in extracted.currentRef).get(settings)
             connectTimeout <- (conductorConnectTimeout in extracted.currentRef).get(settings)
           } yield system.actorOf(ConductorController.props(HttpUri(url.toString), connectTimeout, akka.io.IO(Http)))
-        conductor.getOrElse(sys.error("Cannot establish the conductor actor. Check that you have conductorAddress and conductorConnectTimeout settings."))
+        conductor.getOrElse(sys.error("Cannot establish the ConductorController actor: Check that you have conductorUrl and conductorConnectTimeout settings!"))
       }
       state.put(conductorAttrKey, conductor)
     }(as => state)
