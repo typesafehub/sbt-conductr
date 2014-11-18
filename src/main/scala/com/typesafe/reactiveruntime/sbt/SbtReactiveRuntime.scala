@@ -240,8 +240,8 @@ object SbtReactiveRuntime extends AutoPlugin {
         val settings = extracted.structure.data
         val conductor =
           for {
-            url <- (conductorUrl in extracted.currentRef).get(settings)
-            connectTimeout <- (conductorConnectTimeout in extracted.currentRef).get(settings)
+            url <- (conductorUrl in Global).get(settings)
+            connectTimeout <- (conductorConnectTimeout in Global).get(settings)
           } yield system.actorOf(ConductorController.props(HttpUri(url.toString), connectTimeout, akka.io.IO(Http)))
         conductor.getOrElse(sys.error("Cannot establish the ConductorController actor: Check that you have conductorUrl and conductorConnectTimeout settings!"))
       }
