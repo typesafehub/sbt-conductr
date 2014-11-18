@@ -50,8 +50,8 @@ object Import {
  */
 object SbtReactiveRuntime extends AutoPlugin {
 
-  import Import.ReactiveRuntimeKeys._
   import Import._
+  import Import.ReactiveRuntimeKeys._
   import SbtBundle.autoImport._
   import sbinary.DefaultProtocol.FileFormat
 
@@ -115,7 +115,7 @@ object SbtReactiveRuntime extends AutoPlugin {
       def loadBundle(nrOfCpus: Double, memory: Long, diskSpace: Long) = {
         val (bundle, config) = Parsers.loadBundle.parsed
         withConductorController(state.value) { conductor =>
-          streams.value.log.info("Loading bundle to conductor...")
+          streams.value.log.info("Loading bundle to Conductor ...")
           val request =
             LoadBundle(
               HttpUri(bundle.toString),
@@ -151,13 +151,18 @@ object SbtReactiveRuntime extends AutoPlugin {
     Def.inputTask {
       val (bundleId, scale) = Parsers.startBundle.parsed
       withConductorController(state.value) { conductor =>
-        streams.value.log.info(s"Starting bundle $bundleId...")
+        streams.value.log.info(s"Starting bundle $bundleId ...")
         val response = conductor.ask(StartBundle(bundleId, scale.getOrElse(1)))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
-          case Success(requestId) =>
-            streams.value.log.info(s"Request for starting has been delivered with id: $requestId")
-            requestId
+          case Success(s) =>
+            Json.parse(s) \ "requestId" match {
+              case JsString(requestId) =>
+                streams.value.log.info(s"Request for starting has been delivered with id: $requestId")
+                requestId
+              case other =>
+                sys.error(s"Unexpected response: $other")
+            }
           case Failure(e) =>
             sys.error(s"Problem starting the bundle: ${e.getMessage}")
         }
@@ -168,13 +173,18 @@ object SbtReactiveRuntime extends AutoPlugin {
     Def.inputTask {
       val bundleId = Parsers.stopBundle.parsed
       withConductorController(state.value) { conductor =>
-        streams.value.log.info(s"Stopping all bundle $bundleId instances...")
+        streams.value.log.info(s"Stopping all bundle $bundleId instances ...")
         val response = conductor.ask(StopBundle(bundleId))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
-          case Success(requestId) =>
-            streams.value.log.info(s"Request for stopping has been delivered with id: $requestId")
-            requestId
+          case Success(s) =>
+            Json.parse(s) \ "requestId" match {
+              case JsString(requestId) =>
+                streams.value.log.info(s"Request for stopping has been delivered with id: $requestId")
+                requestId
+              case other =>
+                sys.error(s"Unexpected response: $other")
+            }
           case Failure(e) =>
             sys.error(s"Problem stopping the bundle: ${e.getMessage}")
         }
@@ -185,13 +195,18 @@ object SbtReactiveRuntime extends AutoPlugin {
     Def.inputTask {
       val bundleId = Parsers.stopBundle.parsed
       withConductorController(state.value) { conductor =>
-        streams.value.log.info(s"Unloading bundle $bundleId...")
+        streams.value.log.info(s"Unloading bundle $bundleId ...")
         val response = conductor.ask(UnloadBundle(bundleId))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
         response.value.get match {
-          case Success(requestId) =>
-            streams.value.log.info(s"Request for unloading has been delivered with id: $requestId")
-            requestId
+          case Success(s) =>
+            Json.parse(s) \ "requestId" match {
+              case JsString(requestId) =>
+                streams.value.log.info(s"Request for unloading has been delivered with id: $requestId")
+                requestId
+              case other =>
+                sys.error(s"Unexpected response: $other")
+            }
           case Failure(e) =>
             sys.error(s"Problem unloading the bundle: ${e.getMessage}")
         }
@@ -256,5 +271,4 @@ object SbtReactiveRuntime extends AutoPlugin {
     finally
       thread.setContextClassLoader(oldLoader)
   }
-
 }
