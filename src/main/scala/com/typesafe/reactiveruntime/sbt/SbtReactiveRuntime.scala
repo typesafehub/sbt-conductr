@@ -62,10 +62,10 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      onLoad in Global := (onLoad in Global).value.andThen(loadActorSystem).andThen(loadConductorController),
-      onUnload in Global := (unloadConductorController _).andThen(unloadActorSystem).andThen((onUnload in Global).value),
-      conductorRequestTimeout in Global := 30.seconds,
-      conductorLoadTimeout in Global := 10.minutes
+      onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductorController),
+      onUnload := (unloadConductorController _).andThen(unloadActorSystem).andThen(onUnload.value),
+      conductorUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
+      conductorConnectTimeout := 30.seconds
     )
 
   override def projectSettings: Seq[Setting[_]] =
@@ -77,8 +77,8 @@ object SbtReactiveRuntime extends AutoPlugin {
       startBundle := startBundleTask.value.evaluated,
       stopBundle := stopBundleTask.value.evaluated,
       unloadBundle := unloadBundleTask.value.evaluated,
-      conductorUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
-      conductorConnectTimeout := 30.seconds
+      conductorRequestTimeout in Global := 30.seconds,
+      conductorLoadTimeout in Global := 10.minutes
     )
 
   // Input parsing and action
