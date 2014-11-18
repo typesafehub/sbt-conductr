@@ -62,10 +62,10 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductorController),
-      onUnload := (unloadConductorController _).andThen(unloadActorSystem).andThen(onUnload.value),
-      conductorRequestTimeout := 30.seconds,
-      conductorLoadTimeout := 10.minutes
+      onLoad in Global := (onLoad in Global).value.andThen(loadActorSystem).andThen(loadConductorController),
+      onUnload in Global := (unloadConductorController _).andThen(unloadActorSystem).andThen((onUnload in Global).value),
+      conductorRequestTimeout in Global := 30.seconds,
+      conductorLoadTimeout in Global := 10.minutes
     )
 
   override def projectSettings: Seq[Setting[_]] =
