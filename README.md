@@ -75,9 +75,9 @@ ReactiveRuntimeKeys.roles := Set("web-server")
 
 Additional `sbt-reactive-runtime` properties are available:
 
-Property         | Description
------------------|------------
-conductorAddress | The location of the Conductor. Defaults to 'http://127.0.0.1:9005'.
+Property     | Description
+-------------|------------
+conductorUrl | The location of the Conductor. Defaults to 'http://127.0.0.1:9005'.
 
 The following `sbt-rr` commands are available:
 
