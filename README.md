@@ -79,6 +79,13 @@ Property     | Description
 -------------|------------
 conductorUrl | The location of the Conductor. Defaults to 'http://127.0.0.1:9005'.
 
+The above is a global setting. Here is an example of setting it if the conductor's control protocol is bound to 
+`192.168.59.103` on port `9005`:
+
+```
+set ReactiveRuntimeKeys.conductorUrl in Global := url("http://192.168.59.103:9005")
+```
+
 The following `sbt-rr` commands are available:
 
 Property    | Description
