@@ -1,6 +1,6 @@
 # sbt-reactive-runtime #
 
-sbt-reactive-runtime is an sbt plugin designed to faciliate the development lifecycle at the stage where deployment
+sbt-reactive-runtime is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
 to Reactive Runtime is considered.
 
 ## Usage
@@ -40,7 +40,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 Add the `sbt-reactive-runtime` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.3.0")
+addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.5.0")
 ```
 
 If you will be creating bundles then you may override the following native packager properties:
@@ -73,24 +73,14 @@ ReactiveRuntimeKeys.diskSpace := 5000000
 ReactiveRuntimeKeys.roles := Set("web-server")
 ```
 
-Additional `sbt-reactive-runtime` properties are available:
+The following `sbt-reactive-runtime` commands are available:
 
 Property     | Description
 -------------|------------
-conductorUrl | The location of the Conductor. Defaults to 'http://127.0.0.1:9005'.
-
-The above is a global setting. Here is an example of setting it if the conductor's control protocol is bound to 
-`192.168.59.103` on port `9005`:
-
-```
-set ReactiveRuntimeKeys.conductorUrl in Global := url("http://192.168.59.103:9005")
-```
-
-The following `sbt-rr` commands are available:
-
-Property    | Description
-------------|------------
-loadBundle  | Loads a bundle and an optional configuration to the Conductor
-startBundle | Starts a bundle given a bundle id with an optional scale
+conductor    | Sets the conductor's address to a provided url (the default here is http://127.0.0.1:9005)
+loadBundle   | Loads a bundle and an optional configuration to the Conductor
+startBundle  | Starts a bundle given a bundle id with an optional absolute scale value
+stopBundle   | Stops all executions of a bundle given a bundle id
+unloadBundle | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
 &copy; Typesafe Inc., 2014

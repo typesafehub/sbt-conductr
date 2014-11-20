@@ -4,6 +4,8 @@
 
 package com.typesafe.reactiveruntime.sbt
 
+import java.net.URL
+
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.Http
 import akka.http.model.{ Uri => HttpUri }
@@ -70,7 +72,7 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     List(
-      commands += bundleInfo,
+      commands ++= Seq(bundleInfo, conductor),
       discoveredDist <<= (dist in ReactiveRuntime).storeAs(discoveredDist in Global).triggeredBy(dist in ReactiveRuntime),
       loadBundle := loadBundleTask.value.evaluated,
       roles := Set.empty,
@@ -102,9 +104,14 @@ object SbtReactiveRuntime extends AutoPlugin {
     def unloadBundle = bundleId(Nil) // FIXME: Should default to last bundle loaded
   }
 
-  private def bundleInfo = Command.command("bundleInfo") { state =>
+  private def bundleInfo: Command = Command.command("bundleInfo") { state =>
     withActorSystem(state)(withConductorController(state)(Console.bundleInfo))
     state
+  }
+
+  private def conductor: Command = Command.single("conductor") { (prevState, url) =>
+    val extracted = Project.extract(prevState)
+    extracted.append(Seq(conductorUrl in Global := new URL(url)), prevState)
   }
 
   private def loadBundleTask: Def.Initialize[InputTask[String]] =
