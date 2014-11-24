@@ -30,4 +30,4 @@ publishTo := {
 }
 
 scriptedSettings
-scriptedLaunchOpts <+= version.apply { v => s"-Dproject.version=$v" }
+scriptedLaunchOpts <+= version(v => s"-Dproject.version=$v")
