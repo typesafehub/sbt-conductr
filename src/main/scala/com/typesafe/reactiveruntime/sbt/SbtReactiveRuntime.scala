@@ -59,7 +59,7 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   val autoImport = Import
 
-  override def requires: Plugins =
+  override def `requires`: Plugins =
     plugins.CorePlugin
 
   override def globalSettings: Seq[Setting[_]] =
