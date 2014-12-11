@@ -40,7 +40,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 Add the `sbt-reactive-runtime` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.6.0")
+addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.8.0")
 ```
 
 If you will be creating bundles then you may override the following native packager properties:
@@ -49,7 +49,7 @@ Property     | Description
 -------------|------------
 bundleConf   | The bundle configuration file contents.
 bundleType   | The type of configuration that this bundling relates to. By default Universal is used.
-endpoints    | Provides a port mapping between an external facing endpoint and an internal one. The default is Map("web" -> ("http://0.0.0.0:9000" -> "http://0.0.0.0:9000"))
+endpoints    | Declares endpoints. The default is `Map("web" -> Endpoint("http", 9000))`.
 startCommand | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder.
 
 The following `sbt-reactive-runtime` properties will be required if you will be loading bundles:
