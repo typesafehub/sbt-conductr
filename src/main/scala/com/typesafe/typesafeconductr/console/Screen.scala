@@ -2,18 +2,18 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 package console
 
 import akka.actor.{ Actor, Props }
 import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Source }
-import com.typesafe.reactiveruntime.ConductorController
+import com.typesafe.typesafeconductr.ConductRController
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
 
 object Screen {
 
-  private case class Bundles(bundles: Seq[ConductorController.BundleInfo])
+  private case class Bundles(bundles: Seq[ConductRController.BundleInfo])
 
   private case object CheckSize
 
@@ -22,8 +22,8 @@ object Screen {
 }
 
 /**
- * Draws data to the screen. Data is subscribed from a [[ConductorController.BundleInfo]] flow,
- * which is received in a [[ConductorController.BundleInfosSource]] message and then materialized.
+ * Draws data to the screen. Data is subscribed from a [[ConductRController.BundleInfo]] flow,
+ * which is received in a [[ConductRController.BundleInfosSource]] message and then materialized.
  */
 class Screen extends Actor with ImplicitFlowMaterializer {
 
@@ -38,11 +38,11 @@ class Screen extends Actor with ImplicitFlowMaterializer {
 
   private var screenWidth = terminal.getWidth
 
-  private var bundles: Seq[ConductorController.BundleInfo] =
+  private var bundles: Seq[ConductRController.BundleInfo] =
     Nil
 
   def receive: Receive = {
-    case ConductorController.BundleInfosSource(source) =>
+    case ConductRController.BundleInfosSource(source) =>
       source.foreach(self ! Bundles(_))
     case Bundles(b) =>
       bundles = b

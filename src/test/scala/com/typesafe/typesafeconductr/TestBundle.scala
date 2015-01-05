@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 
 import akka.util.ByteString
 import java.io.{ File, InputStream }
@@ -23,7 +23,7 @@ object TestBundle {
 
   val BundleDigestBytes = toByteString(BundleDigestStr)
 
-  val BundleComponentName = "sbt-rr-tester-1.0.0"
+  val BundleComponentName = "sbt-typesafe-conductr-tester-1.0.0"
 
   val BundleFile = s"$BundleComponentName-$BundleDigestStr.tgz"
 

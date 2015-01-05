@@ -1,6 +1,6 @@
 lazy val sbtReactiveRuntime = project.in(file("."))
 
-name := "sbt-reactive-runtime"
+name := "sbt-typesafe-conductr"
 
 libraryDependencies ++= List(
   Library.akkaContribExtra,

@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime.sbt
+package com.typesafe.typesafeconductr.sbt
 
 import java.net.URL
 
@@ -11,9 +11,9 @@ import akka.http.Http
 import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.reactiveruntime.ConductorController
-import com.typesafe.reactiveruntime.ConductorController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
-import com.typesafe.reactiveruntime.console.Console
+import com.typesafe.typesafeconductr.ConductRController
+import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.typesafeconductr.console.Console
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
@@ -33,27 +33,27 @@ object Import {
   val stopBundle = inputKey[String]("Stops a bundle given a bundle id")
   val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
 
-  object ReactiveRuntimeKeys {
-    val nrOfCpus = SettingKey[Double]("rr-nr-of-cpus", "The number of cpus required to run the bundle.")
-    val memory = SettingKey[Long]("rr-memory", "The amount of memory required to run the bundle.")
-    val diskSpace = SettingKey[Long]("rr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
-    val roles = SettingKey[Set[String]]("rr-roles", "The types of node in the cluster that this bundle can be deployed to.")
+  object ConductRKeys {
+    val nrOfCpus = SettingKey[Double]("conductr-nr-of-cpus", "The number of cpus required to run the bundle.")
+    val memory = SettingKey[Long]("conductr-memory", "The amount of memory required to run the bundle.")
+    val diskSpace = SettingKey[Long]("conductr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
+    val roles = SettingKey[Set[String]]("conductr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
-    val discoveredDist = TaskKey[File]("rr-discovered-dist", "Any distribution produced by the current project")
-    val conductorUrl = SettingKey[URL]("rr-conductor-url", "The URL of the Conductor. Defaults to 'http://${HOSTNAME}:9005' (if HOSTNAME is defined) or  'http://127.0.0.1:9005'")
-    val conductorConnectTimeout = SettingKey[Timeout]("rr-conductor-connect-timeout", "The timeout for conductor communications when connecting")
-    val conductorLoadTimeout = SettingKey[Timeout]("rr-conductor-load-timeout", "The timeout for conductor communications when loading")
-    val conductorRequestTimeout = SettingKey[Timeout]("rr-conductor-request-timeout", "The timeout for conductor communications when requesting")
+    val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
+    val conductorUrl = SettingKey[URL]("conductr-conductor-url", "The URL of the ConductR. Defaults to 'http://${HOSTNAME}:9005' (if HOSTNAME is defined) or  'http://127.0.0.1:9005'")
+    val conductorConnectTimeout = SettingKey[Timeout]("conductr-conductor-connect-timeout", "The timeout for conductor communications when connecting")
+    val conductorLoadTimeout = SettingKey[Timeout]("conductr-conductor-load-timeout", "The timeout for conductor communications when loading")
+    val conductorRequestTimeout = SettingKey[Timeout]("conductr-conductor-request-timeout", "The timeout for conductor communications when requesting")
   }
 }
 
 /**
- * An sbt plugin that interact's with Reactive Runtime's conductor and potentially other components.
+ * An sbt plugin that interact's with Typesafe ConductR's conductor and potentially other components.
  */
-object SbtReactiveRuntime extends AutoPlugin {
+object SbtTypesafeConductR extends AutoPlugin {
 
   import Import._
-  import Import.ReactiveRuntimeKeys._
+  import Import.ConductRKeys._
   import SbtBundle.autoImport._
   import sbinary.DefaultProtocol.FileFormat
 
@@ -64,8 +64,8 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductorController),
-      onUnload := (unloadConductorController _).andThen(unloadActorSystem).andThen(onUnload.value),
+      onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
+      onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
       conductorUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
       conductorConnectTimeout := 30.seconds
     )
@@ -73,7 +73,7 @@ object SbtReactiveRuntime extends AutoPlugin {
   override def projectSettings: Seq[Setting[_]] =
     List(
       commands ++= Seq(bundleInfo, conductor),
-      discoveredDist <<= (dist in ReactiveRuntime).storeAs(discoveredDist in Global).triggeredBy(dist in ReactiveRuntime),
+      discoveredDist <<= (dist in ConductR).storeAs(discoveredDist in Global).triggeredBy(dist in ConductR),
       loadBundle := loadBundleTask.value.evaluated,
       roles := Set.empty,
       startBundle := startBundleTask.value.evaluated,
@@ -105,7 +105,7 @@ object SbtReactiveRuntime extends AutoPlugin {
   }
 
   private def bundleInfo: Command = Command.command("bundleInfo") { state =>
-    withActorSystem(state)(withConductorController(state)(Console.bundleInfo))
+    withActorSystem(state)(withConductRController(state)(Console.bundleInfo))
     state
   }
 
@@ -121,8 +121,8 @@ object SbtReactiveRuntime extends AutoPlugin {
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
       def loadBundle(nrOfCpus: Double, memory: Long, diskSpace: Long) = {
         val (bundle, config) = Parsers.loadBundle.parsed
-        withConductorController(state.value) { conductor =>
-          streams.value.log.info("Loading bundle to Conductor ...")
+        withConductRController(state.value) { conductor =>
+          streams.value.log.info("Loading bundle to ConductR ...")
           val request =
             LoadBundle(
               HttpUri(bundle.toString),
@@ -157,7 +157,7 @@ object SbtReactiveRuntime extends AutoPlugin {
   private def startBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
       val (bundleId, scale) = Parsers.startBundle.parsed
-      withConductorController(state.value) { conductor =>
+      withConductRController(state.value) { conductor =>
         streams.value.log.info(s"Starting bundle $bundleId ...")
         val response = conductor.ask(StartBundle(bundleId, scale.getOrElse(1)))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
@@ -179,7 +179,7 @@ object SbtReactiveRuntime extends AutoPlugin {
   private def stopBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
       val bundleId = Parsers.stopBundle.parsed
-      withConductorController(state.value) { conductor =>
+      withConductRController(state.value) { conductor =>
         streams.value.log.info(s"Stopping all bundle $bundleId instances ...")
         val response = conductor.ask(StopBundle(bundleId))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
@@ -201,7 +201,7 @@ object SbtReactiveRuntime extends AutoPlugin {
   private def unloadBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
       val bundleId = Parsers.stopBundle.parsed
-      withConductorController(state.value) { conductor =>
+      withConductRController(state.value) { conductor =>
         streams.value.log.info(s"Unloading bundle $bundleId ...")
         val response = conductor.ask(UnloadBundle(bundleId))(conductorRequestTimeout.value).mapTo[String]
         Await.ready(response, conductorRequestTimeout.value.duration)
@@ -222,12 +222,12 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   // Actor system management and API
 
-  private val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-reactive-runtime-actor-system")
+  private val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-conductr-actor-system")
 
   private def loadActorSystem(state: State): State =
     state.get(actorSystemAttrKey).fold {
       state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
-      val system = withActorSystemClassloader(ActorSystem("sbt-reactive-runtime"))
+      val system = withActorSystemClassloader(ActorSystem("sbt-typesafe-conductr"))
       state.put(actorSystemAttrKey, system)
     }(_ => state)
 
@@ -237,11 +237,11 @@ object SbtReactiveRuntime extends AutoPlugin {
       state.remove(actorSystemAttrKey)
     }
 
-  private val conductorAttrKey = AttributeKey[ActorRef]("sbt-reactive-runtime-conductor")
+  private val conductorAttrKey = AttributeKey[ActorRef]("sbt-typesafe-conductr-conductor")
 
-  private def loadConductorController(state: State): State =
+  private def loadConductRController(state: State): State =
     state.get(conductorAttrKey).fold {
-      state.log.debug(s"Creating ConductorController actor and storing it under key [${conductorAttrKey.label}]")
+      state.log.debug(s"Creating ConductRController actor and storing it under key [${conductorAttrKey.label}]")
       val conductor = withActorSystem(state) { implicit system =>
         val extracted = Project.extract(state)
         val settings = extracted.structure.data
@@ -249,13 +249,13 @@ object SbtReactiveRuntime extends AutoPlugin {
           for {
             url <- (conductorUrl in Global).get(settings)
             connectTimeout <- (conductorConnectTimeout in Global).get(settings)
-          } yield system.actorOf(ConductorController.props(HttpUri(url.toString), connectTimeout, akka.io.IO(Http)))
-        conductor.getOrElse(sys.error("Cannot establish the ConductorController actor: Check that you have conductorUrl and conductorConnectTimeout settings!"))
+          } yield system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout, akka.io.IO(Http)))
+        conductor.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductorUrl and conductorConnectTimeout settings!"))
       }
       state.put(conductorAttrKey, conductor)
     }(as => state)
 
-  private def unloadConductorController(state: State): State =
+  private def unloadConductRController(state: State): State =
     state.get(conductorAttrKey).fold(state)(_ => state.remove(conductorAttrKey))
 
   // We will get an exception if there is no known actor system - which is a good thing because
@@ -265,7 +265,7 @@ object SbtReactiveRuntime extends AutoPlugin {
 
   // We will get an exception if there is no actor representing the conductor - which is a good thing because
   // there needs to be and it is probably because the plugin has been mis-configured.
-  private def withConductorController[T](state: State)(block: ActorRef => T): T =
+  private def withConductRController[T](state: State)(block: ActorRef => T): T =
     block(state.get(conductorAttrKey).get)
 
   private def withActorSystemClassloader[A](action: => A): A = {

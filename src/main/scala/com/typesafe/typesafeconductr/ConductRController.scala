@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
 import akka.contrib.stream.InputStreamPublisher
@@ -23,7 +23,7 @@ import play.api.libs.json.{ JsPath, Json }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-object ConductorController {
+object ConductRController {
   /**
    * The Props for an actor that represents the conductor's control endpoint.
    * @param address The address to reach the conductor at.
@@ -31,7 +31,7 @@ object ConductorController {
    * @param httpIO The IO(Http) actor to use for IO.
    */
   def props(address: Uri, connectTimeout: Timeout, httpIO: ActorRef) =
-    Props(new ConductorController(address, connectTimeout, httpIO))
+    Props(new ConductRController(address, connectTimeout, httpIO))
 
   /**
    * Load a bundle with optional configuration.
@@ -110,7 +110,7 @@ object ConductorController {
    */
   case class NodeBundleFile(address: String, executing: Boolean)
 
-  private val blockingIoDispatcher = "conductor-blocking-io-dispatcher"
+  private val blockingIoDispatcher = "conductr-blocking-io-dispatcher"
 
   private def absolute(uri: Uri): Uri =
     if (uri.isAbsolute) uri else uri.withScheme("file")
@@ -153,11 +153,11 @@ object ConductorController {
 /**
  * An actor that represents the conductor's control endpoint.
  */
-class ConductorController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
+class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     extends Actor
     with ImplicitFlowMaterializer {
 
-  import ConductorController._
+  import ConductRController._
   import context.dispatcher
 
   override def receive: Receive = {
