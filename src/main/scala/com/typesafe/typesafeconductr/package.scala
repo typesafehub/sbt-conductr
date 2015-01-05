@@ -4,7 +4,7 @@
 
 package com.typesafe
 
-package object reactiveruntime {
+package object typesafeconductr {
 
   type Traversable[+A] = scala.collection.immutable.Traversable[A]
 

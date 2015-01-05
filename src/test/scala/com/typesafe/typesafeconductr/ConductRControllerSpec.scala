@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.Http.{ Connect, OutgoingConnection }
@@ -10,14 +10,14 @@ import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Ur
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestActor, TestProbe }
-import com.typesafe.reactiveruntime.ConductorController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import java.net.InetSocketAddress
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 import scala.concurrent.duration.DurationInt
 
-class ConductorControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
-  import com.typesafe.reactiveruntime.TestBundle._
+  import com.typesafe.typesafeconductr.TestBundle._
 
   // FIXME: Test required for GetBundleStream
 
@@ -101,7 +101,7 @@ class ConductorControllerSpec extends WordSpec with Matchers with BeforeAndAfter
         }
     })
 
-    val controller = system.actorOf(ConductorController.props(Uri(WatchdogAddress), 1 minute, httpIO.testActor))
+    val controller = system.actorOf(ConductRController.props(Uri(WatchdogAddress), 1 minute, httpIO.testActor))
 
     block(controller)
   }

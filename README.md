@@ -1,14 +1,14 @@
-# sbt-reactive-runtime #
+# sbt-typesafe-conductr #
 
-sbt-reactive-runtime is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
-to Reactive Runtime is considered.
+sbt-typesafe-conductr is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
+to Typesafe ConductR is required.
 
 ## Usage
 
-With the Conductor running you can upload a file using sbt:
+With the ConductR running you can upload a file using sbt:
 
 ```bash
-cd sbt-reactive-runtime-tester/
+cd sbt-typesafe-conductr-tester/
 sbt
 ```
 
@@ -35,12 +35,12 @@ produced by the native packager.
 Hitting return will cause the bundle to be uploaded. On successfully uploading the bundle the plugin will report
 the `BundleId` to use for subsequent commands on that bundle.
 
-#### To use sbt-reactive-runtime in your own project
+#### To use sbt-typesafe-conductr in your own project
 
-Add the `sbt-reactive-runtime` plugin:
+Add the `sbt-typesafe-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.reactiveruntime" % "sbt-reactive-runtime" % "0.8.0")
+addSbtPlugin("com.typesafe.typesafeconductr" % "sbt-typesafe-conductr" % "0.9.0")
 ```
 
 If you will be creating bundles then you may override the following native packager properties:
@@ -52,7 +52,7 @@ bundleType   | The type of configuration that this bundling relates to. By defau
 endpoints    | Declares endpoints. The default is `Map("web" -> Endpoint("http", 9000))`.
 startCommand | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder.
 
-The following `sbt-reactive-runtime` properties will be required if you will be loading bundles:
+The following properties will be required if you will be loading bundles:
 
 Property       | Description
 ---------------|------------
@@ -64,21 +64,21 @@ roles          | The types of node in the cluster that this bundle can be deploy
 An sample section from a build.sbt then setting the above given that loading bundles will be required:
 
 ```scala
-ReactiveRuntimeKeys.nrOfCpus := 1.0
+ConductRKeys.nrOfCpus := 1.0
 
-ReactiveRuntimeKeys.memory := 10000000
+ConductRKeys.memory := 10000000
 
-ReactiveRuntimeKeys.diskSpace := 5000000
+ConductRKeys.diskSpace := 5000000
 
-ReactiveRuntimeKeys.roles := Set("web-server")
+ConductRKeys.roles := Set("web-server")
 ```
 
-The following `sbt-reactive-runtime` commands are available:
+The following `sbt-typesafe-conductr` commands are available:
 
 Property     | Description
 -------------|------------
 conductor    | Sets the conductor's address to a provided url (the default here is http://127.0.0.1:9005)
-loadBundle   | Loads a bundle and an optional configuration to the Conductor
+loadBundle   | Loads a bundle and an optional configuration to the ConductR
 startBundle  | Starts a bundle given a bundle id with an optional absolute scale value
 stopBundle   | Stops all executions of a bundle given a bundle id
 unloadBundle | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)

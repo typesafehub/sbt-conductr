@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 package console
 
 import org.fusesource.jansi.Ansi

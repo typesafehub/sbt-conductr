@@ -2,12 +2,12 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.reactiveruntime
+package com.typesafe.typesafeconductr
 package console
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.{ ask, pipe }
-import com.typesafe.reactiveruntime.ConductorController.{ BundleInfosSource, GetBundleInfoStream }
+import com.typesafe.typesafeconductr.ConductRController.{ BundleInfosSource, GetBundleInfoStream }
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import scala.concurrent.blocking
