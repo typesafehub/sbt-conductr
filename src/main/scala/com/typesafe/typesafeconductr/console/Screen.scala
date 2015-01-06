@@ -6,7 +6,7 @@ package com.typesafe.typesafeconductr
 package console
 
 import akka.actor.{ Actor, Props }
-import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Source }
+import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
 import com.typesafe.typesafeconductr.ConductRController
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
@@ -17,15 +17,15 @@ object Screen {
 
   private case object CheckSize
 
-  def props: Props =
-    Props(new Screen())
+  def props(refresh: Boolean): Props =
+    Props(new Screen(refresh))
 }
 
 /**
  * Draws data to the screen. Data is subscribed from a [[ConductRController.BundleInfo]] flow,
  * which is received in a [[ConductRController.BundleInfosSource]] message and then materialized.
  */
-class Screen extends Actor with ImplicitFlowMaterializer {
+class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
 
   import AnsiConsole.Implicits._
   import Column._
@@ -43,10 +43,23 @@ class Screen extends Actor with ImplicitFlowMaterializer {
 
   def receive: Receive = {
     case ConductRController.BundleInfosSource(source) =>
-      source.foreach(self ! Bundles(_))
+      if (refresh)
+        source.foreach(self ! Bundles(_))
+      else
+        source.runWith(Sink.head).foreach(self ! Bundles(_))
+
     case Bundles(b) =>
       bundles = b
-      printScreen()
+      if (refresh) {
+        AnsiConsole.clear
+        printScreen()
+        AnsiConsole.hideCursor
+      } else {
+        printScreen()
+        println()
+        context.stop(self)
+      }
+
     case CheckSize =>
       checkSize()
   }
@@ -67,7 +80,6 @@ class Screen extends Actor with ImplicitFlowMaterializer {
     val totalWidth = leftMostColumns.map(_.width).sum
     val allColumns = leftMostColumns :+ Roles(bundles, screenWidth - totalWidth)
 
-    AnsiConsole.clear
     println(allColumns.map(_.titleForPrint).reduce(_ + _).invert.render)
 
     val rowCounts = allColumns.map(_.data.map(_.size)).transpose.map(_.max)
@@ -76,8 +88,6 @@ class Screen extends Actor with ImplicitFlowMaterializer {
       line <- lines
       cell <- line
     } print(cell.render)
-
-    AnsiConsole.hideCursor
   }
 
   private def checkSize(): Unit = {
