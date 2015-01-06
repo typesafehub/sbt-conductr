@@ -1,4 +1,4 @@
-lazy val sbtReactiveRuntime = project.in(file("."))
+lazy val sbtTypesafeConductR = project.in(file("."))
 
 name := "sbt-typesafe-conductr"
 
