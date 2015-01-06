@@ -101,9 +101,9 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        bundle.nodeBundleFiles.map { node =>
-          val nodeIpAndPort = node.address.dropWhile(_ != '@').drop(1)
-          if (node.executing)
+        bundle.bundleInstallations.map { node =>
+          val nodeIpAndPort = node.uniqueAddress.address.toString.dropWhile(_ != '@').drop(1)
+          if (bundle.bundleExecutions.map(_.host) contains node.uniqueAddress.address.host.get)
             nodeIpAndPort.invert
           else
             nodeIpAndPort
@@ -120,7 +120,7 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.nodeBundleFiles.count(_.executing).toString)
+        List(bundle.bundleExecutions.size.toString)
       }
   }
 
