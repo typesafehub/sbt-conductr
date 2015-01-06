@@ -13,14 +13,14 @@ import org.fusesource.jansi.Ansi
 import scala.concurrent.blocking
 
 object Console {
-  def bundleInfo: ActorRef => ActorSystem => Unit = { implicit conductor =>
+  def bundleInfo: ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       val screen = system.actorOf(Screen.props, "screen")
 
       import scala.concurrent.duration._
       import system.dispatcher
-      conductor.ask(GetBundleInfoStream)(1.second).mapTo[BundleInfosSource].pipeTo(screen)
+      conductr.ask(GetBundleInfoStream)(1.second).mapTo[BundleInfosSource].pipeTo(screen)
 
       print(Ansi.ansi().saveCursorPosition())
 
