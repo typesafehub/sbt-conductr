@@ -249,7 +249,7 @@ object SbtTypesafeConductR extends AutoPlugin {
           for {
             url <- (conductrUrl in Global).get(settings)
             connectTimeout <- (conductrConnectTimeout in Global).get(settings)
-          } yield system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout, akka.io.IO(Http)))
+          } yield system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout))
         conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrUrl and conductrConnectTimeout settings!"))
       }
       state.put(conductrAttrKey, conductr)

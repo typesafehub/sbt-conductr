@@ -5,15 +5,16 @@
 package com.typesafe.typesafeconductr
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.Http.{ Connect, OutgoingConnection }
+import akka.http.Http.OutgoingConnection
 import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
-import akka.testkit.{ TestActor, TestProbe }
+import akka.testkit.{ TestActorRef, TestProbe }
 import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import java.net.InetSocketAddress
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
 
 class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
@@ -50,9 +51,6 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
   private implicit val system =
     ActorSystem()
 
-  // private implicit val timeout: Timeout =
-  //   TestKitExtension(system).DefaultTimeout
-
   override protected def afterAll(): Unit = {
     system.shutdown()
     system.awaitTermination()
@@ -66,42 +64,20 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
     val LocalHost = "somehost"
     val LocalPort = 19005
 
-    val httpIO = TestProbe()
-    httpIO.setAutoPilot(new TestActor.AutoPilot {
-      def run(sender: ActorRef, msg: Any): TestActor.AutoPilot =
-        msg match {
-          case connect: Connect =>
-            implicit val mat = FlowMaterializer(connect.materializerSettings)
-            val requestSink = Source.subscriber[(HttpRequest, Any)]
-            val responses = Sink.publisher[(HttpResponse, Any)]
-            val materializedFlow =
-              requestSink
-                .map {
-                  case (request, context) if request.method == HttpMethods.POST && request.uri == Uri("/bundles") =>
-                    HttpResponse(entity = "hello") -> context
-                  case (request, context) if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=2") =>
-                    HttpResponse(entity = "hello back") -> context
-                  case (request, context) if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=0") =>
-                    HttpResponse(entity = "hello gone") -> context
-                  case (request, context) if request.method == HttpMethods.DELETE && request.uri == Uri("/bundles/hello") =>
-                    HttpResponse(entity = "hello really gone") -> context
-                  case (_, context) =>
-                    HttpResponse(StatusCodes.BadRequest) -> context
-                }
-                .to(responses)
-                .run()
-
-            sender ! OutgoingConnection(
-              new InetSocketAddress(WatchdogHost, WatchdogPort),
-              new InetSocketAddress(LocalHost, LocalPort),
-              materializedFlow.get(responses),
-              materializedFlow.get(requestSink)
-            )
-            TestActor.NoAutoPilot
-        }
+    val controller = TestActorRef[ConductRController](new ConductRController(Uri(WatchdogAddress), 1 minute) {
+      override def request(request: HttpRequest, connection: OutgoingConnection) = request match {
+        case request if request.method == HttpMethods.POST && request.uri == Uri("/bundles") =>
+          Future.successful(HttpResponse(entity = "hello"))
+        case context if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=2") =>
+          Future.successful(HttpResponse(entity = "hello back"))
+        case context if request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=0") =>
+          Future.successful(HttpResponse(entity = "hello gone"))
+        case context if request.method == HttpMethods.DELETE && request.uri == Uri("/bundles/hello") =>
+          Future.successful(HttpResponse(entity = "hello really gone"))
+        case _ =>
+          Future.successful(HttpResponse(StatusCodes.BadRequest))
+      }
     })
-
-    val controller = system.actorOf(ConductRController.props(Uri(WatchdogAddress), 1 minute, httpIO.testActor))
 
     block(controller)
   }

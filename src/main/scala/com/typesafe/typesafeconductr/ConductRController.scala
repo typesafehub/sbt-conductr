@@ -30,8 +30,8 @@ object ConductRController {
    * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
    * @param httpIO The IO(Http) actor to use for IO.
    */
-  def props(address: Uri, connectTimeout: Timeout, httpIO: ActorRef) =
-    Props(new ConductRController(address, connectTimeout, httpIO))
+  def props(address: Uri, connectTimeout: Timeout) =
+    Props(new ConductRController(address, connectTimeout))
 
   /**
    * Load a bundle with optional configuration.
@@ -116,10 +116,9 @@ object ConductRController {
     if (uri.isAbsolute) uri else uri.withScheme("file")
 
   private def connect(
-    httpIO: ActorRef,
     host: String,
     port: Int)(implicit system: ActorSystem, timeout: Timeout): Future[Http.OutgoingConnection] =
-    (httpIO ? Http.Connect(host, port)).mapTo[Http.OutgoingConnection]
+    Future.successful(Http(system).outgoingConnection(host, port))
 
   private def fileBodyPart(name: String, filename: String, source: Source[ByteString]): FormData.BodyPart =
     FormData.BodyPart(
@@ -140,20 +139,12 @@ object ConductRController {
         )
       )
     )
-
-  private def request(request: HttpRequest, connection: Http.OutgoingConnection)(implicit mat: FlowMaterializer): Future[HttpResponse] = {
-    Source(List(request -> None))
-      .runWith(Sink(connection.requestSubscriber))
-    Source(connection.responsePublisher)
-      .map(_._1)
-      .runWith(Sink.head)
-  }
 }
 
 /**
- * An actor that represents the conductor's control endpoint.
+ * An actor that represents the ConductR's control endpoint.
  */
-class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
+class ConductRController(uri: Uri, connectTimeout: Timeout)
     extends Actor
     with ImplicitFlowMaterializer {
 
@@ -167,6 +158,9 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     case request: StopBundle   => stopBundle(request)
     case request: UnloadBundle => unloadBundle(request)
   }
+
+  protected def request(request: HttpRequest, connection: Http.OutgoingConnection): Future[HttpResponse] =
+    Source.single(request).via(connection.flow).runWith(Sink.head)
 
   private def loadBundle(loadBundle: LoadBundle): Unit = {
     val bodyParts =
@@ -182,7 +176,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
       )
     val pendingResponse =
       for {
-        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         entity <- Marshal(FormData(bodyParts)).to[RequestEntity]
         response <- request(HttpRequest(POST, "/bundles", entity = entity), connection)
         body <- Unmarshal(response.entity).to[String]
@@ -193,7 +187,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
   private def startBundle(startBundle: StartBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}?scale=${startBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
@@ -203,7 +197,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
   private def stopBundle(stopBundle: StopBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${stopBundle.bundleId}?scale=0"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
@@ -213,7 +207,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
   private def unloadBundle(unloadBundle: UnloadBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(DELETE, s"/bundles/${unloadBundle.bundleId}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
@@ -234,7 +228,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout, httpIO: ActorRef)
     implicit val bundleInfoReads = Json.reads[BundleInfo]
 
     val pendingResponse = for {
-      connection <- connect(httpIO, uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+      connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
       response <- request(HttpRequest(GET, "/bundles"), connection)
       body <- Unmarshal(response.entity).to[String]
     } yield bodyOrThrow(response, body)
