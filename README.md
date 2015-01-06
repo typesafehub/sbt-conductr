@@ -51,6 +51,23 @@ lazy val root = project
   .enablePlugins(SbtTypesafeConductR, <your other plugins go here>)
 ```
 
+_Note that if you have used Play 2.3 that you must also additionally enable `JavaAppPackaging` for your build e.g.:`
+
+```scala
+enablePlugins(JavaAppPackaging, PlayScala, SbtTypesafeConductR)
+```
+
+_Note also that if you have used a pre 1.0 version of sbt-native-packager then you must remove imports such as the following from your `.sbt` files:_
+
+
+```scala
+import com.typesafe.sbt.SbtNativePackager._
+import NativePackagerKeys._
+```
+
+_...otherwise you will get duplicate imports reported. This is because the new 1.0+ version uses sbt's auto plugin feature._
+
+
 If you will be creating bundles then you may override the following native packager properties:
 
 Property     | Description
