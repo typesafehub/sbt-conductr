@@ -25,8 +25,8 @@ import scala.concurrent.duration.Duration
 
 object ConductRController {
   /**
-   * The Props for an actor that represents the conductor's control endpoint.
-   * @param address The address to reach the conductor at.
+   * The Props for an actor that represents the ConductR's control endpoint.
+   * @param address The address to reach the ConductR at.
    * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
    * @param httpIO The IO(Http) actor to use for IO.
    */

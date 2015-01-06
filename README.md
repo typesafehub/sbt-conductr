@@ -73,11 +73,21 @@ ConductRKeys.diskSpace := 5000000
 ConductRKeys.roles := Set("web-server")
 ```
 
+Unless the ConductR is running at http://127.0.0.1:9005, and instead supposing that it is running at
+http://192.168.59.103:9005 then you will typically issue the following command from the sbt console:
+
+```
+conductr http://192.168.59.103:9005
+```
+
+This then sets the sbt session up to subsequently communicate with the ConductR at 192.168.59.103 on
+port 9005.
+
 The following `sbt-typesafe-conductr` commands are available:
 
 Property     | Description
 -------------|------------
-conductor    | Sets the conductor's address to a provided url (the default here is http://127.0.0.1:9005)
+conductr     | Sets the ConductR's address to a provided url (the default here is http://127.0.0.1:9005)
 loadBundle   | Loads a bundle and an optional configuration to the ConductR
 startBundle  | Starts a bundle given a bundle id with an optional absolute scale value
 stopBundle   | Stops all executions of a bundle given a bundle id
