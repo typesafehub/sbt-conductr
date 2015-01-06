@@ -19,7 +19,7 @@ same directory.
 Produce a bundle by typing:
 
 ```bash
-conductr:dist
+bundle:dist
 ```
 
 A bundle will be produced from the native packager settings of this project. A bundle effectively wraps a native
