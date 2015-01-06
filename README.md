@@ -40,7 +40,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 Add the `sbt-typesafe-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.typesafeconductr" % "sbt-typesafe-conductr" % "0.9.0")
+addSbtPlugin("com.typesafe.typesafeconductr" % "sbt-typesafe-conductr" % "0.10.0")
 ```
 
 If you will be creating bundles then you may override the following native packager properties:
