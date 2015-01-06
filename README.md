@@ -51,7 +51,7 @@ lazy val root = project
   .enablePlugins(SbtTypesafeConductR, <your other plugins go here>)
 ```
 
-_Note that if you have used Play 2.3 that you must also additionally enable `JavaAppPackaging` for your build e.g.:`
+_Note that if you have used Play 2.3 that you must also additionally enable `JavaAppPackaging` for your build e.g.:_
 
 ```scala
 enablePlugins(JavaAppPackaging, PlayScala, SbtTypesafeConductR)
