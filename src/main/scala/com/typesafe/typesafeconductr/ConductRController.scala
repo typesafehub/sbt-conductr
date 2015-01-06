@@ -6,6 +6,7 @@ package com.typesafe.typesafeconductr
 
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
 import akka.contrib.stream.InputStreamPublisher
+import akka.cluster.UniqueAddress
 import akka.http.Http
 import akka.http.marshalling.Marshal
 import akka.http.model.HttpEntity.IndefiniteLength
@@ -18,7 +19,7 @@ import akka.stream.FlowMaterializer
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
 import akka.util.{ ByteString, Timeout }
-import java.net.URL
+import java.net.{ URL, URI }
 import play.api.libs.json.{ JsPath, Json }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
@@ -92,7 +93,7 @@ object ConductRController {
     bundleId: String,
     bundleDigest: String,
     configDigest: Option[String],
-    nodeBundleFiles: Seq[NodeBundleFile],
+    bundleInstallations: Seq[BundleInstallation],
     schedulingRequirement: SchedulingRequirement,
     bundleExecutions: Set[BundleExecution])
 
@@ -106,9 +107,12 @@ object ConductRController {
     roles: Set[String])
 
   /**
-   * Representation of node file in the runtime cluster.
+   * Descriptor of a node's bundle installation including its associated optional configuration.
+   * @param uniqueAddress the unique address within the cluster
+   * @param bundleFile the path to the bundle, has to be a `URI`, because `Path` is not serializable
+   * @param configurationFile the optional path to the bundle, has to be a `URI`, because `Path` is not serializable
    */
-  case class NodeBundleFile(address: String, executing: Boolean)
+  case class BundleInstallation(uniqueAddress: UniqueAddress, bundleFile: URI, configurationFile: Option[URI])
 
   private val blockingIoDispatcher = "conductr-blocking-io-dispatcher"
 
@@ -221,28 +225,15 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
     originalSender ! BundleInfosSource(source)
   }
 
-  private def getBundles: Future[Seq[BundleInfo]] = {
-    implicit val schedulingRequirementReads = Json.reads[SchedulingRequirement]
-    implicit val nodeReads = (JsPath \ "node").read[String].map(NodeBundleFile(_, executing = false))
-    implicit val bundleExecutionReads = Json.reads[BundleExecution]
-    implicit val bundleInfoReads = Json.reads[BundleInfo]
-
-    val pendingResponse = for {
+  private def getBundles: Future[Seq[BundleInfo]] =
+    for {
       connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
       response <- request(HttpRequest(GET, "/bundles"), connection)
       body <- Unmarshal(response.entity).to[String]
-    } yield bodyOrThrow(response, body)
-
-    pendingResponse.map { body =>
-      val bundles = (Json.parse(body) \ "bundles").as[Seq[BundleInfo]]
-      bundles.map { bundle =>
-        val nodesWithExecution = bundle.nodeBundleFiles.map { node =>
-          node.copy(executing = bundle.bundleExecutions.exists(be => node.address.contains(be.host)))
-        }
-        bundle.copy(nodeBundleFiles = nodesWithExecution)
-      }
+    } yield {
+      val b = bodyOrThrow(response, body)
+      Json.parse(b).as[Seq[BundleInfo]]
     }
-  }
 
   private def bodyOrThrow(response: HttpResponse, body: String): String =
     if (response.status.isSuccess())
