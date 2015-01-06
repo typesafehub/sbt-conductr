@@ -35,12 +35,20 @@ produced by the native packager.
 Hitting return will cause the bundle to be uploaded. On successfully uploading the bundle the plugin will report
 the `BundleId` to use for subsequent commands on that bundle.
 
-#### To use sbt-typesafe-conductr in your own project
+### To use sbt-typesafe-conductr in your own project
 
 Add the `sbt-typesafe-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.typesafeconductr" % "sbt-typesafe-conductr" % "0.9.0")
+addSbtPlugin("com.typesafe.typesafeconductr" % "sbt-typesafe-conductr" % "0.10.0")
+```
+
+You must also enable the plugin explicitly for your project:
+
+```scala
+lazy val root = project
+  .in(file("."))
+  .enablePlugins(SbtTypesafeConductR, <your other plugins go here>)
 ```
 
 If you will be creating bundles then you may override the following native packager properties:

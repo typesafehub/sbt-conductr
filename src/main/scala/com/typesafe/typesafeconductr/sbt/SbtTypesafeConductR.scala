@@ -73,7 +73,7 @@ object SbtTypesafeConductR extends AutoPlugin {
   override def projectSettings: Seq[Setting[_]] =
     List(
       commands ++= Seq(bundleInfo, conductr),
-      discoveredDist <<= (dist in ConductR).storeAs(discoveredDist in Global).triggeredBy(dist in ConductR),
+      discoveredDist <<= (dist in Bundle).storeAs(discoveredDist in Global).triggeredBy(dist in Bundle),
       loadBundle := loadBundleTask.value.evaluated,
       roles := Set.empty,
       startBundle := startBundleTask.value.evaluated,
