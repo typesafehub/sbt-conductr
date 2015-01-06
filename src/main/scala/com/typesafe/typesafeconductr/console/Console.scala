@@ -6,30 +6,40 @@ package com.typesafe.typesafeconductr
 package console
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.pattern.{ ask, pipe }
+import akka.pattern.{ ask, pipe, gracefulStop }
 import com.typesafe.typesafeconductr.ConductRController.{ BundleInfosSource, GetBundleInfoStream }
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
-import scala.concurrent.blocking
+import scala.concurrent.{ blocking, Await }
 
 object Console {
-  def bundleInfo: ActorRef => ActorSystem => Unit = { implicit conductr =>
+
+  import scala.concurrent.duration._
+  val timeout = 1.second
+
+  def bundleInfo(refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
-      val screen = system.actorOf(Screen.props, "screen")
+      val screen = system.actorOf(Screen.props(refresh), "screen")
 
-      import scala.concurrent.duration._
       import system.dispatcher
-      conductr.ask(GetBundleInfoStream)(1.second).mapTo[BundleInfosSource].pipeTo(screen)
+      conductr.ask(GetBundleInfoStream)(timeout).mapTo[BundleInfosSource].pipeTo(screen)
 
       print(Ansi.ansi().saveCursorPosition())
 
-      val con = new ConsoleReader()
-      blocking {
-        con.readCharacter('q')
+      if (refresh) {
+        val con = new ConsoleReader()
+        blocking {
+          con.readCharacter('q')
+        }
+        system.stop(screen)
+      } else {
+        // There is no way to wait for actor termination from a non-actor,
+        // other than using gracefulStop with a message that does nothing.
+        case object WaitingForYou
+        Await.ready(gracefulStop(screen, timeout, WaitingForYou), timeout)
       }
 
-      system.stop(screen)
       print(Ansi.ansi().restorCursorPosition())
     }
   }

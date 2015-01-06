@@ -104,8 +104,8 @@ object SbtTypesafeConductR extends AutoPlugin {
     def unloadBundle = bundleId(Nil) // FIXME: Should default to last bundle loaded
   }
 
-  private def bundleInfo: Command = Command.command("bundleInfo") { state =>
-    withActorSystem(state)(withConductRController(state)(Console.bundleInfo))
+  private def bundleInfo: Command = Command.args("bundleInfo", "Refresh screen: -r") { (state, flags) =>
+    withActorSystem(state)(withConductRController(state)(Console.bundleInfo(flags contains "-r")))
     state
   }
 

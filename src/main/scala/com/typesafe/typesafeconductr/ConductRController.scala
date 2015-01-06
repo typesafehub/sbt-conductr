@@ -221,7 +221,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def fetchBundleFlow(originalSender: ActorRef): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(0.millis, 2.seconds, () => ()).mapAsync(_ => getBundles)
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(_ => getBundles)
     originalSender ! BundleInfosSource(source)
   }
 
