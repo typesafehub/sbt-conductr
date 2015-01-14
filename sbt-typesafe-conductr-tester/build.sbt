@@ -12,3 +12,4 @@ ConductRKeys.nrOfCpus := 1.0
 ConductRKeys.memory := 10000000
 ConductRKeys.diskSpace := 5000000
 ConductRKeys.roles := Set("web-server")
+BundleKeys.endpoints := Map.empty

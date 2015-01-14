@@ -40,7 +40,7 @@ object Import {
     val roles = SettingKey[Set[String]]("conductr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
     val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
-    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://${HOSTNAME}:9005' (if HOSTNAME is defined) or  'http://127.0.0.1:9005'")
+    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://127.0.0.1:9005'")
     val conductrConnectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
     val conductrLoadTimeout = SettingKey[Timeout]("conductr-load-timeout", "The timeout for ConductR communications when loading")
     val conductrRequestTimeout = SettingKey[Timeout]("conductr-request-timeout", "The timeout for ConductR communications when requesting")
@@ -66,7 +66,7 @@ object SbtTypesafeConductR extends AutoPlugin {
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
       onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
-      conductrUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
+      conductrUrl := new URL(s"http://127.0.0.1:9005"),
       conductrConnectTimeout := 30.seconds
     )
 
