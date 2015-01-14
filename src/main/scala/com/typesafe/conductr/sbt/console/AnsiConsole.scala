@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.sbt
 package console
 
 import org.fusesource.jansi.Ansi

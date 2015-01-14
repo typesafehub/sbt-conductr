@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr.sbt
+package com.typesafe.conductr.sbt
 
 import java.net.URL
 
@@ -11,15 +11,15 @@ import akka.http.Http
 import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.typesafeconductr.ConductRController
-import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
-import com.typesafe.typesafeconductr.console.Console
+import com.typesafe.conductr.client.ConductRController
+import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.sbt.console.Console
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
-import sbt.Keys._
 import sbt._
+import sbt.Keys._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 import scala.concurrent.Await

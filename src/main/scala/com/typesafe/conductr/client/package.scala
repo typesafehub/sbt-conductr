@@ -2,15 +2,14 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe
+package com.typesafe.conductr
 
 import akka.actor.{ Address, AddressFromURIString }
 import akka.cluster.UniqueAddress
-import com.typesafe.typesafeconductr.ConductRController.{ BundleExecution, BundleInfo, BundleInstallation, SchedulingRequirement }
-import play.api.libs.json.{ Format, Json, JsResult, JsString, JsValue }
 import java.net.URI
+import play.api.libs.json.{ Format, Json, JsResult, JsString, JsValue }
 
-package object typesafeconductr {
+package object client {
 
   type Traversable[+A] = scala.collection.immutable.Traversable[A]
 
@@ -33,15 +32,15 @@ package object typesafeconductr {
   implicit val uniqueAddressFormat: Format[UniqueAddress] =
     Json.format
 
-  implicit val schedulingRequirementFormat: Format[SchedulingRequirement] =
+  implicit val schedulingRequirementFormat: Format[ConductRController.SchedulingRequirement] =
     Json.format
 
-  implicit val bundleInstallationFormat: Format[BundleInstallation] =
+  implicit val bundleInstallationFormat: Format[ConductRController.BundleInstallation] =
     Json.format
 
-  implicit val bundleExecutionFormat: Format[BundleExecution] =
+  implicit val bundleExecutionFormat: Format[ConductRController.BundleExecution] =
     Json.format
 
-  implicit val bundleInfoFormat: Format[BundleInfo] =
+  implicit val bundleInfoFormat: Format[ConductRController.BundleInfo] =
     Json.format
 }

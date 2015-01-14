@@ -2,12 +2,12 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ Actor, Props }
 import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
-import com.typesafe.typesafeconductr.ConductRController
+import com.typesafe.conductr.client.ConductRController
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
 
