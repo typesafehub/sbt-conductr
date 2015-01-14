@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.client
 
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
 import akka.contrib.stream.InputStreamPublisher

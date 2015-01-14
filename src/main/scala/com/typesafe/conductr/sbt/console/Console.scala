@@ -2,12 +2,12 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.pattern.{ ask, pipe, gracefulStop }
-import com.typesafe.typesafeconductr.ConductRController.{ BundleInfosSource, GetBundleInfoStream }
+import com.typesafe.conductr.client.ConductRController
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import scala.concurrent.{ blocking, Await }
@@ -23,7 +23,7 @@ object Console {
       val screen = system.actorOf(Screen.props(refresh), "screen")
 
       import system.dispatcher
-      conductr.ask(GetBundleInfoStream)(timeout).mapTo[BundleInfosSource].pipeTo(screen)
+      conductr.ask(ConductRController.GetBundleInfoStream)(timeout).mapTo[ConductRController.BundleInfosSource].pipeTo(screen)
 
       print(Ansi.ansi().saveCursorPosition())
 

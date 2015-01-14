@@ -2,8 +2,10 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.sbt
 package console
+
+import com.typesafe.conductr.client.ConductRController
 
 object Column {
 

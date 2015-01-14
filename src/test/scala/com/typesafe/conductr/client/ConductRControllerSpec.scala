@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr
+package com.typesafe.conductr.client
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.Http.OutgoingConnection
@@ -10,7 +10,6 @@ import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Ur
 import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestActorRef, TestProbe }
-import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import java.net.InetSocketAddress
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 import scala.concurrent.duration.DurationInt
@@ -18,32 +17,32 @@ import scala.concurrent.Future
 
 class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
-  import com.typesafe.typesafeconductr.TestBundle._
+  import com.typesafe.conductr.TestBundle._
 
   // FIXME: Test required for GetBundleStream
 
   "The controller" should {
     "send a load bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, LoadBundle(Uri(testBundle.toString), None, 1.0, 1024, 1024, Set("web-server")))
+      testProbe.send(controller, ConductRController.LoadBundle(Uri(testBundle.toString), None, 1.0, 1024, 1024, Set("web-server")))
       testProbe expectMsg "hello"
     }
 
     "send a start bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, StartBundle("hello", 2))
+      testProbe.send(controller, ConductRController.StartBundle("hello", 2))
       testProbe expectMsg "hello back"
     }
 
     "send a stop bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, StopBundle("hello"))
+      testProbe.send(controller, ConductRController.StopBundle("hello"))
       testProbe expectMsg "hello gone"
     }
 
     "send an unload bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, UnloadBundle("hello"))
+      testProbe.send(controller, ConductRController.UnloadBundle("hello"))
       testProbe expectMsg "hello really gone"
     }
   }

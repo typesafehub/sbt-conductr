@@ -1,15 +1,15 @@
 import sbt._
 
 object Version {
-  val akka             = "2.3.7"
-  val akkaContribExtra = "1.1.1"
+  val akka             = "2.3.8"
+  val akkaContribExtra = "1.2.0"
   val akkaHttp         = "1.0-M2"
   val jansi            = "1.11"
   val jline            = "2.12"
   val play             = "2.4.0-M1"
   val sbtBundle        = "0.9.1"
-  val scalaTest        = "2.2.2"
-  val scalactic        = "2.2.2"
+  val scalaTest        = "2.2.3"
+  val scalactic        = "2.2.3"
 }
 
 object Library {

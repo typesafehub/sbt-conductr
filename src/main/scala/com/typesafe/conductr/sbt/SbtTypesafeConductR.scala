@@ -2,7 +2,7 @@
  * Copyright © 2014 Typesafe, Inc. All rights reserved.
  */
 
-package com.typesafe.typesafeconductr.sbt
+package com.typesafe.conductr.sbt
 
 import java.net.URL
 
@@ -11,15 +11,15 @@ import akka.http.Http
 import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.typesafeconductr.ConductRController
-import com.typesafe.typesafeconductr.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
-import com.typesafe.typesafeconductr.console.Console
+import com.typesafe.conductr.client.ConductRController
+import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.sbt.console.Console
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
-import sbt.Keys._
 import sbt._
+import sbt.Keys._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 import scala.concurrent.Await
@@ -40,7 +40,7 @@ object Import {
     val roles = SettingKey[Set[String]]("conductr-roles", "The types of node in the cluster that this bundle can be deployed to.")
 
     val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
-    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://${HOSTNAME}:9005' (if HOSTNAME is defined) or  'http://127.0.0.1:9005'")
+    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://127.0.0.1:9005'")
     val conductrConnectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
     val conductrLoadTimeout = SettingKey[Timeout]("conductr-load-timeout", "The timeout for ConductR communications when loading")
     val conductrRequestTimeout = SettingKey[Timeout]("conductr-request-timeout", "The timeout for ConductR communications when requesting")
@@ -66,7 +66,7 @@ object SbtTypesafeConductR extends AutoPlugin {
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
       onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
-      conductrUrl := new URL(s"http://${Option(System.getenv("HOSTNAME")).getOrElse("127.0.0.1")}:9005"),
+      conductrUrl := new URL(s"http://127.0.0.1:9005"),
       conductrConnectTimeout := 30.seconds
     )
 
