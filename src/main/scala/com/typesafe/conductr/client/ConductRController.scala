@@ -176,7 +176,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
           FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
           fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
         ) ++
-          loadBundle.config.map(config => fileBodyPart("config", filename(config), publisher(config)))
+          loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
       )
     val pendingResponse =
       for {
