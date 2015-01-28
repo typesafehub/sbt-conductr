@@ -105,11 +105,37 @@ object Column {
       bundles.map { bundle =>
         bundle.bundleInstallations.map { node =>
           val nodeIpAndPort = node.uniqueAddress.address.toString.dropWhile(_ != '@').drop(1)
-          if (bundle.bundleExecutions.map(_.host) contains node.uniqueAddress.address.host.get)
+          if (bundle.bundleExecutions.withFilter(_.isStarted).map(_.host) contains node.uniqueAddress.address.host.get)
             nodeIpAndPort.invert
           else
             nodeIpAndPort
         }
+      }
+  }
+
+  /**
+   * Displays the number of hosts where bundle is replicated.
+   */
+  case class Replicated(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
+    val title = "#REP"
+    val width = 7
+
+    val data: Seq[Seq[String]] =
+      bundles.map { bundle =>
+        List(bundle.bundleInstallations.size.toString)
+      }
+  }
+
+  /**
+   * Displays the number of hosts where bundle is starting.
+   */
+  case class Starting(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
+    val title = "#STR"
+    val width = 7
+
+    val data: Seq[Seq[String]] =
+      bundles.map { bundle =>
+        List(bundle.bundleExecutions.count(!_.isStarted).toString)
       }
   }
 
@@ -122,7 +148,7 @@ object Column {
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.bundleExecutions.size.toString)
+        List(bundle.bundleExecutions.count(_.isStarted).toString)
       }
   }
 
