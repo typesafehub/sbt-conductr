@@ -84,7 +84,7 @@ object ConductRController {
    * Represent a bundle execution - ignores the endpoint info for now as we
    * do not render it.
    */
-  case class BundleExecution(host: String)
+  case class BundleExecution(host: String, isStarted: Boolean)
 
   /**
    * Representation of bundle in the runtime.

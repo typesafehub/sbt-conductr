@@ -25,6 +25,12 @@ object AnsiConsole {
   def hideCursor: Unit =
     print(Ansi.ansi().cursor(1000, 1000))
 
+  /**
+   * Go to specified line.
+   */
+  def goToLine(line: Int) =
+    print(Ansi.ansi().cursor(line, 0))
+
   object Implicits {
 
     implicit class AnsiString(s: String) {

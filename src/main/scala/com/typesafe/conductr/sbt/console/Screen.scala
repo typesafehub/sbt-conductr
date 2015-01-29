@@ -53,6 +53,7 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       if (refresh) {
         AnsiConsole.clear
         printScreen()
+        printInfoBar()
         AnsiConsole.hideCursor
       } else {
         printScreen()
@@ -72,6 +73,8 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       Vector(
         Id(bundles),
         Where(bundles),
+        Replicated(bundles),
+        Starting(bundles),
         Running(bundles),
         Cpu(bundles),
         Memory(bundles),
@@ -88,6 +91,12 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       line <- lines
       cell <- line
     } print(cell.render)
+  }
+
+  private def printInfoBar(): Unit = {
+    AnsiConsole.goToLine(terminal.getHeight)
+    val hints = " q: Quit "
+    print(hints.reverse.padTo(screenWidth, " ").reverse.mkString)
   }
 
   private def checkSize(): Unit = {
