@@ -68,15 +68,6 @@ import NativePackagerKeys._
 _...otherwise you will get duplicate imports reported. This is because the new 1.0+ version uses sbt's auto plugin feature._
 
 
-If you will be creating bundles then you may override the following native packager properties:
-
-Property     | Description
--------------|------------
-bundleConf   | The bundle configuration file contents.
-bundleType   | The type of configuration that this bundling relates to. By default Universal is used.
-endpoints    | Declares endpoints. The default is `Map("web" -> Endpoint("http", 9000))`.
-startCommand | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder.
-
 The following properties will be required if you will be loading bundles:
 
 Property       | Description
