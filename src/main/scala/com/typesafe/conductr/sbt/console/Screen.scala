@@ -72,6 +72,7 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
     val leftMostColumns =
       Vector(
         Id(bundles),
+        Name(bundles),
         Where(bundles),
         Replicated(bundles),
         Starting(bundles),

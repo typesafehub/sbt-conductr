@@ -25,7 +25,7 @@ object TestBundle {
 
   val BundleComponentName = "sbt-typesafe-conductr-tester-1.0.0"
 
-  val BundleFile = s"$BundleComponentName-$BundleDigestStr.tgz"
+  val BundleFile = s"$BundleComponentName-$BundleDigestStr.zip"
 
   val BundleFileSize = 4949655
 
@@ -35,7 +35,7 @@ object TestBundle {
 
   val ConfigComponentName = "bundle.conf"
 
-  val ConfigFile = s"$ConfigComponentName-$ConfigDigestStr.tgz"
+  val ConfigFile = s"$ConfigComponentName-$ConfigDigestStr.zip"
 
   val ConfigFileSize = 303
 
@@ -44,12 +44,6 @@ object TestBundle {
   val DigestAlgorithm = "SHA-256"
 
   val Utf8 = Charset.forName("UTF-8")
-
-  lazy val testBundle: URL =
-    TestBundle.getClass.getClassLoader.getResource(BundleFile)
-
-  def testBundleStream: InputStream =
-    TestBundle.getClass.getClassLoader.getResourceAsStream(BundleFile)
 
   lazy val testConfig: URL =
     TestBundle.getClass.getClassLoader.getResource(ConfigFile)

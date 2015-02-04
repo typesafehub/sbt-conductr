@@ -25,6 +25,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 object ConductRController {
+
+  private[this] val BundlePath = "(.*?)(-[a-fA-F0-9]{0,64})?\\.zip".r
+
   /**
    * The Props for an actor that represents the ConductR's control endpoint.
    * @param address The address to reach the ConductR at.
@@ -94,17 +97,18 @@ object ConductRController {
     bundleDigest: String,
     configDigest: Option[String],
     bundleInstallations: Seq[BundleInstallation],
-    schedulingRequirement: SchedulingRequirement,
+    attributes: Attributes,
     bundleExecutions: Set[BundleExecution])
 
   /**
-   * Representation of bundle requirements to be scheduled.
+   * Representation of bundle attributes.
    */
-  case class SchedulingRequirement(
+  case class Attributes(
     nrOfCpus: Double,
     memory: Long,
     diskSpace: Long,
-    roles: Set[String])
+    roles: Set[String],
+    bundleName: String)
 
   /**
    * Descriptor of a node's bundle installation including its associated optional configuration.
@@ -143,6 +147,12 @@ object ConductRController {
         )
       )
     )
+
+  private def toBundleName(bundle: Uri): String = {
+    bundle.path.toString.reverse.takeWhile(_ != '/').reverse match {
+      case BundlePath(name, _) => name
+    }
+  }
 }
 
 /**
@@ -174,6 +184,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
           FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
           FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
           FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
+          FormData.BodyPart.Strict("bundleName", toBundleName(loadBundle.bundle)),
           fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
         ) ++
           loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
