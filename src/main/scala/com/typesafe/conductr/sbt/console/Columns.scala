@@ -51,7 +51,7 @@ object Column {
     def dataForPrint(rowCounts: Seq[Int]): Seq[String] =
       data.zip(rowCounts).flatMap {
         case (rows, rowCount) =>
-          rows.padTo(rowCount, "").map(justify)
+          rows.padTo(rowCount, "").map(ellipsize _ andThen justify _)
       }
 
     /**
@@ -61,6 +61,17 @@ object Column {
 
     protected def space(length: Int): String =
       Stream.continually(" ").take(length).mkString
+
+    /**
+     * Add '... ' if string is over the allowed width.
+     */
+    private def ellipsize(s: String): String = {
+      val ellipsis = "... "
+      if (s.length >= width)
+        s.take(width - ellipsis.length) + ellipsis
+      else
+        s
+    }
   }
 
   trait LeftJustified { self: RegularColumn =>
@@ -79,8 +90,8 @@ object Column {
    * Displays bundle id, bundle digest and config digest.
    */
   case class Id(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
-    val title = "ID/BUNDLE/CONF"
-    val width = 27
+    override val title = "ID/BUNDLE/CONF"
+    override val width = 27
 
     val hashLength = 7
 
@@ -94,12 +105,23 @@ object Column {
   }
 
   /**
+   * Displays bundle name.
+   */
+  case class Name(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
+    override val title = "NAME"
+    override val width = 30
+
+    val data: Seq[Seq[String]] =
+      bundles.map { bundle => List(bundle.attributes.bundleName) }
+  }
+
+  /**
    * Displays address where bundle is running and/or deployed.
    * Address is inverted if bundle is running on the particular host.
    */
   case class Where(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
-    val title = "WHERE"
-    val width = 22
+    override val title = "WHERE"
+    override val width = 22
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
@@ -117,8 +139,8 @@ object Column {
    * Displays the number of hosts where bundle is replicated.
    */
   case class Replicated(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "#REP"
-    val width = 7
+    override val title = "#REP"
+    override val width = 7
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
@@ -130,8 +152,8 @@ object Column {
    * Displays the number of hosts where bundle is starting.
    */
   case class Starting(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "#STR"
-    val width = 7
+    override val title = "#STR"
+    override val width = 7
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
@@ -143,8 +165,8 @@ object Column {
    * Displays the number of hosts where bundle is running.
    */
   case class Running(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "#RUN"
-    val width = 7
+    override val title = "#RUN"
+    override val width = 7
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
@@ -156,12 +178,12 @@ object Column {
    * Displays bundle CPU requirement.
    */
   case class Cpu(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "#CPU"
-    val width = 9
+    override val title = "#CPU"
+    override val width = 9
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.nrOfCpus.toString)
+        List(bundle.attributes.nrOfCpus.toString)
       }
   }
 
@@ -169,12 +191,12 @@ object Column {
    * Displays bundle memory requirement.
    */
   case class Memory(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "MEM"
-    val width = 8
+    override val title = "MEM"
+    override val width = 8
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.memory.toSize)
+        List(bundle.attributes.memory.toSize)
       }
   }
 
@@ -182,12 +204,12 @@ object Column {
    * Displays bundle file size.
    */
   case class FileSize(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    val title = "FSIZE"
-    val width = 8
+    override val title = "FSIZE"
+    override val width = 8
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.diskSpace.toSize)
+        List(bundle.attributes.diskSpace.toSize)
       }
   }
 
@@ -195,11 +217,11 @@ object Column {
    * Displays bundle cluster roles requirement.
    */
   case class Roles(bundles: Seq[ConductRController.BundleInfo], width: Int = 20) extends RegularColumn {
-    val title = "ROLES"
+    override val title = "ROLES"
 
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
-        List(bundle.schedulingRequirement.roles.mkString(","))
+        List(bundle.attributes.roles.mkString(","))
       }
   }
 }

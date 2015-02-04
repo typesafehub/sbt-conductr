@@ -32,7 +32,7 @@ package object client {
   implicit val uniqueAddressFormat: Format[UniqueAddress] =
     Json.format
 
-  implicit val schedulingRequirementFormat: Format[ConductRController.SchedulingRequirement] =
+  implicit val attributesFormat: Format[ConductRController.Attributes] =
     Json.format
 
   implicit val bundleInstallationFormat: Format[ConductRController.BundleInstallation] =

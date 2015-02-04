@@ -11,11 +11,11 @@ import akka.stream.FlowMaterializer
 import akka.stream.scaladsl.{ Sink, Source }
 import akka.testkit.{ TestActorRef, TestProbe }
 import java.net.InetSocketAddress
-import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, PrivateMethodTester, WordSpec }
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.Future
 
-class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll with PrivateMethodTester {
 
   import com.typesafe.conductr.TestBundle._
 
@@ -24,7 +24,7 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
   "The controller" should {
     "send a load bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.LoadBundle(Uri(testBundle.toString), None, 1.0, 1024, 1024, Set("web-server")))
+      testProbe.send(controller, ConductRController.LoadBundle(Uri(BundleFile), None, 1.0, 1024, 1024, Set("web-server")))
       testProbe expectMsg "hello"
     }
 
@@ -44,6 +44,21 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
       val testProbe = TestProbe()
       testProbe.send(controller, ConductRController.UnloadBundle("hello"))
       testProbe expectMsg "hello really gone"
+    }
+  }
+
+  "Bundle URI" should {
+    "be converted to bundle name" in {
+      val pathsToNames = Map(
+        "path/to/bundle.zip" -> "bundle",
+        "path/to/bundle-5ca1ab1e.zip" -> "bundle",
+        "path/to/bundle-1.0.0-M2.zip" -> "bundle-1.0.0-M2"
+      )
+
+      val toBundleName = PrivateMethod[String]('toBundleName)
+      pathsToNames foreach {
+        case (path, name) => ConductRController.invokePrivate(toBundleName(Uri(s"file://$path"))) shouldBe name
+      }
     }
   }
 
