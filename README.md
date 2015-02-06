@@ -72,6 +72,7 @@ The following properties will be required if you will be loading bundles:
 
 Property       | Description
 ---------------|------------
+system         | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0.
 nrOfCpus       | The number of cpus required to run the bundle.
 memory         | The amount of memory required to run the bundle.
 diskSpace      | The amount of disk space required to host an expanded bundle and configuration.
@@ -80,13 +81,15 @@ roles          | The types of node in the cluster that this bundle can be deploy
 An sample section from a build.sbt then setting the above given that loading bundles will be required:
 
 ```scala
+ConductRKeys.system := "my-system" // Defaults to `packageName in Universal` setting
+
 ConductRKeys.nrOfCpus := 1.0
 
 ConductRKeys.memory := 10000000
 
 ConductRKeys.diskSpace := 5000000
 
-ConductRKeys.roles := Set("web-server")
+ConductRKeys.roles := Set("web-server") // Defaults to `Set.emtpy`
 ```
 
 Unless the ConductR is running at http://127.0.0.1:9005, and instead supposing that it is running at

@@ -49,6 +49,7 @@ object ConductRController {
   case class LoadBundle(
     bundle: Uri,
     config: Option[Uri],
+    system: String,
     nrOfCpus: Double,
     memory: Long,
     diskSpace: Long,
@@ -180,6 +181,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
     val bodyParts =
       Source(
         List(
+          FormData.BodyPart.Strict("system", loadBundle.system),
           FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
           FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
           FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),

@@ -7,13 +7,13 @@ package com.typesafe.conductr.sbt
 import java.net.URL
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.Http
 import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import com.typesafe.conductr.sbt.console.Console
+import com.typesafe.sbt.SbtNativePackager.Universal
 import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
@@ -34,6 +34,7 @@ object Import {
   val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
 
   object ConductRKeys {
+    val system = SettingKey[String]("conductr-system", "A logical name that can be used to associate multiple bundles with each other.")
     val nrOfCpus = SettingKey[Double]("conductr-nr-of-cpus", "The number of cpus required to run the bundle.")
     val memory = SettingKey[Long]("conductr-memory", "The amount of memory required to run the bundle.")
     val diskSpace = SettingKey[Long]("conductr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
@@ -75,6 +76,7 @@ object SbtTypesafeConductR extends AutoPlugin {
       commands ++= Seq(bundleInfo, conductr),
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist in Global).triggeredBy(dist in Bundle),
       loadBundle := loadBundleTask.value.evaluated,
+      system := (packageName in Universal).value,
       roles := Set.empty,
       startBundle := startBundleTask.value.evaluated,
       stopBundle := stopBundleTask.value.evaluated,
@@ -127,6 +129,7 @@ object SbtTypesafeConductR extends AutoPlugin {
             LoadBundle(
               HttpUri(bundle.toString),
               config map (u => HttpUri(u.toString)),
+              system.value,
               nrOfCpus,
               memory,
               diskSpace,
