@@ -67,7 +67,7 @@ object Column {
      */
     private def ellipsize(s: String): String = {
       val ellipsis = "... "
-      if (s.length >= width)
+      if (s.visibleLength >= width)
         s.take(width - ellipsis.length) + ellipsis
       else
         s
