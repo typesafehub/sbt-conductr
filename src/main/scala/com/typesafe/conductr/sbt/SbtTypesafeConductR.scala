@@ -34,12 +34,6 @@ object Import {
   val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
 
   object ConductRKeys {
-    val system = SettingKey[String]("conductr-system", "A logical name that can be used to associate multiple bundles with each other.")
-    val nrOfCpus = SettingKey[Double]("conductr-nr-of-cpus", "The number of cpus required to run the bundle.")
-    val memory = SettingKey[Long]("conductr-memory", "The amount of memory required to run the bundle.")
-    val diskSpace = SettingKey[Long]("conductr-disk-space", "The amount of disk space required to host an expanded bundle and configuration.")
-    val roles = SettingKey[Set[String]]("conductr-roles", "The types of node in the cluster that this bundle can be deployed to.")
-
     val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
     val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://127.0.0.1:9005'")
     val conductrConnectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
@@ -76,8 +70,8 @@ object SbtTypesafeConductR extends AutoPlugin {
       commands ++= Seq(bundleInfo, conductr),
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist in Global).triggeredBy(dist in Bundle),
       loadBundle := loadBundleTask.value.evaluated,
-      system := (packageName in Universal).value,
-      roles := Set.empty,
+      BundleKeys.system := (packageName in Universal).value,
+      BundleKeys.roles := Set.empty,
       startBundle := startBundleTask.value.evaluated,
       stopBundle := stopBundleTask.value.evaluated,
       unloadBundle := unloadBundleTask.value.evaluated,
@@ -121,7 +115,7 @@ object SbtTypesafeConductR extends AutoPlugin {
       def get[A](key: SettingKey[A]) =
         Project.extract(state.value).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def loadBundle(nrOfCpus: Double, memory: Long, diskSpace: Long) = {
+      def loadBundle(nrOfCpus: Double, memory: String, diskSpace: String) = {
         val (bundle, config) = Parsers.loadBundle.parsed
         withConductRController(state.value) { conductr =>
           streams.value.log.info("Loading bundle to ConductR ...")
@@ -129,11 +123,11 @@ object SbtTypesafeConductR extends AutoPlugin {
             LoadBundle(
               HttpUri(bundle.toString),
               config map (u => HttpUri(u.toString)),
-              system.value,
+              BundleKeys.system.value,
               nrOfCpus,
-              memory,
-              diskSpace,
-              roles.value
+              SbtBundle.uomToBytes(memory),
+              SbtBundle.uomToBytes(diskSpace),
+              BundleKeys.roles.value
             )
           val response = conductr.ask(request)(conductrLoadTimeout.value).mapTo[String]
           Await.ready(response, conductrLoadTimeout.value.duration)
@@ -151,7 +145,7 @@ object SbtTypesafeConductR extends AutoPlugin {
           }
         }
       }
-      Accumulation.withGood(get(nrOfCpus), get(memory), get(diskSpace))(loadBundle).fold(
+      Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(loadBundle).fold(
         identity,
         errors => sys.error(errors.mkString(f"%n"))
       )

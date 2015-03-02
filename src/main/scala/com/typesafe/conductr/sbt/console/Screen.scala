@@ -44,7 +44,7 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
   def receive: Receive = {
     case ConductRController.BundleInfosSource(source) =>
       if (refresh)
-        source.foreach(self ! Bundles(_))
+        source.runForeach(self ! Bundles(_))
       else
         source.runWith(Sink.head).foreach(self ! Bundles(_))
 

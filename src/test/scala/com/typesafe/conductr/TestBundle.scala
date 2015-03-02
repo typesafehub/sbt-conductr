@@ -8,7 +8,6 @@ import akka.util.ByteString
 import java.io.{ File, InputStream }
 import java.net.URL
 import java.nio.charset.Charset
-import java.nio.file.Path
 import java.util.UUID
 
 /**
@@ -47,9 +46,6 @@ object TestBundle {
 
   lazy val testConfig: URL =
     TestBundle.getClass.getClassLoader.getResource(ConfigFile)
-
-  lazy val testConfigPath: Path =
-    new File(testConfig.toURI).toPath
 
   def testConfigStream: InputStream =
     TestBundle.getClass.getClassLoader.getResourceAsStream(ConfigFile)
