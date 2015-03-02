@@ -15,6 +15,7 @@ libraryDependencies ++= List(
 addSbtPlugin(Library.sbtBundle)
 
 resolvers ++= List(
+  Resolver.akkaContribExtra,
   Resolver.patriknw,
   Resolver.typesafeReleases
 )
