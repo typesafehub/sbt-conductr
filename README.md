@@ -1,5 +1,7 @@
 # sbt-typesafe-conductr #
 
+[![Build Status](https://api.travis-ci.org/sbt/sbt-typesafe-conductr.png?branch=master)](https://travis-ci.org/sbt/sbt-typesafe-conductr)
+
 sbt-typesafe-conductr is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
 to Typesafe ConductR is required.
 
