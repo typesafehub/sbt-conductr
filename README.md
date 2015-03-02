@@ -67,31 +67,6 @@ import NativePackagerKeys._
 
 _...otherwise you will get duplicate imports reported. This is because the new 1.0+ version uses sbt's auto plugin feature._
 
-
-The following properties will be required if you will be loading bundles:
-
-Property       | Description
----------------|------------
-system         | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0.
-nrOfCpus       | The number of cpus required to run the bundle.
-memory         | The amount of memory required to run the bundle.
-diskSpace      | The amount of disk space required to host an expanded bundle and configuration.
-roles          | The types of node in the cluster that this bundle can be deployed to.
-
-An sample section from a build.sbt then setting the above given that loading bundles will be required:
-
-```scala
-ConductRKeys.system := "my-system" // Defaults to `packageName in Universal` setting
-
-ConductRKeys.nrOfCpus := 1.0
-
-ConductRKeys.memory := 10000000
-
-ConductRKeys.diskSpace := 5000000
-
-ConductRKeys.roles := Set("web-server") // Defaults to `Set.emtpy`
-```
-
 Unless the ConductR is running at http://127.0.0.1:9005, and instead supposing that it is running at
 http://192.168.59.103:9005 then you will typically issue the following command from the sbt console:
 
@@ -112,4 +87,4 @@ startBundle  | Starts a bundle given a bundle id with an optional absolute scale
 stopBundle   | Stops all executions of a bundle given a bundle id
 unloadBundle | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
-&copy; Typesafe Inc., 2014
+&copy; Typesafe Inc., 2014-2015
