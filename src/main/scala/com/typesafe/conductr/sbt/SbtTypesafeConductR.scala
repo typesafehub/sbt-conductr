@@ -115,7 +115,7 @@ object SbtTypesafeConductR extends AutoPlugin {
       def get[A](key: SettingKey[A]) =
         Project.extract(state.value).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def loadBundle(nrOfCpus: Double, memory: String, diskSpace: String) = {
+      def loadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
         val (bundle, config) = Parsers.loadBundle.parsed
         withConductRController(state.value) { conductr =>
           streams.value.log.info("Loading bundle to ConductR ...")
@@ -125,8 +125,8 @@ object SbtTypesafeConductR extends AutoPlugin {
               config map (u => HttpUri(u.toString)),
               BundleKeys.system.value,
               nrOfCpus,
-              SbtBundle.uomToBytes(memory),
-              SbtBundle.uomToBytes(diskSpace),
+              memory.underlying,
+              diskSpace.underlying,
               BundleKeys.roles.value
             )
           val response = conductr.ask(request)(conductrLoadTimeout.value).mapTo[String]
