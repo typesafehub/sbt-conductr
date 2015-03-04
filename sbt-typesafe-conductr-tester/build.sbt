@@ -1,3 +1,5 @@
+import ByteConversions._
+
 lazy val root = project
   .in(file("."))
   .enablePlugins(JavaAppPackaging, SbtTypesafeConductR)
@@ -8,8 +10,8 @@ scalaVersion := "2.11.4"
 
 // ConductR
 
-ConductRKeys.nrOfCpus := 1.0
-ConductRKeys.memory := 10000000
-ConductRKeys.diskSpace := 5000000
-ConductRKeys.roles := Set("web-server")
+BundleKeys.nrOfCpus := 1.0
+BundleKeys.memory := 10.MiB
+BundleKeys.diskSpace := 5.MB
+BundleKeys.roles := Set("web-server")
 BundleKeys.endpoints := Map.empty
