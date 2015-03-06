@@ -8,6 +8,7 @@ package console
 import akka.actor.{ Actor, Props }
 import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
 import com.typesafe.conductr.client.ConductRController
+import com.typesafe.conductr.client.ConductRController.BundleInfo
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
 
@@ -46,7 +47,7 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       if (refresh)
         source.runForeach(self ! Bundles(_))
       else
-        source.runWith(Sink.head).foreach(self ! Bundles(_))
+        source.runWith(Sink.head()).foreach(self ! Bundles(_))
 
     case Bundles(b) =>
       bundles = b

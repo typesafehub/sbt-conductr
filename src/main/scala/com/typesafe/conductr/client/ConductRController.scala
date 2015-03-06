@@ -4,9 +4,9 @@
 
 package com.typesafe.conductr.client
 
-import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
-import akka.contrib.stream.InputStreamPublisher
+import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Cancellable, Props }
 import akka.cluster.UniqueAddress
+import akka.contrib.stream.InputStreamPublisher
 import akka.http.Http
 import akka.http.marshalling.Marshal
 import akka.http.model.HttpEntity.IndefiniteLength
@@ -14,13 +14,12 @@ import akka.http.model.HttpMethods._
 import akka.http.model.Multipart.FormData
 import akka.http.model.{ HttpRequest, HttpResponse, MediaTypes, RequestEntity, Uri }
 import akka.http.unmarshalling.Unmarshal
-import akka.pattern.{ ask, pipe }
-import akka.stream.FlowMaterializer
+import akka.pattern.pipe
 import akka.stream.actor.ActorPublisher
-import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
+import akka.stream.scaladsl.{ Flow, ImplicitFlowMaterializer, Sink, Source }
 import akka.util.{ ByteString, Timeout }
-import java.net.{ URL, URI }
-import play.api.libs.json.{ JsPath, Json }
+import java.net.{ URI, URL }
+import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
@@ -82,7 +81,7 @@ object ConductRController {
   /**
    * A flow of [[BundleInfo]]. Needs to be materialized after attaching sink.
    */
-  case class BundleInfosSource(source: Source[Seq[BundleInfo]])
+  case class BundleInfosSource(source: Source[Seq[BundleInfo], Cancellable])
 
   /**
    * Represent a bundle execution - ignores the endpoint info for now as we
@@ -124,12 +123,10 @@ object ConductRController {
   private def absolute(uri: Uri): Uri =
     if (uri.isAbsolute) uri else uri.withScheme("file")
 
-  private def connect(
-    host: String,
-    port: Int)(implicit system: ActorSystem, timeout: Timeout): Future[Http.OutgoingConnection] =
+  private def connect(host: String, port: Int)(implicit system: ActorSystem, timeout: Timeout) =
     Future.successful(Http(system).outgoingConnection(host, port))
 
-  private def fileBodyPart(name: String, filename: String, source: Source[ByteString]): FormData.BodyPart =
+  private def fileBodyPart(name: String, filename: String, source: Source[ByteString, Unit]): FormData.BodyPart =
     FormData.BodyPart(
       name,
       IndefiniteLength(MediaTypes.`application/octet-stream`, source),
@@ -139,7 +136,7 @@ object ConductRController {
   private def filename(uri: Uri): String =
     uri.path.reverse.head.toString
 
-  private def publisher(uri: Uri)(implicit actorRefFactory: ActorRefFactory): Source[ByteString] =
+  private def publisher(uri: Uri)(implicit actorRefFactory: ActorRefFactory): Source[ByteString, Unit] =
     Source(
       ActorPublisher[ByteString](
         actorRefFactory.actorOf(
@@ -174,8 +171,8 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
     case request: UnloadBundle => unloadBundle(request)
   }
 
-  protected def request(request: HttpRequest, connection: Http.OutgoingConnection): Future[HttpResponse] =
-    Source.single(request).via(connection.flow).runWith(Sink.head)
+  protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
+    Source.single(request).via(connection).runWith(Sink.head())
 
   private def loadBundle(loadBundle: LoadBundle): Unit = {
     val bodyParts =
