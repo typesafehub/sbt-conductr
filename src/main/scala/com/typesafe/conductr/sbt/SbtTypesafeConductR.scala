@@ -35,7 +35,7 @@ object Import {
 
   object ConductRKeys {
     val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
-    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to 'http://127.0.0.1:9005'")
+    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to the env variables 'CONDUCTR_IP:[CONDUCTR_PORT]', otherwise uses the default: 'http://127.0.0.1:9005'")
     val conductrConnectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
     val conductrLoadTimeout = SettingKey[Timeout]("conductr-load-timeout", "The timeout for ConductR communications when loading")
     val conductrRequestTimeout = SettingKey[Timeout]("conductr-request-timeout", "The timeout for ConductR communications when requesting")
@@ -54,6 +54,10 @@ object SbtTypesafeConductR extends AutoPlugin {
 
   val autoImport = Import
 
+  val DefaultConductrProtocol = "http"
+  val DefaultConductrHost = "127.0.0.1"
+  val DefaultConductrPort = 9005
+
   override def `requires`: Plugins =
     plugins.CorePlugin
 
@@ -61,7 +65,7 @@ object SbtTypesafeConductR extends AutoPlugin {
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
       onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
-      conductrUrl := new URL(s"http://127.0.0.1:9005"),
+      conductrUrl := envConductrUrl getOrElse new URL(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort"),
       conductrConnectTimeout := 30.seconds
     )
 
@@ -106,8 +110,25 @@ object SbtTypesafeConductR extends AutoPlugin {
   }
 
   private def conductr: Command = Command.single("conductr") { (prevState, url) =>
+    require(url != null && url.nonEmpty, "ConductR URL must NOT be empty!")
     val extracted = Project.extract(prevState)
-    extracted.append(Seq(conductrUrl in Global := new URL(url)), prevState)
+    val furl = prepareUrl(url)
+    extracted.append(Seq(conductrUrl in Global := furl), prevState)
+  }
+
+  private def prepareUrl(url: String): sbt.URL = {
+    def insertPort(url: String, port: Int): String =
+      url.indexOf("/", "http://".length) match {
+        case -1             => s"""$url:$port"""
+        case firstPathSlash => s"""${url.substring(0, firstPathSlash)}:$port${url.substring(firstPathSlash)}"""
+      }
+    val surl = if (url.contains("://")) url else s"$DefaultConductrProtocol://$url"
+    val nurl = new sbt.URL(surl)
+
+    nurl.getPort match {
+      case -1 => new sbt.URL(insertPort(surl, DefaultConductrPort))
+      case _  => nurl
+    }
   }
 
   private def loadBundleTask: Def.Initialize[InputTask[String]] =
@@ -216,6 +237,13 @@ object SbtTypesafeConductR extends AutoPlugin {
         }
       }
     }
+
+  private def envConductrUrl(): Option[URL] = {
+    val ip = sys.env.get("CONDUCTR_IP")
+    val port = sys.env.getOrElse("CONDUCTR_PORT", 9005)
+
+    ip.map(i => new URL(s"http://$i:$port"))
+  }
 
   // Actor system management and API
 

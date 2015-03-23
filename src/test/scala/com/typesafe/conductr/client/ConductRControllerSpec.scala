@@ -9,14 +9,14 @@ import akka.http.Http
 import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
 import akka.stream.scaladsl.Flow
 import akka.testkit.{ TestActorRef, TestProbe }
-import com.typesafe.conductr.TestBundle
 import org.scalatest.{ BeforeAndAfterAll, Matchers, PrivateMethodTester, WordSpec }
+
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll with PrivateMethodTester {
 
-  import TestBundle._
+  import com.typesafe.conductr.TestBundle._
 
   // FIXME: Test required for GetBundleStream
 

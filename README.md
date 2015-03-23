@@ -83,7 +83,7 @@ The following `sbt-typesafe-conductr` commands are available:
 
 Property     | Description
 -------------|------------
-conductr     | Sets the ConductR's address to a provided url (the default here is http://127.0.0.1:9005)
+conductr     | Sets the ConductR's address to a provided url (defaults to env varialbe `CONDUCTR_IP:[CONDUCTR_PORT]` if set, otherwise uses the default: `http://127.0.0.1:9005`)
 loadBundle   | Loads a bundle and an optional configuration to the ConductR
 startBundle  | Starts a bundle given a bundle id with an optional absolute scale value
 stopBundle   | Stops all executions of a bundle given a bundle id
