@@ -14,31 +14,36 @@ import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import com.typesafe.conductr.sbt.console.Console
 import com.typesafe.sbt.SbtNativePackager.Universal
-import com.typesafe.sbt.bundle.SbtBundle
 import com.typesafe.sbt.packager.Keys._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
-import sbt._
 import sbt.Keys._
+import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
+
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success }
 
 object Import {
 
-  val loadBundle = inputKey[String]("Loads a bundle and an optional configuration to the ConductR")
-  val startBundle = inputKey[String]("Starts a bundle given a bundle id with an optional scale")
-  val stopBundle = inputKey[String]("Stops a bundle given a bundle id")
-  val unloadBundle = inputKey[String]("Unloads a bundle given a bundle id")
+  val Conductr = config("conductr")
 
-  object ConductRKeys {
+  val controlServer = inputKey[sbt.URL]("Sets the ConductR Control Server's location (can be just IP, default port (9005) will be added automatically)")
+  
+  val load = inputKey[String]("Loads a bundle and an optional configuration to the ConductR")
+  val start = inputKey[String]("Starts a bundle given a bundle id with an optional scale")
+  val stop = inputKey[String]("Stops a bundle given a bundle id")
+  val info = inputKey[Unit]("Shows information about bundles in conductr")
+  val unload = inputKey[String]("Unloads a bundle given a bundle id")
+
+  object Keys {
     val discoveredDist = TaskKey[File]("conductr-discovered-dist", "Any distribution produced by the current project")
-    val conductrUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to the env variables 'CONDUCTR_IP:[CONDUCTR_PORT]', otherwise uses the default: 'http://127.0.0.1:9005'")
-    val conductrConnectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
-    val conductrLoadTimeout = SettingKey[Timeout]("conductr-load-timeout", "The timeout for ConductR communications when loading")
-    val conductrRequestTimeout = SettingKey[Timeout]("conductr-request-timeout", "The timeout for ConductR communications when requesting")
+    val controlServerUrl = SettingKey[URL]("conductr-url", "The URL of the ConductR. Defaults to the env variables 'CONDUCTR_IP:[CONDUCTR_PORT]', otherwise uses the default: 'http://127.0.0.1:9005'")
+    val connectTimeout = SettingKey[Timeout]("conductr-connect-timeout", "The timeout for ConductR communications when connecting")
+    val loadTimeout = SettingKey[Timeout]("conductr-load-timeout", "The timeout for ConductR communications when loading")
+    val requestTimeout = SettingKey[Timeout]("conductr-request-timeout", "The timeout for ConductR communications when requesting")
   }
 }
 
@@ -47,9 +52,9 @@ object Import {
  */
 object SbtTypesafeConductR extends AutoPlugin {
 
-  import Import._
-  import Import.ConductRKeys._
-  import SbtBundle.autoImport._
+  import com.typesafe.conductr.sbt.Import.Keys._
+  import com.typesafe.conductr.sbt.Import._
+  import com.typesafe.sbt.bundle.SbtBundle.autoImport._
   import sbinary.DefaultProtocol.FileFormat
 
   val autoImport = Import
@@ -65,22 +70,23 @@ object SbtTypesafeConductR extends AutoPlugin {
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
       onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
-      conductrUrl := envConductrUrl getOrElse new URL(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort"),
-      conductrConnectTimeout := 30.seconds
+      controlServerUrl := envConductrUrl getOrElse new URL(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort"),
+      connectTimeout := 30.seconds
     )
 
   override def projectSettings: Seq[Setting[_]] =
     List(
-      commands ++= Seq(bundleInfo, conductr),
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist in Global).triggeredBy(dist in Bundle),
-      loadBundle := loadBundleTask.value.evaluated,
+      controlServer in Conductr := setConductrTask.value.evaluated,
+      info in Conductr := infoTask.value,
+      load in Conductr := loadBundleTask.value.evaluated,
+      start in Conductr := startBundleTask.value.evaluated,
+      stop in Conductr := stopBundleTask.value.evaluated,
+      unload in Conductr := unloadBundleTask.value.evaluated,
       BundleKeys.system := (packageName in Universal).value,
       BundleKeys.roles := Set.empty,
-      startBundle := startBundleTask.value.evaluated,
-      stopBundle := stopBundleTask.value.evaluated,
-      unloadBundle := unloadBundleTask.value.evaluated,
-      conductrRequestTimeout in Global := 30.seconds,
-      conductrLoadTimeout in Global := 10.minutes
+      requestTimeout in Conductr := 30.seconds,
+      loadTimeout in Conductr := 10.minutes
     )
 
   // Input parsing and action
@@ -88,6 +94,10 @@ object SbtTypesafeConductR extends AutoPlugin {
   private object Parsers {
     def bundle(bundle: Option[File]): Parser[URI] =
       Space ~> token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
+
+    def setConductr: Parser[String] = Space ~> StringBasic
+
+    def info: Parser[String] = Space ~> StringBasic
 
     def configuration: Parser[URI] = Space ~> token(basicUri)
 
@@ -104,19 +114,14 @@ object SbtTypesafeConductR extends AutoPlugin {
     def unloadBundle = bundleId(Nil) // FIXME: Should default to last bundle loaded
   }
 
-  private def bundleInfo: Command = Command.args("bundleInfo", "Refresh screen: -r") { (state, flags) =>
-    withActorSystem(state)(withConductRController(state)(Console.bundleInfo(flags contains "-r")))
-    state
-  }
+  private def setConductrTask: Def.Initialize[InputTask[sbt.URL]] =
+    Def.inputTask {
+      val urlString = Parsers.setConductr.parsed
+      require(urlString.nonEmpty, "ConductR URL must NOT be empty!")
+      prepareConductrUrl(urlString)
+    }
 
-  private def conductr: Command = Command.single("conductr") { (prevState, url) =>
-    require(url != null && url.nonEmpty, "ConductR URL must NOT be empty!")
-    val extracted = Project.extract(prevState)
-    val furl = prepareUrl(url)
-    extracted.append(Seq(conductrUrl in Global := furl), prevState)
-  }
-
-  private def prepareUrl(url: String): sbt.URL = {
+  private[conductr] def prepareConductrUrl(url: String): sbt.URL = {
     def insertPort(url: String, port: Int): String =
       url.indexOf("/", "http://".length) match {
         case -1             => s"""$url:$port"""
@@ -150,8 +155,8 @@ object SbtTypesafeConductR extends AutoPlugin {
               diskSpace.underlying,
               BundleKeys.roles.value
             )
-          val response = conductr.ask(request)(conductrLoadTimeout.value).mapTo[String]
-          Await.ready(response, conductrLoadTimeout.value.duration)
+          val response = conductr.ask(request)((loadTimeout in Conductr).value).mapTo[String]
+          Await.ready(response, (loadTimeout in Conductr).value.duration)
           response.value.get match {
             case Success(s) =>
               Json.parse(s) \ "bundleId" match {
@@ -174,11 +179,13 @@ object SbtTypesafeConductR extends AutoPlugin {
 
   private def startBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
+      val log = streams.value.log
       val (bundleId, scale) = Parsers.startBundle.parsed
+
       withConductRController(state.value) { conductr =>
-        streams.value.log.info(s"Starting bundle $bundleId ...")
-        val response = conductr.ask(StartBundle(bundleId, scale.getOrElse(1)))(conductrRequestTimeout.value).mapTo[String]
-        Await.ready(response, conductrRequestTimeout.value.duration)
+        log.info(s"Starting bundle $bundleId ...")
+        val response = conductr.ask(StartBundle(bundleId, scale.getOrElse(1)))((requestTimeout in Conductr).value).mapTo[String]
+        Await.ready(response, (requestTimeout in Conductr).value.duration)
         response.value.get match {
           case Success(s) =>
             Json.parse(s) \ "requestId" match {
@@ -194,13 +201,21 @@ object SbtTypesafeConductR extends AutoPlugin {
       }
     }
 
+  private def infoTask: Def.Initialize[Task[Unit]] =
+    Def.task {
+      val s = state.value
+      //      val flags = Parsers.info.parsed
+      //      withActorSystem(s)(withConductRController(s)(Console.bundleInfo(flags contains "-r")))
+      withActorSystem(s)(withConductRController(s)(Console.bundleInfo(refresh = false)))
+    }
+
   private def stopBundleTask: Def.Initialize[InputTask[String]] =
     Def.inputTask {
       val bundleId = Parsers.stopBundle.parsed
       withConductRController(state.value) { conductr =>
         streams.value.log.info(s"Stopping all bundle $bundleId instances ...")
-        val response = conductr.ask(StopBundle(bundleId))(conductrRequestTimeout.value).mapTo[String]
-        Await.ready(response, conductrRequestTimeout.value.duration)
+        val response = conductr.ask(StopBundle(bundleId))((requestTimeout in Conductr).value).mapTo[String]
+        Await.ready(response, (requestTimeout in Conductr).value.duration)
         response.value.get match {
           case Success(s) =>
             Json.parse(s) \ "requestId" match {
@@ -221,8 +236,8 @@ object SbtTypesafeConductR extends AutoPlugin {
       val bundleId = Parsers.stopBundle.parsed
       withConductRController(state.value) { conductr =>
         streams.value.log.info(s"Unloading bundle $bundleId ...")
-        val response = conductr.ask(UnloadBundle(bundleId))(conductrRequestTimeout.value).mapTo[String]
-        Await.ready(response, conductrRequestTimeout.value.duration)
+        val response = conductr.ask(UnloadBundle(bundleId))((requestTimeout in Conductr).value).mapTo[String]
+        Await.ready(response, (requestTimeout in Conductr).value.duration)
         response.value.get match {
           case Success(s) =>
             Json.parse(s) \ "requestId" match {
@@ -247,12 +262,12 @@ object SbtTypesafeConductR extends AutoPlugin {
 
   // Actor system management and API
 
-  private val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-conductr-actor-system")
+  private val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
 
   private def loadActorSystem(state: State): State =
     state.get(actorSystemAttrKey).fold {
       state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
-      val system = withActorSystemClassloader(ActorSystem("sbt-typesafe-conductr"))
+      val system = withActorSystemClassloader(ActorSystem("sbt-typesafe-set-conductr-task"))
       state.put(actorSystemAttrKey, system)
     }(_ => state)
 
@@ -262,7 +277,7 @@ object SbtTypesafeConductR extends AutoPlugin {
       state.remove(actorSystemAttrKey)
     }
 
-  private val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-conductr")
+  private val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
 
   private def loadConductRController(state: State): State =
     state.get(conductrAttrKey).fold {
@@ -272,10 +287,10 @@ object SbtTypesafeConductR extends AutoPlugin {
         val settings = extracted.structure.data
         val conductr =
           for {
-            url <- (conductrUrl in Global).get(settings)
-            connectTimeout <- (conductrConnectTimeout in Global).get(settings)
+            url <- (controlServerUrl in Global).get(settings)
+            connectTimeout <- (connectTimeout in Global).get(settings)
           } yield system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout))
-        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrUrl and conductrConnectTimeout settings!"))
+        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductr:url and ConnectTimeout settings!"))
       }
       state.put(conductrAttrKey, conductr)
     }(as => state)
