@@ -172,7 +172,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   }
 
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
-    Source.single(request).via(connection).runWith(Sink.head())
+    Source.single(request).via(connection).runWith(Sink.head)
 
   private def loadBundle(loadBundle: LoadBundle): Unit = {
     val bodyParts =
