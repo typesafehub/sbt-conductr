@@ -1,3 +1,5 @@
+import bintray.Keys._
+
 lazy val sbtTypesafeConductR = project.in(file("."))
 
 name := "sbt-typesafe-conductr"
@@ -22,13 +24,11 @@ resolvers ++= List(
 
 sbtPlugin := true
 
+licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 publishMavenStyle := false
-publishTo := {
-  if (isSnapshot.value)
-    Some(Classpaths.sbtPluginSnapshots)
-  else
-    Some(Classpaths.sbtPluginReleases)
-}
+bintrayPublishSettings
+repository in bintray := "sbt-plugins"
+bintrayOrganization in bintray := Some("sbt-typesafe-conductr")
 
 scriptedSettings
 scriptedLaunchOpts <+= version(v => s"-Dproject.version=$v")
