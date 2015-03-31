@@ -47,7 +47,7 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       if (refresh)
         source.runForeach(self ! Bundles(_))
       else
-        source.runWith(Sink.head()).foreach(self ! Bundles(_))
+        source.runWith(Sink.head).foreach(self ! Bundles(_))
 
     case Bundles(b) =>
       bundles = b
