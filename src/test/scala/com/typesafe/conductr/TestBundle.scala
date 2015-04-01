@@ -44,6 +44,9 @@ object TestBundle {
 
   val Utf8 = Charset.forName("UTF-8")
 
+  lazy val testBundle: URL =
+    TestBundle.getClass.getClassLoader.getResource(BundleFile)
+
   lazy val testConfig: URL =
     TestBundle.getClass.getClassLoader.getResource(ConfigFile)
 

@@ -31,7 +31,7 @@ object Import {
   val Conductr = config("conductr")
 
   val controlServer = inputKey[sbt.URL]("Sets the ConductR Control Server's location (can be just IP, default port (9005) will be added automatically)")
-  
+
   val load = inputKey[String]("Loads a bundle and an optional configuration to the ConductR")
   val start = inputKey[String]("Starts a bundle given a bundle id with an optional scale")
   val stop = inputKey[String]("Stops a bundle given a bundle id")
