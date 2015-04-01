@@ -15,7 +15,7 @@ import scala.concurrent.{ blocking, Await }
 object Console {
 
   import scala.concurrent.duration._
-  val timeout = 1.second
+  val timeout = 10.second
 
   def bundleInfo(refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>

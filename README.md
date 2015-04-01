@@ -28,7 +28,7 @@ A bundle will be produced from the native packager settings of this project. A b
 packager distribution and includes some component configuration. To load the bundle:
 
 ```bash
-loadBundle <HIT THE TAB KEY AND THEN RETURN>
+conductr:load <HIT THE TAB KEY AND THEN RETURN>
 ```
 
 Using the tab completion feature of sbt will produce a URI representing the location of the last distribution
@@ -69,24 +69,23 @@ import NativePackagerKeys._
 
 _...otherwise you will get duplicate imports reported. This is because the new 1.0+ version uses sbt's auto plugin feature._
 
-Unless the ConductR is running at http://127.0.0.1:9005, and instead supposing that it is running at
-http://192.168.59.103:9005 then you will typically issue the following command from the sbt console:
+Unless the ConductR is running at `127.0.0.1:9005`, and instead supposing that it is running at
+`192.168.59.103:9005` then you will typically issue the following command from the sbt console:
 
 ```
-conductr http://192.168.59.103:9005
+conductr:controlServer 192.168.59.103:9005
 ```
 
-This then sets the sbt session up to subsequently communicate with the ConductR at 192.168.59.103 on
-port 9005.
+This then sets the sbt session up to subsequently communicate with the ConductR at 192.168.59.103 on port 9005.
 
 The following `sbt-typesafe-conductr` commands are available:
 
-Property     | Description
--------------|------------
-conductr     | Sets the ConductR's address to a provided url (defaults to env varialbe `CONDUCTR_IP:[CONDUCTR_PORT]` if set, otherwise uses the default: `http://127.0.0.1:9005`)
-loadBundle   | Loads a bundle and an optional configuration to the ConductR
-startBundle  | Starts a bundle given a bundle id with an optional absolute scale value
-stopBundle   | Stops all executions of a bundle given a bundle id
-unloadBundle | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
+Property               | Description
+-----------------------|------------
+conductr:controlServer | Sets the ConductR's address to a provided url (defaults to env varialbe `CONDUCTR_IP:[CONDUCTR_PORT]` if set, otherwise uses the default: `http://127.0.0.1:9005`)
+conductr:load          | Loads a bundle and an optional configuration to the ConductR
+conductr:start         | Starts a bundle given a bundle id with an optional absolute scale value
+conductr:stop          | Stops all executions of a bundle given a bundle id
+conductr:unload        | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
 &copy; Typesafe Inc., 2014-2015

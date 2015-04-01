@@ -5,9 +5,9 @@
 package com.typesafe.conductr.sbt
 
 import akka.actor.ActorSystem
-import org.scalatest.{ BeforeAndAfterAll, Matchers, PrivateMethodTester, WordSpec }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 
-class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfterAll with PrivateMethodTester {
+class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
   "Setting ConductR URL" should {
     "be prepared to full format given partial input" in {
@@ -24,9 +24,8 @@ class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfter
         "192.1.1.28:9999/example" -> "http://192.1.1.28:9999/example"
       )
 
-      val prepareUrl = PrivateMethod[sbt.URL]('prepareUrl)
       inputToUrls foreach {
-        case (input, fullUrl) => SbtTypesafeConductR.invokePrivate(prepareUrl(input)).toString shouldBe fullUrl
+        case (input, fullUrl) => SbtTypesafeConductR.prepareConductrUrl(input).toString shouldBe fullUrl
       }
     }
   }

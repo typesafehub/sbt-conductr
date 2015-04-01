@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+version in ThisBuild := "0.27.0-SNAPSHOT"
+=======
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -10,3 +13,4 @@ version in ThisBuild := {
   } finally s.close()
 
 }
+>>>>>>> !makes APIs discoverable and introduces scripted tests
