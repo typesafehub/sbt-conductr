@@ -31,4 +31,4 @@ repository in bintray := "sbt-plugins"
 bintrayOrganization in bintray := Some("sbt-typesafe-conductr")
 
 scriptedSettings
-scriptedLaunchOpts <+= version(v => s"-Dproject.version=$v")
+scriptedLaunchOpts <+= version apply { v => s"-Dproject.version=$v" }

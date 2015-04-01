@@ -25,7 +25,7 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
       val testProbe = TestProbe()
       testProbe.send(
         controller,
-        ConductRController.LoadBundle(Uri(BundleFile), None, "some-system", 1.0, 1024, 1024, Set("web-server"))
+        ConductRController.LoadBundle(Uri(testBundle.toURI.toString), None, "some-system", 1.0, 1024, 1024, Set("web-server"))
       )
       testProbe expectMsg "hello"
     }
