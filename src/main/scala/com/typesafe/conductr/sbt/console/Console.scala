@@ -6,11 +6,12 @@ package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.pattern.{ ask, pipe, gracefulStop }
+import akka.pattern.{ ask, gracefulStop, pipe }
 import com.typesafe.conductr.client.ConductRController
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
-import scala.concurrent.{ blocking, Await }
+import scala.concurrent.{ Await, blocking }
+import scala.util.Failure
 
 object Console {
 
@@ -37,7 +38,10 @@ object Console {
         // There is no way to wait for actor termination from a non-actor,
         // other than using gracefulStop with a message that does nothing.
         case object WaitingForYou
-        Await.ready(gracefulStop(screen, timeout, WaitingForYou), timeout)
+        val f = gracefulStop(screen, timeout, WaitingForYou).andThen {
+          case Failure(cause) => system.stop(screen)
+        }
+        Await.ready(f, timeout)
       }
 
       print(Ansi.ansi().restorCursorPosition())

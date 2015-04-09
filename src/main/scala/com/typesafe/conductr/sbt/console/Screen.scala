@@ -5,10 +5,9 @@
 package com.typesafe.conductr.sbt
 package console
 
-import akka.actor.{ Actor, Props }
-import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink, Source }
+import akka.actor.{ Actor, Props, Status }
+import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink }
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.BundleInfo
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
 
@@ -64,6 +63,9 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
 
     case CheckSize =>
       checkSize()
+
+    case Status.Failure(_) =>
+      context.stop(self)
   }
 
   override def postStop(): Unit =
