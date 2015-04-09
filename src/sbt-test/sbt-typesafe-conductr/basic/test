@@ -1,1 +1,1 @@
-> conductr:controlServer 127.0.0.1
+> conductr controlServer 127.0.0.1
