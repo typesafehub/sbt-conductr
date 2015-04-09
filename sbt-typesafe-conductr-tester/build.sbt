@@ -6,7 +6,7 @@ lazy val root = project
 
 name := "sbt-typesafe-conductr-tester"
 version := "1.0.0"
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.6"
 
 // ConductR
 

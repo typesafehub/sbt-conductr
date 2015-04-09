@@ -90,18 +90,10 @@ object Column {
    * Displays bundle id, bundle digest and config digest.
    */
   case class Id(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
-    override val title = "ID/BUNDLE/CONF"
+    override val title = "ID"
     override val width = 27
 
-    val hashLength = 7
-
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle =>
-        val id = bundle.bundleId.take(hashLength)
-        val bundleId = bundle.bundleDigest.take(hashLength)
-        val configId = bundle.configDigest.fold("")(_.take(hashLength))
-        List(s"$id/$bundleId/$configId")
-      }
+    val data: Seq[Seq[String]] = bundles.map(bundle => List(bundle.bundleId.split("-").map(_.take(7)).mkString("-")))
   }
 
   /**
