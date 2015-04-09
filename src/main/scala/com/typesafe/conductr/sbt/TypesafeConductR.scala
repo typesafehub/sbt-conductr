@@ -140,6 +140,21 @@ private[conductr] object TypesafeConductR {
     ip.map(i => new URL(s"http://$i:$port"))
   }
 
+  def prepareConductrUrl(url: String): sbt.URL = {
+    def insertPort(url: String, port: Int): String =
+      url.indexOf("/", "http://".length) match {
+        case -1             => s"""$url:$port"""
+        case firstPathSlash => s"""${url.substring(0, firstPathSlash)}:$port${url.substring(firstPathSlash)}"""
+      }
+    val surl = if (url.contains("://")) url else s"$DefaultConductrProtocol://$url"
+    val nurl = new sbt.URL(surl)
+
+    nurl.getPort match {
+      case -1 => new sbt.URL(insertPort(surl, DefaultConductrPort))
+      case _  => nurl
+    }
+  }
+
   // Actor system management and API
 
   def loadActorSystem(state: State): State =

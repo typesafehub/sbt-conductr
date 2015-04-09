@@ -25,7 +25,7 @@ class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfter
       )
 
       inputToUrls foreach {
-        case (input, fullUrl) => SbtTypesafeConductR.prepareConductrUrl(input).toString shouldBe fullUrl
+        case (input, fullUrl) => TypesafeConductR.prepareConductrUrl(input).toString shouldBe fullUrl
       }
     }
   }
