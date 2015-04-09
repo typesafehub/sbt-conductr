@@ -32,6 +32,7 @@ object Import {
 
   val controlServer = inputKey[sbt.URL]("Sets the ConductR Control Server's location (can be just IP, default port (9005) will be added automatically)")
 
+  val konductr = inputKey[Unit]("ConductR task.")
   val load = inputKey[String]("Loads a bundle and an optional configuration to the ConductR")
   val start = inputKey[String]("Starts a bundle given a bundle id with an optional scale")
   val stop = inputKey[String]("Stops a bundle given a bundle id")
@@ -76,6 +77,7 @@ object SbtTypesafeConductR extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     List(
+      konductr := conductrTask.value.evaluated,
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist in Global).triggeredBy(dist in Bundle),
       controlServer in Conductr := setConductrTask.value.evaluated,
       info in Conductr := infoTask.value,
@@ -92,8 +94,28 @@ object SbtTypesafeConductR extends AutoPlugin {
   // Input parsing and action
 
   private object Parsers {
+    lazy val subtask: Def.Initialize[State => Parser[Option[ConductrSubtask]]] =
+      Defaults.loadForParser(discoveredDist in Global)((s, b) =>
+        (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | controlServerSubtask | infoSubtask))?
+      )
+    def loadSubtask(b: Option[File]): Parser[LoadSubtask] =
+      (token("load") ~> Space ~> bundle(b) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
+    def startSubtask: Parser[StartSubtask] =
+      (token("start") ~> Space ~> startBundle) map { case (b, scale) => StartSubtask(b, scale) }
+    def stopSubtask: Parser[StopSubtask] =
+      (token("stop") ~> Space ~> stopBundle) map { case b => StopSubtask(b) }
+    def unloadSubtask: Parser[UnloadSubtask] =
+      (token("unload") ~> Space ~> unloadBundle) map { case b => UnloadSubtask(b) }
+    def controlServerSubtask: Parser[ControlServerSubtask] =
+      (token("controlServer") ~> Space ~> token(StringBasic).examples(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort") map {
+        case s =>
+          ControlServerSubtask(prepareConductrUrl(s))
+      })
+    def infoSubtask: Parser[InfoSubtask] =
+      (token("info") map { case _ => InfoSubtask() })
+
     def bundle(bundle: Option[File]): Parser[URI] =
-      Space ~> token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
+      token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
 
     def setConductr: Parser[String] = Space ~> StringBasic
 
@@ -103,7 +125,7 @@ object SbtTypesafeConductR extends AutoPlugin {
 
     def bundleId(x: Seq[String]): Parser[String] = Space ~> (StringBasic examples (x: _*))
 
-    def loadBundle = Defaults.loadForParser(discoveredDist in Global)((s, b) => bundle(b) ~ configuration.?)
+    def loadBundle = Defaults.loadForParser(discoveredDist in Global)((s, b) => Space ~> bundle(b) ~ configuration.?)
 
     def scale: Parser[Int] = Space ~> IntBasic
 
@@ -113,6 +135,35 @@ object SbtTypesafeConductR extends AutoPlugin {
 
     def unloadBundle = bundleId(Nil) // FIXME: Should default to last bundle loaded
   }
+
+  private sealed trait ConductrSubtask
+  private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductrSubtask
+  private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductrSubtask
+  private case class StopSubtask(bundleId: String) extends ConductrSubtask
+  private case class UnloadSubtask(bundleId: String) extends ConductrSubtask
+  private case class ControlServerSubtask(conductrHost: sbt.URL) extends ConductrSubtask
+  private case class InfoSubtask() extends ConductrSubtask
+
+  private def conductrTask: Def.Initialize[InputTask[Unit]] =
+    Def.inputTask {
+      val subtaskOpt: Option[ConductrSubtask] = Parsers.subtask.parsed
+      subtaskOpt match {
+        case Some(LoadSubtask(b, config)) =>
+          println("load")
+        case Some(StartSubtask(b, scale)) =>
+          println("start")
+        case Some(StopSubtask(b)) =>
+          println("stop")
+        case Some(UnloadSubtask(b)) =>
+          println("unload")
+        case Some(ControlServerSubtask(host)) =>
+          println("controlServer")
+        case Some(InfoSubtask()) =>
+          println("info")
+        case None =>
+          println("Usage: conductr <subtask>")
+      }
+    }
 
   private def setConductrTask: Def.Initialize[InputTask[sbt.URL]] =
     Def.inputTask {
