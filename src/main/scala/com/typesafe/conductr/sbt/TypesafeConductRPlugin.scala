@@ -112,7 +112,7 @@ object TypesafeConductRPlugin extends AutoPlugin {
         case Some(UnloadSubtask(b)) =>
           TypesafeConductR.unloadBundleTask(b, requestTimeout, s, log)
         case Some(ControlServerSubtask(host)) =>
-        // println("controlServer")
+          TypesafeConductR.setControlServer(host, s, log)
         case Some(InfoSubtask()) =>
           TypesafeConductR.info(s)
         case None =>

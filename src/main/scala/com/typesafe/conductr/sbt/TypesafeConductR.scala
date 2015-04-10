@@ -11,13 +11,14 @@ import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.client.ConductRController._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
 import sbt.Keys._
 import sbt._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import scala.util.parsing.combinator.RegexParsers
 import scala.util.{ Failure, Success }
 
 private[conductr] object TypesafeConductR {
@@ -29,6 +30,41 @@ private[conductr] object TypesafeConductR {
   val DefaultConductrPort = 9005
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
+
+  private object IPParser extends RegexParsers {
+
+    /**
+     * http://semberal.github.io/parser-combinators-and-what-if-regular-expressions-are-not-enough.html
+     * @param input
+     * @return
+     */
+    def parseUsingParserCombinator(input: String): Option[String] = {
+      def dot: Parser[Any] = "."
+      def ipGroup: Parser[Int] = "25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?".r ^^ (_.toInt)
+      def ip: Parser[String] = (ipGroup <~ dot) ~ (ipGroup <~ dot) ~ (ipGroup <~ dot) ~ ipGroup ^^ {
+        case (a ~ b ~ c ~ d) => a + "." + b + "." + c + "." + d
+      }
+      parseAll(ip, input) match {
+        case Success(r, _) => Some(r)
+        case _             => None
+      }
+    }
+  }
+
+  def setControlServer(host: sbt.URL, s: State, log: Logger): String = {
+    IPParser.parseUsingParserCombinator(host.getHost).fold(sys.error(s"Not a valid ipv4 address")) { _ =>
+      withConductRController(s) { conductr =>
+        log.info(s"Setting Control Server URL to $host")
+        val request = SetControlServer(host.toURI)
+        val response = conductr.ask(request)(2 seconds).mapTo[String]
+        Await.ready(response, 2 seconds)
+        response.value.get match {
+          case Success(res) => res
+          case Failure(e)   => e.printStackTrace; e.getMessage
+        }
+      }
+    }
+  }
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
     loadTimeout: Timeout, s: State, log: Logger): String =
