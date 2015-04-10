@@ -18,10 +18,10 @@ import sbt.Keys._
 import sbt._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import scala.util.parsing.combinator.RegexParsers
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 private[conductr] object TypesafeConductR {
+
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
   import TypesafeConductRKeys._
 
@@ -31,82 +31,58 @@ private[conductr] object TypesafeConductR {
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
 
-  private object IPParser extends RegexParsers {
-
-    /**
-     * http://semberal.github.io/parser-combinators-and-what-if-regular-expressions-are-not-enough.html
-     * @param input
-     * @return
-     */
-    def parseUsingParserCombinator(input: String): Option[String] = {
-      def dot: Parser[Any] = "."
-      def ipGroup: Parser[Int] = "25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?".r ^^ (_.toInt)
-      def ip: Parser[String] = (ipGroup <~ dot) ~ (ipGroup <~ dot) ~ (ipGroup <~ dot) ~ ipGroup ^^ {
-        case (a ~ b ~ c ~ d) => a + "." + b + "." + c + "." + d
-      }
-      parseAll(ip, input) match {
-        case Success(r, _) => Some(r)
-        case _             => None
-      }
-    }
-  }
-
-  def setControlServer(host: sbt.URL, s: State, log: Logger): String = {
-    IPParser.parseUsingParserCombinator(host.getHost).fold(sys.error(s"Not a valid ipv4 address")) { _ =>
-      withConductRController(s) { conductr =>
-        log.info(s"Setting Control Server URL to $host")
-        val request = SetControlServer(host.toURI)
-        val response = conductr.ask(request)(2 seconds).mapTo[String]
-        Await.ready(response, 2 seconds)
-        response.value.get match {
-          case Success(res) => res
-          case Failure(e)   => e.printStackTrace; e.getMessage
+  def setControlServer(host: sbt.URL, s: State, log: Logger): String =
+    withConductRController(s) { conductr =>
+      log.info(s"Setting Control Server URL to $host")
+      val request = SetControlServer(host.toURI)
+      Try(
+        Await.result(conductr.ask(request)(2 seconds).mapTo[String], 2 seconds)
+      ) match {
+          case Success(s) => s
+          case Failure(e) => sys.error(s"Problem setting the Control Server URL: ${e.getMessage}")
         }
-      }
     }
-  }
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
-    loadTimeout: Timeout, s: State, log: Logger): String =
-    {
-      def get[A](key: SettingKey[A]) =
-        Project.extract(s).getOpt(key)
-          .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
-        // val (bundle, config) = Parsers.loadBundle.parsed
-        withConductRController(s) { conductr =>
-          log.info("Loading bundle to ConductR ...")
-          val request =
-            LoadBundle(
-              HttpUri(bundle.toString),
-              config map (u => HttpUri(u.toString)),
-              stm,
-              nrOfCpus,
-              memory.underlying,
-              diskSpace.underlying,
-              roles
-            )
-          val response = conductr.ask(request)(loadTimeout).mapTo[String]
-          Await.ready(response, loadTimeout.duration)
-          response.value.get match {
-            case Success(s) =>
-              Json.parse(s) \ "bundleId" match {
-                case JsString(bundleId) =>
-                  log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
-                  bundleId
-                case other =>
-                  sys.error(s"Unexpected response: $other")
-              }
-            case Failure(e) =>
-              sys.error(s"Problem loading the bundle: ${e.getMessage}")
-          }
+    loadTimeout: Timeout, s: State, log: Logger): String = {
+    def get[A](key: SettingKey[A]) =
+      Project.extract(s).getOpt(key)
+        .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
+    def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
+      // val (bundle, config) = Parsers.loadBundle.parsed
+      withConductRController(s) { conductr =>
+        log.info("Loading bundle to ConductR ...")
+        val request =
+          LoadBundle(
+            HttpUri(bundle.toString),
+            config map (u => HttpUri(u.toString)),
+            stm,
+            nrOfCpus,
+            memory.underlying,
+            diskSpace.underlying,
+            roles
+          )
+        val response = conductr.ask(request)(loadTimeout).mapTo[String]
+        Await.ready(response, loadTimeout.duration)
+        response.value.get match {
+          case Success(s) =>
+            Json.parse(s) \ "bundleId" match {
+              case JsString(bundleId) =>
+                log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
+                bundleId
+              case other =>
+                sys.error(s"Unexpected response: $other")
+            }
+          case Failure(e) =>
+            sys.error(s"Problem loading the bundle: ${e.getMessage}")
         }
       }
-      Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(doLoadBundle).fold(
-        identity,
-        errors => sys.error(errors.mkString(f"%n"))
-      )
     }
+    Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(doLoadBundle).fold(
+      identity,
+      errors => sys.error(errors.mkString(f"%n"))
+    )
+  }
 
   def startBundle(bundleId: String, scale: Option[Int],
     requestTimeout: Timeout, s: State, log: Logger): String =
