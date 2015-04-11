@@ -31,7 +31,6 @@ object ConductRController {
    * The Props for an actor that represents the ConductR's control endpoint.
    * @param address The address to reach the ConductR at.
    * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
-   * @param httpIO The IO(Http) actor to use for IO.
    */
   def props(address: Uri, connectTimeout: Timeout) =
     Props(new ConductRController(address, connectTimeout))
@@ -146,11 +145,11 @@ object ConductRController {
       )
     )
 
-  private def toBundleName(bundle: Uri): String = {
-    bundle.path.toString.reverse.takeWhile(_ != '/').reverse match {
+  private def toBundleName(bundle: Uri): String =
+    bundle.path.toString().reverse.takeWhile(_ != '/').reverse match {
       case BundlePath(name, _) => name
+      case name                => name
     }
-  }
 }
 
 /**
@@ -175,28 +174,33 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
     Source.single(request).via(connection).runWith(Sink.head)
 
   private def loadBundle(loadBundle: LoadBundle): Unit = {
-    val bodyParts =
-      Source(
-        List(
-          FormData.BodyPart.Strict("system", loadBundle.system),
-          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
-          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
-          FormData.BodyPart.Strict("bundleName", toBundleName(loadBundle.bundle)),
-          fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
-        ) ++
-          loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
-      )
     val pendingResponse =
       for {
         connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
-        entity <- Marshal(FormData(bodyParts)).to[RequestEntity]
+        bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
+        configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
+        entity <- Marshal(FormData(formBodyParts(loadBundle, bundleFileBodyPart, configFileBodyPart))).to[RequestEntity]
         response <- request(HttpRequest(POST, "/bundles", entity = entity), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
+
+  private def formBodyParts(
+    loadBundle: LoadBundle,
+    bundleFileBodyPart: FormData.BodyPart,
+    configFileBodyPart: Option[FormData.BodyPart]): Source[FormData.BodyPart, Unit] =
+    Source(
+      List(
+        FormData.BodyPart.Strict("system", loadBundle.system),
+        FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
+        FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
+        FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
+        FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
+        FormData.BodyPart.Strict("bundleName", toBundleName(loadBundle.bundle)),
+        bundleFileBodyPart
+      ) ++ configFileBodyPart
+    )
 
   private def startBundle(startBundle: StartBundle): Unit = {
     val pendingResponse =
