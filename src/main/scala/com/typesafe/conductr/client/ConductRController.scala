@@ -172,24 +172,19 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   override def receive: Receive = service(uri)
 
   def service(host: Uri): Receive = {
-    case GetBundleInfoStream    => fetchBundleFlow(sender(), host)
-    case request: LoadBundle    => loadBundle(request, host)
-    case request: StartBundle   => startBundle(request, host)
-    case request: StopBundle    => stopBundle(request, host)
-    case request: UnloadBundle  => unloadBundle(request, host)
-    case SetControlServer(host) => setControlServer(host)
+    case GetBundleInfoStream   => fetchBundleFlow(sender(), host)
+    case request: LoadBundle   => loadBundle(request, host)
+    case request: StartBundle  => startBundle(request, host)
+    case request: StopBundle   => stopBundle(request, host)
+    case request: UnloadBundle => unloadBundle(request, host)
+    case SetControlServer(uri) =>
+      context.become(service(Uri(uri.toString)))
+      sender() ! "Success"
 
   }
 
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
     Source.single(request).via(connection).runWith(Sink.head)
-
-  private def setControlServer(host: URI): Unit = {
-    context.become(service(Uri(host.toString)))
-
-    // TODO verify this is a valid connection?
-    sender() ! "Control Server URL has be set to " + host.toString
-  }
 
   private def loadBundle(loadBundle: LoadBundle, host: Uri): Unit = {
     val bodyParts =

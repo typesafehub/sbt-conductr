@@ -49,16 +49,9 @@ object TypesafeConductRPlugin extends AutoPlugin {
       conductrLoadTimeout := 10.minutes
     )
 
-  private[sbt] sealed trait ConductrSubtask
-  private[sbt] case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductrSubtask
-  private[sbt] case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductrSubtask
-  private[sbt] case class StopSubtask(bundleId: String) extends ConductrSubtask
-  private[sbt] case class UnloadSubtask(bundleId: String) extends ConductrSubtask
-  private[sbt] case class ControlServerSubtask(conductrHost: URL) extends ConductrSubtask
-  private[sbt] case class InfoSubtask() extends ConductrSubtask
-
   // Input parsing and action
-  private[sbt] object Parsers {
+
+  private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductrSubtask]]] =
       Defaults.loadForParser(conductrDiscoveredDist in Global)((s, b) =>
         (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | controlServerSubtask | infoSubtask))?
@@ -75,9 +68,10 @@ object TypesafeConductRPlugin extends AutoPlugin {
       // FIXME: Should default to last bundle loaded
       (token("unload") ~> Space ~> bundleId(Nil)) map { case b => UnloadSubtask(b) }
     def controlServerSubtask: Parser[ControlServerSubtask] =
-      token("controlServer") ~> Space ~> token(parseIpAddress).examples(s"$DefaultConductrHost:$DefaultConductrPort") map {
-        case s => ControlServerSubtask(prepareConductrUrl(s))
-      }
+      (token("controlServer") ~> Space ~> token(StringBasic).examples(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort") map {
+        case s =>
+          ControlServerSubtask(prepareConductrUrl(s))
+      })
     def infoSubtask: Parser[InfoSubtask] =
       (token("info") map { case _ => InfoSubtask() })
 
@@ -89,16 +83,15 @@ object TypesafeConductRPlugin extends AutoPlugin {
     def bundleId(x: Seq[String]): Parser[String] = Space ~> (StringBasic examples (x: _*))
 
     def scale: Parser[Int] = Space ~> IntBasic
-
-    /** Naive ip address parser: parses 3 digit repeats with dots and optional port  */
-    def parseIpAddress: Parser[String] = {
-      def ipGroup: Parser[String] = Parser.repeat(Digit, 1, 3).map(intList => intList.mkString(""))
-      def ipGroupDot: Parser[String] = (ipGroup ~ literal('.')) map { case (a, b) => a + b }
-      def port: Parser[String] = (literal(':') ~
-        Parser.repeat(Digit, 1, 6).map(intList => intList.mkString(""))) map { case (a, b) => a +: b }
-      ipGroupDot ~ ipGroupDot ~ ipGroupDot ~ ipGroup ~ port.? map { case ((((a, b), c), d), e) => a + b + c + d + e.getOrElse("") }
-    }
   }
+
+  private sealed trait ConductrSubtask
+  private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductrSubtask
+  private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductrSubtask
+  private case class StopSubtask(bundleId: String) extends ConductrSubtask
+  private case class UnloadSubtask(bundleId: String) extends ConductrSubtask
+  private case class ControlServerSubtask(conductrHost: sbt.URL) extends ConductrSubtask
+  private case class InfoSubtask() extends ConductrSubtask
 
   private def conductrTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
