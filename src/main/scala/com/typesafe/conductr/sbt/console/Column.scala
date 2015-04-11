@@ -51,7 +51,7 @@ object Column {
     def dataForPrint(rowCounts: Seq[Int]): Seq[String] =
       data.zip(rowCounts).flatMap {
         case (rows, rowCount) =>
-          rows.padTo(rowCount, "").map(ellipsize _ andThen justify _)
+          rows.padTo(rowCount, "").map(ellipsize _ andThen justify)
       }
 
     /**

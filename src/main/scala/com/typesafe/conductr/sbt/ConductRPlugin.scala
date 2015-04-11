@@ -15,6 +15,7 @@ import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.universal.UniversalPlugin
 import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
 import scala.concurrent.duration.DurationInt
+import language.postfixOps
 import ConductR._
 
 /**
@@ -59,11 +60,11 @@ object ConductRPlugin extends AutoPlugin {
 
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] =
-      Defaults.loadForParser(conductrDiscoveredDist in Global)((s, b) =>
+      Defaults.loadForParser(conductrDiscoveredDist in Global)((state, b) =>
         (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | infoSubtask))?
       )
-    def loadSubtask(b: Option[File]): Parser[LoadSubtask] =
-      (token("load") ~> Space ~> bundle(b) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
+    def loadSubtask(availableBundle: Option[File]): Parser[LoadSubtask] =
+      (token("load") ~> Space ~> bundle(availableBundle) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
     def startSubtask: Parser[StartSubtask] =
       // FIXME: Should default to last loadBundle result
       (token("start") ~> Space ~> bundleId(List("fixme")) ~ scale.?) map { case (b, scale) => StartSubtask(b, scale) }

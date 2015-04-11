@@ -14,31 +14,28 @@ import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
-import sbt.Keys._
 import sbt._
 import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success }
 
 private[conductr] object ConductR {
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
   import ConductRKeys._
 
-  val DefaultConductrProtocol = "http"
-  val DefaultConductrHost = "127.0.0.1"
-  val DefaultConductrPort = 9005
+  final val DefaultConductrProtocol = "http"
+  final val DefaultConductrHost = "127.0.0.1"
+  final val DefaultConductrPort = 9005
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
-    loadTimeout: Timeout, s: State, log: Logger): String =
+    loadTimeout: Timeout, state: State, log: Logger): String =
     {
       def get[A](key: SettingKey[A]) =
-        Project.extract(s).getOpt(key)
+        Project.extract(state).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
       def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
-        // val (bundle, config) = Parsers.loadBundle.parsed
-        withConductRController(s) { conductr =>
+        withConductRController(state) { conductr =>
           log.info("Loading bundle to ConductR ...")
           val request =
             LoadBundle(
@@ -73,8 +70,8 @@ private[conductr] object ConductR {
     }
 
   def startBundle(bundleId: String, scale: Option[Int],
-    requestTimeout: Timeout, s: State, log: Logger): String =
-    withConductRController(s) { conductr =>
+    requestTimeout: Timeout, state: State, log: Logger): String =
+    withConductRController(state) { conductr =>
       log.info(s"Starting bundle $bundleId ...")
       val response = conductr.ask(StartBundle(bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
@@ -92,8 +89,8 @@ private[conductr] object ConductR {
       }
     }
 
-  def stopBundle(bundleId: String, requestTimeout: Timeout, s: State, log: Logger): String =
-    withConductRController(s) { conductr =>
+  def stopBundle(bundleId: String, requestTimeout: Timeout, state: State, log: Logger): String =
+    withConductRController(state) { conductr =>
       log.info(s"Stopping all bundle $bundleId instances ...")
       val response = conductr.ask(StopBundle(bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
@@ -111,8 +108,8 @@ private[conductr] object ConductR {
       }
     }
 
-  def unloadBundleTask(bundleId: String, requestTimeout: Timeout, s: State, log: Logger): String =
-    withConductRController(s) { conductr =>
+  def unloadBundleTask(bundleId: String, requestTimeout: Timeout, state: State, log: Logger): String =
+    withConductRController(state) { conductr =>
       log.info(s"Unloading bundle $bundleId ...")
       val response = conductr.ask(UnloadBundle(bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
