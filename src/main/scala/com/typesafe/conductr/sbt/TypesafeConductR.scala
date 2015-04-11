@@ -34,7 +34,13 @@ private[conductr] object TypesafeConductR {
   def setControlServer(host: sbt.URL, s: State, log: Logger): Unit =
     withConductRController(s) { conductr =>
       log.info(s"Setting Control Server URL to $host")
-      conductr ! SetControlServer(host.toURI)
+      val request = SetControlServer(host.toURI)
+      val response = conductr.ask(request)(2 seconds).mapTo[String]
+      Await.ready(response, 2 seconds)
+      response.value.get match {
+        case Success(s) => log.info(s)
+        case Failure(e) => sys.error(s"Problem setting the Control Server URL: ${e.getMessage}")
+      }
     }
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
