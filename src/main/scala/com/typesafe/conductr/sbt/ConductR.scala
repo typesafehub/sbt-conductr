@@ -27,8 +27,8 @@ private[conductr] object ConductR {
   val DefaultConductrProtocol = "http"
   val DefaultConductrHost = "127.0.0.1"
   val DefaultConductrPort = 9005
-  val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
-  val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
+  val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
+  val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
     loadTimeout: Timeout, s: State, log: Logger): String =
@@ -160,7 +160,7 @@ private[conductr] object ConductR {
   def loadActorSystem(state: State): State =
     state.get(actorSystemAttrKey).fold {
       state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
-      val system = withActorSystemClassloader(ActorSystem("sbt-typesafe-set-conductr-task"))
+      val system = withActorSystemClassloader(ActorSystem("sbt-conductr"))
       state.put(actorSystemAttrKey, system)
     }(_ => state)
 

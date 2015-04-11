@@ -26,7 +26,7 @@ object ConductRPlugin extends AutoPlugin {
   import sbinary.DefaultProtocol.FileFormat
 
   object autoImport {
-    val conductr = ConductRKeys.conductr
+    val conductr = ConductRKeys.conduct
   }
 
   override def `requires`: Plugins = SbtNativePackager && UniversalPlugin && JavaAppPackaging
@@ -42,7 +42,7 @@ object ConductRPlugin extends AutoPlugin {
   override def projectSettings: Seq[Setting[_]] =
     List(
       commands ++= Seq(controlServer),
-      conductr := conductrTask.value.evaluated,
+      conduct := conductTask.value.evaluated,
       conductrDiscoveredDist <<= (dist in Bundle).storeAs(conductrDiscoveredDist in Global).triggeredBy(dist in Bundle),
       BundleKeys.system := (packageName in Universal).value,
       BundleKeys.roles := Set.empty,
@@ -58,7 +58,7 @@ object ConductRPlugin extends AutoPlugin {
   }
 
   private object Parsers {
-    lazy val subtask: Def.Initialize[State => Parser[Option[ConductrSubtask]]] =
+    lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] =
       Defaults.loadForParser(conductrDiscoveredDist in Global)((s, b) =>
         (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | infoSubtask))?
       )
@@ -86,14 +86,14 @@ object ConductRPlugin extends AutoPlugin {
     def scale: Parser[Int] = Space ~> IntBasic
   }
 
-  private sealed trait ConductrSubtask
-  private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductrSubtask
-  private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductrSubtask
-  private case class StopSubtask(bundleId: String) extends ConductrSubtask
-  private case class UnloadSubtask(bundleId: String) extends ConductrSubtask
-  private case class InfoSubtask() extends ConductrSubtask
+  private sealed trait ConductSubtask
+  private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductSubtask
+  private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
+  private case class StopSubtask(bundleId: String) extends ConductSubtask
+  private case class UnloadSubtask(bundleId: String) extends ConductSubtask
+  private case class InfoSubtask() extends ConductSubtask
 
-  private def conductrTask: Def.Initialize[InputTask[Unit]] =
+  private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
       val s = state.value
       val log = sLog.value
@@ -101,7 +101,7 @@ object ConductRPlugin extends AutoPlugin {
       val roles = BundleKeys.roles.value
       val loadTimeout = conductrLoadTimeout.value
       val requestTimeout = conductrRequestTimeout.value
-      val subtaskOpt: Option[ConductrSubtask] = Parsers.subtask.parsed
+      val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
         case Some(LoadSubtask(b, config)) =>
           ConductR.loadBundle(b, config, stm, roles, loadTimeout, s, log)
@@ -114,7 +114,7 @@ object ConductRPlugin extends AutoPlugin {
         case Some(InfoSubtask()) =>
           ConductR.info(s)
         case None =>
-          println("Usage: conductr <subtask>")
+          println("Usage: conduct <subtask>")
       }
     }
 }
