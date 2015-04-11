@@ -177,19 +177,11 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
     case request: StartBundle   => startBundle(request, host)
     case request: StopBundle    => stopBundle(request, host)
     case request: UnloadBundle  => unloadBundle(request, host)
-    case SetControlServer(host) => setControlServer(host)
-
+    case SetControlServer(host) => context.become(service(Uri(host.toString)))
   }
 
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
     Source.single(request).via(connection).runWith(Sink.head)
-
-  private def setControlServer(host: URI): Unit = {
-    context.become(service(Uri(host.toString)))
-
-    // TODO verify this is a valid connection?
-    sender() ! "Control Server URL has be set to " + host.toString
-  }
 
   private def loadBundle(loadBundle: LoadBundle, host: Uri): Unit = {
     val bodyParts =
