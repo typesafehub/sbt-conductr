@@ -41,6 +41,7 @@ object TypesafeConductRPlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     List(
+      commands ++= Seq(controlServer),
       conductr := conductrTask.value.evaluated,
       conductrDiscoveredDist <<= (dist in Bundle).storeAs(conductrDiscoveredDist in Global).triggeredBy(dist in Bundle),
       BundleKeys.system := (packageName in Universal).value,
@@ -51,10 +52,15 @@ object TypesafeConductRPlugin extends AutoPlugin {
 
   // Input parsing and action
 
+  private def controlServer: Command = Command.single("controlServer") { (prevState, url) =>
+    val extracted = Project.extract(prevState)
+    extracted.append(Seq(conductrControlServerUrl in Global := prepareConductrUrl(url)), prevState)
+  }
+
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductrSubtask]]] =
       Defaults.loadForParser(conductrDiscoveredDist in Global)((s, b) =>
-        (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | controlServerSubtask | infoSubtask))?
+        (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | infoSubtask))?
       )
     def loadSubtask(b: Option[File]): Parser[LoadSubtask] =
       (token("load") ~> Space ~> bundle(b) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
@@ -67,13 +73,8 @@ object TypesafeConductRPlugin extends AutoPlugin {
     def unloadSubtask: Parser[UnloadSubtask] =
       // FIXME: Should default to last bundle loaded
       (token("unload") ~> Space ~> bundleId(Nil)) map { case b => UnloadSubtask(b) }
-    def controlServerSubtask: Parser[ControlServerSubtask] =
-      (token("controlServer") ~> Space ~> token(StringBasic).examples(s"$DefaultConductrProtocol://$DefaultConductrHost:$DefaultConductrPort") map {
-        case s =>
-          ControlServerSubtask(prepareConductrUrl(s))
-      })
     def infoSubtask: Parser[InfoSubtask] =
-      (token("info") map { case _ => InfoSubtask() })
+      token("info") map { case _ => InfoSubtask() }
 
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
@@ -90,7 +91,6 @@ object TypesafeConductRPlugin extends AutoPlugin {
   private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductrSubtask
   private case class StopSubtask(bundleId: String) extends ConductrSubtask
   private case class UnloadSubtask(bundleId: String) extends ConductrSubtask
-  private case class ControlServerSubtask(conductrHost: sbt.URL) extends ConductrSubtask
   private case class InfoSubtask() extends ConductrSubtask
 
   private def conductrTask: Def.Initialize[InputTask[Unit]] =
@@ -111,8 +111,6 @@ object TypesafeConductRPlugin extends AutoPlugin {
           TypesafeConductR.stopBundle(b, requestTimeout, s, log)
         case Some(UnloadSubtask(b)) =>
           TypesafeConductR.unloadBundleTask(b, requestTimeout, s, log)
-        case Some(ControlServerSubtask(host)) =>
-        // println("controlServer")
         case Some(InfoSubtask()) =>
           TypesafeConductR.info(s)
         case None =>

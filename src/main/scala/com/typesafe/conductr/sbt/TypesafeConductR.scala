@@ -180,8 +180,11 @@ private[conductr] object TypesafeConductR {
           for {
             url <- (conductrControlServerUrl in Global).get(settings)
             connectTimeout <- (conductrConnectTimeout in Global).get(settings)
-          } yield system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout))
-        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductr:url and ConnectTimeout settings!"))
+          } yield {
+            state.log.info(s"Control Protocol set for $url. Use `controlServer` to set an alternate address.")
+            system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout))
+          }
+        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
       }
       state.put(conductrAttrKey, conductr)
     }(as => state)
