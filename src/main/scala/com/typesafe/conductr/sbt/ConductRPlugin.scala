@@ -73,16 +73,16 @@ object ConductRPlugin extends AutoPlugin {
       (token("stop") ~> Space ~> bundleId(List("fixme"))) map { case b => StopSubtask(b) }
     def unloadSubtask: Parser[UnloadSubtask] =
       // FIXME: Should default to last bundle loaded
-      (token("unload") ~> Space ~> bundleId(Nil)) map { case b => UnloadSubtask(b) }
+      (token("unload") ~> Space ~> bundleId(List("fixme"))) map { case b => UnloadSubtask(b) }
     def infoSubtask: Parser[InfoSubtask] =
       token("info") map { case _ => InfoSubtask() }
 
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
 
-    def configuration: Parser[URI] = Space ~> token(basicUri)
+    def configuration: Parser[URI] = token(basicUri)
 
-    def bundleId(x: Seq[String]): Parser[String] = Space ~> (StringBasic examples (x: _*))
+    def bundleId(x: Seq[String]): Parser[String] = StringBasic examples (x: _*)
 
     def scale: Parser[Int] = Space ~> IntBasic
   }
