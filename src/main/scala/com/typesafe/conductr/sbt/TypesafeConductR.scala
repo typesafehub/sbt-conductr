@@ -11,7 +11,7 @@ import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.{ LoadBundle, SetControlServer, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.client.ConductRController._
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
 import sbt.Keys._
@@ -31,16 +31,16 @@ private[conductr] object TypesafeConductR {
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
 
-  def setControlServer(host: sbt.URL, s: State, log: Logger): Unit =
+  def setControlServer(host: sbt.URL, s: State, log: Logger): String =
     withConductRController(s) { conductr =>
       log.info(s"Setting Control Server URL to $host")
       val request = SetControlServer(host.toURI)
-      val response = conductr.ask(request)(2 seconds).mapTo[String]
-      Await.ready(response, 2 seconds)
-      response.value.get match {
-        case Success(s) => log.info(s)
-        case Failure(e) => sys.error(s"Problem setting the Control Server URL: ${e.getMessage}")
-      }
+      Try(
+        Await.result(conductr.ask(request)(2 seconds).mapTo[String], 2 seconds)
+      ) match {
+          case Success(s) => s
+          case Failure(e) => sys.error(s"Problem setting the Control Server URL: ${e.getMessage}")
+        }
     }
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
