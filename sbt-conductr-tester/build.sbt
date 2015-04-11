@@ -2,11 +2,11 @@ import ByteConversions._
 
 lazy val root = project
   .in(file("."))
-  .enablePlugins(JavaAppPackaging, TypesafeConductRPlugin)
+  .enablePlugins(ConductRPlugin)
 
-name := "sbt-typesafe-conductr-tester"
+name := "sbt-conductr-tester"
 version := "1.0.0"
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.6"
 
 // ConductR
 

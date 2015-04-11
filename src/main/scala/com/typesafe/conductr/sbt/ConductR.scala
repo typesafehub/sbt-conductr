@@ -20,9 +20,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success }
 
-private[conductr] object TypesafeConductR {
+private[conductr] object ConductR {
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
-  import TypesafeConductRKeys._
+  import ConductRKeys._
 
   val DefaultConductrProtocol = "http"
   val DefaultConductrHost = "127.0.0.1"

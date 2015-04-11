@@ -15,18 +15,18 @@ import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.universal.UniversalPlugin
 import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
 import scala.concurrent.duration.DurationInt
-import TypesafeConductR._
+import ConductR._
 
 /**
  * An sbt plugin that interact's with Typesafe ConductR's controller and potentially other components.
  */
-object TypesafeConductRPlugin extends AutoPlugin {
-  import TypesafeConductRKeys._
+object ConductRPlugin extends AutoPlugin {
+  import ConductRKeys._
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
   import sbinary.DefaultProtocol.FileFormat
 
   object autoImport {
-    val conductr = TypesafeConductRKeys.conductr
+    val conductr = ConductRKeys.conductr
   }
 
   override def `requires`: Plugins = SbtNativePackager && UniversalPlugin && JavaAppPackaging
@@ -104,15 +104,15 @@ object TypesafeConductRPlugin extends AutoPlugin {
       val subtaskOpt: Option[ConductrSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
         case Some(LoadSubtask(b, config)) =>
-          TypesafeConductR.loadBundle(b, config, stm, roles, loadTimeout, s, log)
+          ConductR.loadBundle(b, config, stm, roles, loadTimeout, s, log)
         case Some(StartSubtask(b, scale)) =>
-          TypesafeConductR.startBundle(b, scale, requestTimeout, s, log)
+          ConductR.startBundle(b, scale, requestTimeout, s, log)
         case Some(StopSubtask(b)) =>
-          TypesafeConductR.stopBundle(b, requestTimeout, s, log)
+          ConductR.stopBundle(b, requestTimeout, s, log)
         case Some(UnloadSubtask(b)) =>
-          TypesafeConductR.unloadBundleTask(b, requestTimeout, s, log)
+          ConductR.unloadBundleTask(b, requestTimeout, s, log)
         case Some(InfoSubtask()) =>
-          TypesafeConductR.info(s)
+          ConductR.info(s)
         case None =>
           println("Usage: conductr <subtask>")
       }

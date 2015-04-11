@@ -7,7 +7,7 @@ package com.typesafe.conductr.sbt
 import akka.actor.ActorSystem
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 
-class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfterAll {
+class SbtConductRSpec extends WordSpec with Matchers with BeforeAndAfterAll {
 
   "Setting ConductR URL" should {
     "be prepared to full format given partial input" in {
@@ -25,7 +25,7 @@ class SbtTypesafeConductRSpec extends WordSpec with Matchers with BeforeAndAfter
       )
 
       inputToUrls foreach {
-        case (input, fullUrl) => TypesafeConductR.prepareConductrUrl(input).toString shouldBe fullUrl
+        case (input, fullUrl) => ConductR.prepareConductrUrl(input).toString shouldBe fullUrl
       }
     }
   }
