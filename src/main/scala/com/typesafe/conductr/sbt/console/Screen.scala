@@ -76,13 +76,9 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       Vector(
         Id(bundles),
         Name(bundles),
-        Where(bundles),
         Replicated(bundles),
         Starting(bundles),
-        Running(bundles),
-        Cpu(bundles),
-        Memory(bundles),
-        FileSize(bundles)
+        Running(bundles)
       )
     val totalWidth = leftMostColumns.map(_.width).sum
     val allColumns = leftMostColumns :+ Roles(bundles, screenWidth - totalWidth)

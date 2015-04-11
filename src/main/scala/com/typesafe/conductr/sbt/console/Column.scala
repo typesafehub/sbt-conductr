@@ -108,26 +108,6 @@ object Column {
   }
 
   /**
-   * Displays address where bundle is running and/or deployed.
-   * Address is inverted if bundle is running on the particular host.
-   */
-  case class Where(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
-    override val title = "WHERE"
-    override val width = 22
-
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle =>
-        bundle.bundleInstallations.map { node =>
-          val nodeIpAndPort = node.uniqueAddress.address.toString.dropWhile(_ != '@').drop(1)
-          if (bundle.bundleExecutions.withFilter(_.isStarted).map(_.host) contains node.uniqueAddress.address.host.get)
-            nodeIpAndPort.invert
-          else
-            nodeIpAndPort
-        }
-      }
-  }
-
-  /**
    * Displays the number of hosts where bundle is replicated.
    */
   case class Replicated(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
@@ -163,45 +143,6 @@ object Column {
     val data: Seq[Seq[String]] =
       bundles.map { bundle =>
         List(bundle.bundleExecutions.count(_.isStarted).toString)
-      }
-  }
-
-  /**
-   * Displays bundle CPU requirement.
-   */
-  case class Cpu(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    override val title = "#CPU"
-    override val width = 9
-
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle =>
-        List(bundle.attributes.nrOfCpus.toString)
-      }
-  }
-
-  /**
-   * Displays bundle memory requirement.
-   */
-  case class Memory(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    override val title = "MEM"
-    override val width = 8
-
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle =>
-        List(bundle.attributes.memory.toSize)
-      }
-  }
-
-  /**
-   * Displays bundle file size.
-   */
-  case class FileSize(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
-    override val title = "FSIZE"
-    override val width = 8
-
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle =>
-        List(bundle.attributes.diskSpace.toSize)
       }
   }
 
