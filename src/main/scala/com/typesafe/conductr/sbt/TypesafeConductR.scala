@@ -11,16 +11,17 @@ import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.client.ConductRController.{ LoadBundle, SetControlServer, StartBundle, StopBundle, UnloadBundle }
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
 import sbt.Keys._
 import sbt._
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 private[conductr] object TypesafeConductR {
+
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
   import TypesafeConductRKeys._
 
@@ -30,47 +31,52 @@ private[conductr] object TypesafeConductR {
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-typesafe-set-conductr-task")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-typesafe-setConductrTask-actor-system")
 
+  def setControlServer(host: sbt.URL, s: State, log: Logger): Unit =
+    withConductRController(s) { conductr =>
+      log.info(s"Setting Control Server URL to $host")
+      conductr ! SetControlServer(host.toURI)
+    }
+
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
-    loadTimeout: Timeout, s: State, log: Logger): String =
-    {
-      def get[A](key: SettingKey[A]) =
-        Project.extract(s).getOpt(key)
-          .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
-        // val (bundle, config) = Parsers.loadBundle.parsed
-        withConductRController(s) { conductr =>
-          log.info("Loading bundle to ConductR ...")
-          val request =
-            LoadBundle(
-              HttpUri(bundle.toString),
-              config map (u => HttpUri(u.toString)),
-              stm,
-              nrOfCpus,
-              memory.underlying,
-              diskSpace.underlying,
-              roles
-            )
-          val response = conductr.ask(request)(loadTimeout).mapTo[String]
-          Await.ready(response, loadTimeout.duration)
-          response.value.get match {
-            case Success(s) =>
-              Json.parse(s) \ "bundleId" match {
-                case JsString(bundleId) =>
-                  log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
-                  bundleId
-                case other =>
-                  sys.error(s"Unexpected response: $other")
-              }
-            case Failure(e) =>
-              sys.error(s"Problem loading the bundle: ${e.getMessage}")
-          }
+    loadTimeout: Timeout, s: State, log: Logger): String = {
+    def get[A](key: SettingKey[A]) =
+      Project.extract(s).getOpt(key)
+        .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
+    def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
+      // val (bundle, config) = Parsers.loadBundle.parsed
+      withConductRController(s) { conductr =>
+        log.info("Loading bundle to ConductR ...")
+        val request =
+          LoadBundle(
+            HttpUri(bundle.toString),
+            config map (u => HttpUri(u.toString)),
+            stm,
+            nrOfCpus,
+            memory.underlying,
+            diskSpace.underlying,
+            roles
+          )
+        val response = conductr.ask(request)(loadTimeout).mapTo[String]
+        Await.ready(response, loadTimeout.duration)
+        response.value.get match {
+          case Success(s) =>
+            Json.parse(s) \ "bundleId" match {
+              case JsString(bundleId) =>
+                log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
+                bundleId
+              case other =>
+                sys.error(s"Unexpected response: $other")
+            }
+          case Failure(e) =>
+            sys.error(s"Problem loading the bundle: ${e.getMessage}")
         }
       }
-      Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(doLoadBundle).fold(
-        identity,
-        errors => sys.error(errors.mkString(f"%n"))
-      )
     }
+    Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(doLoadBundle).fold(
+      identity,
+      errors => sys.error(errors.mkString(f"%n"))
+    )
+  }
 
   def startBundle(bundleId: String, scale: Option[Int],
     requestTimeout: Timeout, s: State, log: Logger): String =
