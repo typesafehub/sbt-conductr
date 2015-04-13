@@ -10,7 +10,7 @@ to Typesafe ConductR is required.
 With the ConductR running you can upload a file using sbt:
 
 ```bash
-cd sbt-typesafe-conductr-tester/
+cd sbt-conductr-tester/
 sbt
 ```
 
