@@ -31,16 +31,9 @@ object ConductRController {
    * The Props for an actor that represents the ConductR's control endpoint.
    * @param address The address to reach the ConductR at.
    * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
-   * @param httpIO The IO(Http) actor to use for IO.
    */
   def props(address: Uri, connectTimeout: Timeout) =
     Props(new ConductRController(address, connectTimeout))
-
-  /**
-   * Set the control server host URL
-   * @param host address of the host
-   */
-  case class SetControlServer(host: URI)
 
   /**
    * Load a bundle with optional configuration.
@@ -152,11 +145,11 @@ object ConductRController {
       )
     )
 
-  private def toBundleName(bundle: Uri): String = {
-    bundle.path.toString.reverse.takeWhile(_ != '/').reverse match {
+  private def toBundleName(bundle: Uri): String =
+    bundle.path.toString().reverse.takeWhile(_ != '/').reverse match {
       case BundlePath(name, _) => name
+      case name                => name
     }
-  }
 }
 
 /**
@@ -169,84 +162,86 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   import ConductRController._
   import context.dispatcher
 
-  override def receive: Receive = service(uri)
-
-  def service(host: Uri): Receive = {
-    case GetBundleInfoStream    => fetchBundleFlow(sender(), host)
-    case request: LoadBundle    => loadBundle(request, host)
-    case request: StartBundle   => startBundle(request, host)
-    case request: StopBundle    => stopBundle(request, host)
-    case request: UnloadBundle  => unloadBundle(request, host)
-    case SetControlServer(host) => context.become(service(Uri(host.toString)))
+  override def receive: Receive = {
+    case GetBundleInfoStream   => fetchBundleFlow(sender())
+    case request: LoadBundle   => loadBundle(request)
+    case request: StartBundle  => startBundle(request)
+    case request: StopBundle   => stopBundle(request)
+    case request: UnloadBundle => unloadBundle(request)
   }
 
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
     Source.single(request).via(connection).runWith(Sink.head)
 
-  private def loadBundle(loadBundle: LoadBundle, host: Uri): Unit = {
-    val bodyParts =
-      Source(
-        List(
-          FormData.BodyPart.Strict("system", loadBundle.system),
-          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
-          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
-          FormData.BodyPart.Strict("bundleName", toBundleName(loadBundle.bundle)),
-          fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
-        ) ++
-          loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
-      )
+  private def loadBundle(loadBundle: LoadBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(host.authority.host.address(), host.authority.port)(context.system, connectTimeout)
-        entity <- Marshal(FormData(bodyParts)).to[RequestEntity]
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
+        configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
+        entity <- Marshal(FormData(formBodyParts(loadBundle, bundleFileBodyPart, configFileBodyPart))).to[RequestEntity]
         response <- request(HttpRequest(POST, "/bundles", entity = entity), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
 
-  private def startBundle(startBundle: StartBundle, host: Uri): Unit = {
+  private def formBodyParts(
+    loadBundle: LoadBundle,
+    bundleFileBodyPart: FormData.BodyPart,
+    configFileBodyPart: Option[FormData.BodyPart]): Source[FormData.BodyPart, Unit] =
+    Source(
+      List(
+        FormData.BodyPart.Strict("system", loadBundle.system),
+        FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
+        FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
+        FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
+        FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
+        FormData.BodyPart.Strict("bundleName", toBundleName(loadBundle.bundle)),
+        bundleFileBodyPart
+      ) ++ configFileBodyPart
+    )
+
+  private def startBundle(startBundle: StartBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(host.authority.host.address(), host.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}?scale=${startBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
 
-  private def stopBundle(stopBundle: StopBundle, host: Uri): Unit = {
+  private def stopBundle(stopBundle: StopBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(host.authority.host.address(), host.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${stopBundle.bundleId}?scale=0"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
 
-  private def unloadBundle(unloadBundle: UnloadBundle, host: Uri): Unit = {
+  private def unloadBundle(unloadBundle: UnloadBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(host.authority.host.address(), host.authority.port)(context.system, connectTimeout)
+        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(DELETE, s"/bundles/${unloadBundle.bundleId}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
 
-  private def fetchBundleFlow(originalSender: ActorRef, host: Uri): Unit = {
+  private def fetchBundleFlow(originalSender: ActorRef): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(_ => getBundles(host))
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(_ => getBundles)
     originalSender ! BundleInfosSource(source)
   }
 
-  private def getBundles(host: Uri): Future[Seq[BundleInfo]] =
+  private def getBundles: Future[Seq[BundleInfo]] =
     for {
-      connection <- connect(host.authority.host.address(), host.authority.port)(context.system, connectTimeout)
+      connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
       response <- request(HttpRequest(GET, "/bundles"), connection)
       body <- Unmarshal(response.entity).to[String]
     } yield {

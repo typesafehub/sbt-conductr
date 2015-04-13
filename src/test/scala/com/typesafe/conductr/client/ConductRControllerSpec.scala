@@ -77,7 +77,7 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
     val WatchdogPort = 9005
     val WatchdogAddress = s"http://$WatchdogHost:$WatchdogPort"
 
-    val controller = TestActorRef[ConductRController](new ConductRController(Uri(WatchdogAddress), 1 minute) {
+    val controller = TestActorRef[ConductRController](new ConductRController(Uri(WatchdogAddress), 1.minute) {
       override def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]) =
         if (request.method == HttpMethods.POST && request.uri == Uri("/bundles"))
           Future.successful(HttpResponse(entity = "hello"))

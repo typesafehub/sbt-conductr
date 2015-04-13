@@ -1,8 +1,8 @@
 import bintray.Keys._
 
-lazy val sbtTypesafeConductR = project.in(file("."))
+lazy val sbtConductR = project.in(file("."))
 
-name := "sbt-typesafe-conductr"
+name := "sbt-conductr"
 
 libraryDependencies ++= List(
   Library.akkaContribExtra,
@@ -28,7 +28,7 @@ licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html
 publishMavenStyle := false
 bintrayPublishSettings
 repository in bintray := "sbt-plugins"
-bintrayOrganization in bintray := Some("sbt-typesafe-conductr")
+bintrayOrganization in bintray := Some("sbt-conductr")
 
 scriptedSettings
 scriptedLaunchOpts <+= version apply { v => s"-Dproject.version=$v" }

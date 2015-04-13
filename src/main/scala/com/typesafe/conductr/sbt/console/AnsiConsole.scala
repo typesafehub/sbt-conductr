@@ -15,14 +15,14 @@ object AnsiConsole {
   /**
    * Clear terminal screen and move the cursor to the upper-left corner.
    */
-  def clear: Unit =
+  def clear(): Unit =
     print(Ansi.ansi().eraseScreen().cursor(0, 0))
 
   /**
    * No real support for hiding cursor. Currently moving the cursor to the
    * bottom-right corner.
    */
-  def hideCursor: Unit =
+  def hideCursor(): Unit =
     print(Ansi.ansi().cursor(1000, 1000))
 
   /**

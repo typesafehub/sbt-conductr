@@ -1,8 +1,8 @@
-# sbt-typesafe-conductr #
+# sbt-conductr #
 
 [![Build Status](https://api.travis-ci.org/sbt/sbt-typesafe-conductr.png?branch=master)](https://travis-ci.org/sbt/sbt-typesafe-conductr)
 
-sbt-typesafe-conductr is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
+sbt-conductr is an sbt plugin designed to facilitate the development lifecycle at the stage where deployment
 to Typesafe ConductR is required.
 
 ## Usage
@@ -28,7 +28,7 @@ A bundle will be produced from the native packager settings of this project. A b
 packager distribution and includes some component configuration. To load the bundle:
 
 ```bash
-conductr:load <HIT THE TAB KEY AND THEN RETURN>
+conduct load <HIT THE TAB KEY AND THEN RETURN>
 ```
 
 Using the tab completion feature of sbt will produce a URI representing the location of the last distribution
@@ -39,10 +39,10 @@ the `BundleId` to use for subsequent commands on that bundle.
 
 ### To use sbt-typesafe-conductr in your own project
 
-Add the `sbt-typesafe-conductr` plugin:
+Add the `sbt-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-typesafe-conductr" % "0.27.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "0.27.0")
 ```
 
 You must also enable the plugin explicitly for your project:
@@ -50,13 +50,13 @@ You must also enable the plugin explicitly for your project:
 ```scala
 lazy val root = project
   .in(file("."))
-  .enablePlugins(SbtTypesafeConductR, <your other plugins go here>)
+  .enablePlugins(ConductRPlugin, <your other plugins go here>)
 ```
 
 _Note that if you have used Play 2.3 that you must also additionally enable `JavaAppPackaging` for your build e.g.:_
 
 ```scala
-enablePlugins(JavaAppPackaging, PlayScala, SbtTypesafeConductR)
+enablePlugins(JavaAppPackaging, PlayScala, ConductRPlugin)
 ```
 
 _Note also that if you have used a pre 1.0 version of sbt-native-packager then you must remove imports such as the following from your `.sbt` files:_
@@ -73,19 +73,19 @@ Unless the ConductR is running at `127.0.0.1:9005`, and instead supposing that i
 `192.168.59.103:9005` then you will typically issue the following command from the sbt console:
 
 ```
-conductr:controlServer 192.168.59.103:9005
+controlServer 192.168.59.103:9005
 ```
 
 This then sets the sbt session up to subsequently communicate with the ConductR at 192.168.59.103 on port 9005.
 
-The following `sbt-typesafe-conductr` commands are available:
+The following `sbt-conductr` commands are available:
 
 Property               | Description
 -----------------------|------------
-conductr:controlServer | Sets the ConductR's address to a provided url (defaults to env varialbe `CONDUCTR_IP:[CONDUCTR_PORT]` if set, otherwise uses the default: `http://127.0.0.1:9005`)
-conductr:load          | Loads a bundle and an optional configuration to the ConductR
-conductr:start         | Starts a bundle given a bundle id with an optional absolute scale value
-conductr:stop          | Stops all executions of a bundle given a bundle id
-conductr:unload        | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
+conduct info           | Gain infomation on the cluster
+conduct load           | Loads a bundle and an optional configuration to the ConductR
+conduct start          | Starts a bundle given a bundle id with an optional absolute scale value
+conduct stop           | Stops all executions of a bundle given a bundle id
+conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
 &copy; Typesafe Inc., 2014-2015

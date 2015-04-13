@@ -22,8 +22,8 @@ object Screen {
 }
 
 /**
- * Draws data to the screen. Data is subscribed from a [[ConductRController.BundleInfo]] flow,
- * which is received in a [[ConductRController.BundleInfosSource]] message and then materialized.
+ * Draws data to the screen. Data is subscribed from a ConductRController.BundleInfo flow,
+ * which is received in a ConductRController.BundleInfosSource message and then materialized.
  */
 class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
 
@@ -51,10 +51,10 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
     case Bundles(b) =>
       bundles = b
       if (refresh) {
-        AnsiConsole.clear
+        AnsiConsole.clear()
         printScreen()
         printInfoBar()
-        AnsiConsole.hideCursor
+        AnsiConsole.hideCursor()
       } else {
         printScreen()
         println()
@@ -76,13 +76,9 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
       Vector(
         Id(bundles),
         Name(bundles),
-        Where(bundles),
         Replicated(bundles),
         Starting(bundles),
-        Running(bundles),
-        Cpu(bundles),
-        Memory(bundles),
-        FileSize(bundles)
+        Running(bundles)
       )
     val totalWidth = leftMostColumns.map(_.width).sum
     val allColumns = leftMostColumns :+ Roles(bundles, screenWidth - totalWidth)

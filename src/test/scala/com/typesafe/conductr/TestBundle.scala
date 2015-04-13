@@ -5,7 +5,7 @@
 package com.typesafe.conductr
 
 import akka.util.ByteString
-import java.io.{ File, InputStream }
+import java.io.InputStream
 import java.net.URL
 import java.nio.charset.Charset
 import java.util.UUID
