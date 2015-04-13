@@ -62,7 +62,7 @@ private[conductr] object TypesafeConductR {
           case Success(s) =>
             Json.parse(s) \ "bundleId" match {
               case JsString(bundleId) =>
-                log.info(s"Upload completed. Use 'startBundle $bundleId' to start.")
+                log.info(s"Upload completed. Use 'conduct start $bundleId' to start.")
                 bundleId
               case other =>
                 sys.error(s"Unexpected response: $other")
