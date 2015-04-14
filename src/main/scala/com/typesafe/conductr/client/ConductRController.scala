@@ -54,11 +54,11 @@ object ConductRController {
     roles: Set[String])
 
   /**
-   * Start a bundle/config combination. Returns a request id for tracking purposes.
+   * Run a bundle/config combination. Returns a request id for tracking purposes.
    * @param bundleId The bundle/config combination to start
    * @param scale The number of instances to scale up or down to.
    */
-  case class StartBundle(bundleId: String, scale: Int)
+  case class RunBundle(bundleId: String, scale: Int)
 
   /**
    * Stop a bundle/config combination. Returns a request id for tracking purposes.
@@ -165,7 +165,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   override def receive: Receive = {
     case GetBundleInfoStream   => fetchBundleFlow(sender())
     case request: LoadBundle   => loadBundle(request)
-    case request: StartBundle  => startBundle(request)
+    case request: RunBundle    => runBundle(request)
     case request: StopBundle   => stopBundle(request)
     case request: UnloadBundle => unloadBundle(request)
   }
@@ -202,11 +202,11 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
       ) ++ configFileBodyPart
     )
 
-  private def startBundle(startBundle: StartBundle): Unit = {
+  private def runBundle(runBundle: RunBundle): Unit = {
     val pendingResponse =
       for {
         connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(PUT, s"/bundles/${startBundle.bundleId}?scale=${startBundle.scale}"), connection)
+        response <- request(HttpRequest(PUT, s"/bundles/${runBundle.bundleId}?scale=${runBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())

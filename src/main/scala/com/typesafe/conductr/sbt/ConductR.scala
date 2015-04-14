@@ -11,7 +11,7 @@ import akka.http.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.{ LoadBundle, StartBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle }
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
 import play.api.libs.json.{ JsString, Json }
 import sbt._
@@ -53,7 +53,7 @@ private[conductr] object ConductR {
             case Success(s) =>
               Json.parse(s) \ "bundleId" match {
                 case JsString(bundleId) =>
-                  log.info(s"Upload completed. Use 'conduct load $bundleId' to start.")
+                  log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
                   bundleId
                 case other =>
                   sys.error(s"Unexpected response: $other")
@@ -69,23 +69,23 @@ private[conductr] object ConductR {
       )
     }
 
-  def startBundle(bundleId: String, scale: Option[Int],
+  def runBundle(bundleId: String, scale: Option[Int],
     requestTimeout: Timeout, state: State, log: Logger): String =
     withConductRController(state) { conductr =>
-      log.info(s"Starting bundle $bundleId ...")
-      val response = conductr.ask(StartBundle(bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
+      log.info(s"Running bundle $bundleId ...")
+      val response = conductr.ask(RunBundle(bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
           Json.parse(s) \ "requestId" match {
             case JsString(requestId) =>
-              log.info(s"Request for starting has been delivered with id: $requestId")
+              log.info(s"Request for running has been delivered with id: $requestId")
               requestId
             case other =>
               sys.error(s"Unexpected response: $other")
           }
         case Failure(e) =>
-          sys.error(s"Problem starting the bundle: ${e.getMessage}")
+          sys.error(s"Problem running the bundle: ${e.getMessage}")
       }
     }
 
