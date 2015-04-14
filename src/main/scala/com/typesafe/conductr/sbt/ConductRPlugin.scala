@@ -27,7 +27,7 @@ object ConductRPlugin extends AutoPlugin {
   import sbinary.DefaultProtocol.FileFormat
 
   object autoImport {
-    val conductr = ConductRKeys.conduct
+    val conduct = ConductRKeys.conduct
   }
 
   override def `requires`: Plugins = SbtNativePackager && UniversalPlugin && JavaAppPackaging
