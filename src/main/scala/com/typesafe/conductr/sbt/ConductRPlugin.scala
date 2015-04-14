@@ -61,13 +61,13 @@ object ConductRPlugin extends AutoPlugin {
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] =
       Defaults.loadForParser(conductrDiscoveredDist in Global)((state, b) =>
-        (Space ~> (loadSubtask(b) | startSubtask | stopSubtask | unloadSubtask | infoSubtask))?
+        (Space ~> (loadSubtask(b) | runSubtask | stopSubtask | unloadSubtask | infoSubtask))?
       )
     def loadSubtask(availableBundle: Option[File]): Parser[LoadSubtask] =
       (token("load") ~> Space ~> bundle(availableBundle) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
-    def startSubtask: Parser[StartSubtask] =
+    def runSubtask: Parser[RunSubtask] =
       // FIXME: Should default to last loadBundle result
-      (token("start") ~> Space ~> bundleId(List("fixme")) ~ scale.?) map { case (b, scale) => StartSubtask(b, scale) }
+      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.?) map { case (b, scale) => RunSubtask(b, scale) }
     def stopSubtask: Parser[StopSubtask] =
       // FIXME: Should default to last bundle started
       (token("stop") ~> Space ~> bundleId(List("fixme"))) map { case b => StopSubtask(b) }
@@ -89,7 +89,7 @@ object ConductRPlugin extends AutoPlugin {
 
   private sealed trait ConductSubtask
   private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductSubtask
-  private case class StartSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
+  private case class RunSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
   private case class StopSubtask(bundleId: String) extends ConductSubtask
   private case class UnloadSubtask(bundleId: String) extends ConductSubtask
   private case class InfoSubtask() extends ConductSubtask
@@ -106,8 +106,8 @@ object ConductRPlugin extends AutoPlugin {
       subtaskOpt match {
         case Some(LoadSubtask(b, config)) =>
           ConductR.loadBundle(b, config, stm, roles, loadTimeout, s, log)
-        case Some(StartSubtask(b, scale)) =>
-          ConductR.startBundle(b, scale, requestTimeout, s, log)
+        case Some(RunSubtask(b, scale)) =>
+          ConductR.runBundle(b, scale, requestTimeout, s, log)
         case Some(StopSubtask(b)) =>
           ConductR.stopBundle(b, requestTimeout, s, log)
         case Some(UnloadSubtask(b)) =>

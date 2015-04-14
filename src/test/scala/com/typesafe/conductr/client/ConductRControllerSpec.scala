@@ -32,7 +32,7 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
 
     "send a start bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.StartBundle("hello", 2))
+      testProbe.send(controller, ConductRController.RunBundle("hello", 2))
       testProbe expectMsg "hello back"
     }
 

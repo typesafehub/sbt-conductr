@@ -84,7 +84,7 @@ Property               | Description
 -----------------------|------------
 conduct info           | Gain infomation on the cluster
 conduct load           | Loads a bundle and an optional configuration to the ConductR
-conduct start          | Starts a bundle given a bundle id with an optional absolute scale value
+conduct run            | Runs a bundle given a bundle id with an optional absolute scale value
 conduct stop           | Stops all executions of a bundle given a bundle id
 conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
