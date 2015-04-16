@@ -97,7 +97,6 @@ object ConductRPlugin extends AutoPlugin {
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
       val s = state.value
-      val log = sLog.value
       val stm = BundleKeys.system.value
       val roles = BundleKeys.roles.value
       val loadTimeout = conductrLoadTimeout.value
@@ -105,13 +104,13 @@ object ConductRPlugin extends AutoPlugin {
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
         case Some(LoadSubtask(b, config)) =>
-          ConductR.loadBundle(b, config, stm, roles, loadTimeout, s, log)
+          ConductR.loadBundle(b, config, stm, roles, loadTimeout, s)
         case Some(RunSubtask(b, scale)) =>
-          ConductR.runBundle(b, scale, requestTimeout, s, log)
+          ConductR.runBundle(b, scale, requestTimeout, s)
         case Some(StopSubtask(b)) =>
-          ConductR.stopBundle(b, requestTimeout, s, log)
+          ConductR.stopBundle(b, requestTimeout, s)
         case Some(UnloadSubtask(b)) =>
-          ConductR.unloadBundleTask(b, requestTimeout, s, log)
+          ConductR.unloadBundleTask(b, requestTimeout, s)
         case Some(InfoSubtask()) =>
           ConductR.info(s)
         case None =>
