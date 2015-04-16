@@ -29,14 +29,14 @@ private[conductr] object ConductR {
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
-    loadTimeout: Timeout, state: State, log: Logger): String =
+    loadTimeout: Timeout, state: State): String =
     {
       def get[A](key: SettingKey[A]) =
         Project.extract(state).getOpt(key)
           .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
       def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
         withConductRController(state) { conductr =>
-          log.info("Loading bundle to ConductR ...")
+          state.log.info("Loading bundle to ConductR ...")
           val request =
             LoadBundle(
               HttpUri(bundle.toString),
@@ -53,7 +53,7 @@ private[conductr] object ConductR {
             case Success(s) =>
               Json.parse(s) \ "bundleId" match {
                 case JsString(bundleId) =>
-                  log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
+                  state.log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
                   bundleId
                 case other =>
                   sys.error(s"Unexpected response: $other")
@@ -70,16 +70,16 @@ private[conductr] object ConductR {
     }
 
   def runBundle(bundleId: String, scale: Option[Int],
-    requestTimeout: Timeout, state: State, log: Logger): String =
+    requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
-      log.info(s"Running bundle $bundleId ...")
+      state.log.info(s"Running bundle $bundleId ...")
       val response = conductr.ask(RunBundle(bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
           Json.parse(s) \ "requestId" match {
             case JsString(requestId) =>
-              log.info(s"Request for running has been delivered with id: $requestId")
+              state.log.info(s"Request for running has been delivered with id: $requestId")
               requestId
             case other =>
               sys.error(s"Unexpected response: $other")
@@ -89,16 +89,16 @@ private[conductr] object ConductR {
       }
     }
 
-  def stopBundle(bundleId: String, requestTimeout: Timeout, state: State, log: Logger): String =
+  def stopBundle(bundleId: String, requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
-      log.info(s"Stopping all bundle $bundleId instances ...")
+      state.log.info(s"Stopping all bundle $bundleId instances ...")
       val response = conductr.ask(StopBundle(bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
           Json.parse(s) \ "requestId" match {
             case JsString(requestId) =>
-              log.info(s"Request for stopping has been delivered with id: $requestId")
+              state.log.info(s"Request for stopping has been delivered with id: $requestId")
               requestId
             case other =>
               sys.error(s"Unexpected response: $other")
@@ -108,16 +108,16 @@ private[conductr] object ConductR {
       }
     }
 
-  def unloadBundleTask(bundleId: String, requestTimeout: Timeout, state: State, log: Logger): String =
+  def unloadBundleTask(bundleId: String, requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
-      log.info(s"Unloading bundle $bundleId ...")
+      state.log.info(s"Unloading bundle $bundleId ...")
       val response = conductr.ask(UnloadBundle(bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
           Json.parse(s) \ "requestId" match {
             case JsString(requestId) =>
-              log.info(s"Request for unloading has been delivered with id: $requestId")
+              state.log.info(s"Request for unloading has been delivered with id: $requestId")
               requestId
             case other =>
               sys.error(s"Unexpected response: $other")
