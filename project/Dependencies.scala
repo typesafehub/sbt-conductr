@@ -8,7 +8,7 @@ object Version {
   val jansi            = "1.11"
   val jline            = "2.12"
   val play             = "2.4.0-M1"
-  val sbtBundle        = "0.21.0"
+  val sbtBundle        = "0.22.0"
   val scalaTest        = "2.2.4"
   val scalactic        = "2.2.4"
 }
