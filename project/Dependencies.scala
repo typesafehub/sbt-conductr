@@ -2,8 +2,8 @@ import sbt._
 import sbt.Resolver.bintrayRepo
 
 object Version {
-  val akka             = "2.3.9"
-  val akkaContribExtra = "1.12.0"
+  val akka             = "2.3.10"
+  val akkaContribExtra = "1.13.1"
   val akkaHttp         = "1.0-M5"
   val jansi            = "1.11"
   val jline            = "2.12"
@@ -26,7 +26,7 @@ object Library {
 }
 
 object Resolver {
-  val akkaContribExtra = bintrayRepo("akka-contrib-extra", "maven")
-  val patriknw         = "patriknw at bintray" at "http://dl.bintray.com/patriknw/maven"
+  val akkaContribExtra = bintrayRepo("typesafe", "maven-releases")
+  val patriknw         = bintrayRepo("patriknw", "maven")
   val typesafeReleases = "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases"
 }
