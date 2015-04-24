@@ -42,7 +42,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 Add the `sbt-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "0.31.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "0.32.0")
 ```
 
 You must also enable the plugin explicitly for your project:
