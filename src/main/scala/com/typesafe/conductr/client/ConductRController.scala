@@ -7,13 +7,13 @@ package com.typesafe.conductr.client
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Cancellable, Props }
 import akka.cluster.UniqueAddress
 import akka.contrib.stream.InputStreamPublisher
-import akka.http.Http
-import akka.http.marshalling.Marshal
-import akka.http.model.HttpEntity.IndefiniteLength
-import akka.http.model.HttpMethods._
-import akka.http.model.Multipart.FormData
-import akka.http.model.{ HttpRequest, HttpResponse, MediaTypes, RequestEntity, Uri }
-import akka.http.unmarshalling.Unmarshal
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshalling.Marshal
+import akka.http.scaladsl.model.HttpEntity.IndefiniteLength
+import akka.http.scaladsl.model.HttpMethods._
+import akka.http.scaladsl.model.Multipart.FormData
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, MediaTypes, RequestEntity, Uri }
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.pipe
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ Flow, ImplicitFlowMaterializer, Sink, Source }
@@ -235,7 +235,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def fetchBundleFlow(originalSender: ActorRef): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(_ => getBundles)
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1, _ => getBundles)
     originalSender ! BundleInfosSource(source)
   }
 
