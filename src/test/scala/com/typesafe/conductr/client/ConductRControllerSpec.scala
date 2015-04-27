@@ -5,8 +5,8 @@
 package com.typesafe.conductr.client
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.Http
-import akka.http.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
 import akka.stream.scaladsl.Flow
 import akka.testkit.{ TestActorRef, TestProbe }
 import org.scalatest.{ BeforeAndAfterAll, Matchers, PrivateMethodTester, WordSpec }

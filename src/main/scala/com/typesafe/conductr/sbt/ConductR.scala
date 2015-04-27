@@ -7,7 +7,7 @@ package com.typesafe.conductr.sbt
 import java.net.URL
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.model.{ Uri => HttpUri }
+import akka.http.scaladsl.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
