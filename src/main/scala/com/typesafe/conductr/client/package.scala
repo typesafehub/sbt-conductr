@@ -29,18 +29,21 @@ package object client {
     override def reads(json: JsValue): JsResult[URI] = implicitly[Format[String]].reads(json).map(new URI(_))
   }
 
-  implicit val uniqueAddressFormat: Format[UniqueAddress] =
-    Json.format
+  implicit val uniqueAddressFormat: Format[UniqueAddress] = Json.format[UniqueAddress]
 
-  implicit val attributesFormat: Format[ConductRController.Attributes] =
-    Json.format
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.Attributes]`
+  import ConductRController.Attributes
+  implicit val attributesFormat: Format[Attributes] = Json.format
 
-  implicit val bundleInstallationFormat: Format[ConductRController.BundleInstallation] =
-    Json.format
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleInstallation]`
+  import ConductRController.BundleInstallation
+  implicit val bundleInstallationFormat: Format[BundleInstallation] = Json.format
 
-  implicit val bundleExecutionFormat: Format[ConductRController.BundleExecution] =
-    Json.format
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleExecution]`
+  import ConductRController.BundleExecution
+  implicit val bundleExecutionFormat: Format[BundleExecution] = Json.format
 
-  implicit val bundleInfoFormat: Format[ConductRController.BundleInfo] =
-    Json.format
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleInfo]`
+  import ConductRController.BundleInfo
+  implicit val bundleInfoFormat: Format[BundleInfo] = Json.format
 }
