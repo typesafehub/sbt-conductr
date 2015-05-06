@@ -86,7 +86,13 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
     println(allColumns.map(_.titleForPrint).reduce(_ + _).invert.render)
 
     val rowCounts = allColumns.map(_.data.map(_.size)).transpose.map(_.max)
-    val lines = allColumns.map(_.dataForPrint(rowCounts)).transpose
+    val lines = {
+      val lines = allColumns.map(_.dataForPrint(rowCounts)).transpose
+      if (bundles.exists(_.hasError))
+        lines :+ Vector("@|red There are errors: use `conduct events` or `conduct logs` for further information|@")
+      else
+        lines
+    }
     for {
       line <- lines
       cell <- line

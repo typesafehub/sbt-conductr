@@ -97,7 +97,8 @@ object ConductRController {
     configDigest: Option[String],
     bundleInstallations: Seq[BundleInstallation],
     attributes: Attributes,
-    bundleExecutions: Set[BundleExecution])
+    bundleExecutions: Set[BundleExecution],
+    hasError: Boolean)
 
   /**
    * Representation of bundle attributes.

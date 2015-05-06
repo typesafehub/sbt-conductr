@@ -93,7 +93,11 @@ object Column {
     override val title = "ID"
     override val width = 27
 
-    val data: Seq[Seq[String]] = bundles.map(bundle => List(bundle.bundleId.split("-").map(_.take(7)).mkString("-")))
+    override val data =
+      bundles.map { bundle =>
+        val id = bundle.bundleId.split("-").map(_.take(7)).mkString("-")
+        if (bundle.hasError) List(s"@|red ! $id|@") else List(id)
+      }
   }
 
   /**
@@ -103,8 +107,7 @@ object Column {
     override val title = "NAME"
     override val width = 30
 
-    val data: Seq[Seq[String]] =
-      bundles.map { bundle => List(bundle.attributes.bundleName) }
+    override val data = bundles.map { bundle => List(bundle.attributes.bundleName) }
   }
 
   /**
@@ -114,7 +117,7 @@ object Column {
     override val title = "#REP"
     override val width = 7
 
-    val data: Seq[Seq[String]] =
+    override val data =
       bundles.map { bundle =>
         List(bundle.bundleInstallations.size.toString)
       }
@@ -127,7 +130,7 @@ object Column {
     override val title = "#STR"
     override val width = 7
 
-    val data: Seq[Seq[String]] =
+    override val data =
       bundles.map { bundle =>
         List(bundle.bundleExecutions.count(!_.isStarted).toString)
       }
@@ -140,7 +143,7 @@ object Column {
     override val title = "#RUN"
     override val width = 7
 
-    val data: Seq[Seq[String]] =
+    override val data =
       bundles.map { bundle =>
         List(bundle.bundleExecutions.count(_.isStarted).toString)
       }
@@ -152,7 +155,7 @@ object Column {
   case class Roles(bundles: Seq[ConductRController.BundleInfo], width: Int = 20) extends RegularColumn {
     override val title = "ROLES"
 
-    val data: Seq[Seq[String]] =
+    override val data =
       bundles.map { bundle =>
         List(bundle.attributes.roles.mkString(","))
       }
