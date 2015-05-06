@@ -21,10 +21,13 @@ object Console {
   def bundleInfo(refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
-      val screen = system.actorOf(Screen.props(refresh), "screen")
-
       import system.dispatcher
-      conductr.ask(ConductRController.GetBundleInfoStream)(timeout).mapTo[ConductRController.BundleInfosSource].pipeTo(screen)
+
+      val screen = system.actorOf(Screen.props(refresh), "screen")
+      conductr
+        .ask(ConductRController.GetBundleInfoStream)(timeout)
+        .mapTo[ConductRController.BundleInfosSource]
+        .pipeTo(screen)
 
       print(Ansi.ansi().saveCursorPosition())
 

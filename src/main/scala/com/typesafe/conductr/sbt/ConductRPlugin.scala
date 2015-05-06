@@ -74,8 +74,8 @@ object ConductRPlugin extends AutoPlugin {
     def unloadSubtask: Parser[UnloadSubtask] =
       // FIXME: Should default to last bundle loaded
       (token("unload") ~> Space ~> bundleId(List("fixme"))) map { case b => UnloadSubtask(b) }
-    def infoSubtask: Parser[InfoSubtask] =
-      token("info") map { case _ => InfoSubtask() }
+    def infoSubtask: Parser[InfoSubtask.type] =
+      token("info") map { case _ => InfoSubtask }
 
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
@@ -92,7 +92,7 @@ object ConductRPlugin extends AutoPlugin {
   private case class RunSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
   private case class StopSubtask(bundleId: String) extends ConductSubtask
   private case class UnloadSubtask(bundleId: String) extends ConductSubtask
-  private case class InfoSubtask() extends ConductSubtask
+  private case object InfoSubtask extends ConductSubtask
 
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
@@ -103,18 +103,12 @@ object ConductRPlugin extends AutoPlugin {
       val requestTimeout = conductrRequestTimeout.value
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
-        case Some(LoadSubtask(b, config)) =>
-          ConductR.loadBundle(b, config, stm, roles, loadTimeout, s)
-        case Some(RunSubtask(b, scale)) =>
-          ConductR.runBundle(b, scale, requestTimeout, s)
-        case Some(StopSubtask(b)) =>
-          ConductR.stopBundle(b, requestTimeout, s)
-        case Some(UnloadSubtask(b)) =>
-          ConductR.unloadBundleTask(b, requestTimeout, s)
-        case Some(InfoSubtask()) =>
-          ConductR.info(s)
-        case None =>
-          println("Usage: conduct <subtask>")
+        case Some(LoadSubtask(b, config)) => ConductR.loadBundle(b, config, stm, roles, loadTimeout, s)
+        case Some(RunSubtask(b, scale))   => ConductR.runBundle(b, scale, requestTimeout, s)
+        case Some(StopSubtask(b))         => ConductR.stopBundle(b, requestTimeout, s)
+        case Some(UnloadSubtask(b))       => ConductR.unloadBundleTask(b, requestTimeout, s)
+        case Some(InfoSubtask)            => ConductR.info(s)
+        case None                         => println("Usage: conduct <subtask>")
       }
     }
 }
