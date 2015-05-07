@@ -15,3 +15,5 @@ BundleKeys.memory := 10.MiB
 BundleKeys.diskSpace := 5.MB
 BundleKeys.roles := Set("web-server")
 BundleKeys.endpoints := Map.empty
+
+configurationName := "web-server"

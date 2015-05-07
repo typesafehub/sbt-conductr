@@ -10,6 +10,7 @@ import akka.util.Timeout
 trait ConductRKeys {
   val conduct = inputKey[Unit]("ConductR task.")
   val conductrDiscoveredDist = taskKey[File]("Any distribution produced by the current project")
+  val conductrDiscoveredConfigDist = taskKey[File]("Any additional configuration distribution produced by the current project")
   val conductrControlServerUrl = settingKey[URL]("The URL of the ConductR. Defaults to the env variables 'CONDUCTR_IP:[CONDUCTR_PORT]', otherwise uses the default: 'http://127.0.0.1:9005'")
   val conductrConnectTimeout = settingKey[Timeout]("The timeout for ConductR communications when connecting")
   val conductrLoadTimeout = settingKey[Timeout]("The timeout for ConductR communications when loading")

@@ -44,7 +44,12 @@ object ConductRPlugin extends AutoPlugin {
     List(
       commands ++= Seq(controlServer),
       conduct := conductTask.value.evaluated,
-      conductrDiscoveredDist <<= (dist in Bundle).storeAs(conductrDiscoveredDist in Global).triggeredBy(dist in Bundle),
+      conductrDiscoveredDist <<=
+        (dist in Bundle).storeAs(conductrDiscoveredDist in Global)
+          .triggeredBy(dist in Bundle),
+      conductrDiscoveredConfigDist <<=
+        (dist in BundleConfiguration).storeAs(conductrDiscoveredConfigDist in Global)
+        .triggeredBy(dist in BundleConfiguration),
       BundleKeys.system := (packageName in Universal).value,
       BundleKeys.roles := Set.empty,
       conductrRequestTimeout := 30.seconds,
@@ -60,11 +65,14 @@ object ConductRPlugin extends AutoPlugin {
 
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] =
-      Defaults.loadForParser(conductrDiscoveredDist in Global)((state, b) =>
-        (Space ~> (loadSubtask(b) | runSubtask | stopSubtask | unloadSubtask | infoSubtask))?
-      )
-    def loadSubtask(availableBundle: Option[File]): Parser[LoadSubtask] =
-      (token("load") ~> Space ~> bundle(availableBundle) ~ configuration.?) map { case (b, config) => LoadSubtask(b, config) }
+      Defaults.loadForParser(conductrDiscoveredDist in Global) { (state, bundle) =>
+        val configSetting = conductrDiscoveredConfigDist in Global
+        val bundleConfig = Defaults.loadFromContext(configSetting, configSetting.scopedKey, state)
+        (Space ~> (loadSubtask(bundle, bundleConfig) | runSubtask | stopSubtask | unloadSubtask | infoSubtask)) ?
+      }
+    def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[LoadSubtask] =
+      (token("load") ~> Space ~> bundle(availableBundle) ~
+        bundleConfiguration(availableBundleConfiguration).?) map { case (b, config) => LoadSubtask(b, config) }
     def runSubtask: Parser[RunSubtask] =
       // FIXME: Should default to last loadBundle result
       (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.?) map { case (b, scale) => RunSubtask(b, scale) }
@@ -80,7 +88,7 @@ object ConductRPlugin extends AutoPlugin {
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
 
-    def configuration: Parser[URI] = token(basicUri)
+    def bundleConfiguration(bundleConf: Option[File]): Parser[URI] = Space ~> bundle(bundleConf)
 
     def bundleId(x: Seq[String]): Parser[String] = StringBasic examples (x: _*)
 
