@@ -37,6 +37,16 @@ produced by the native packager.
 Hitting return will cause the bundle to be uploaded. On successfully uploading the bundle the plugin will report
 the `BundleId` to use for subsequent commands on that bundle.
 
+### Configuration
+
+When loading a bundle you can also load configuration if there is any e.g.:
+
+```bash
+config:dist
+```
+
+...and then hit the tab key after specifying the bundle for `conduct load`.
+
 ### To use sbt-typesafe-conductr in your own project
 
 Add the `sbt-conductr` plugin:
