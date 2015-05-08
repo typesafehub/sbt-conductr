@@ -22,6 +22,7 @@ import java.net.{ URI, URL }
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import play.api.libs.json.Reads
 
 object ConductRController {
 
@@ -32,8 +33,8 @@ object ConductRController {
    * @param address The address to reach the ConductR at.
    * @param connectTimeout The amount of time to wait for establishing a connection with the conductor's control interface.
    */
-  def props(address: Uri, connectTimeout: Timeout) =
-    Props(new ConductRController(address, connectTimeout))
+  def props(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeout) =
+    Props(new ConductRController(conductr, loggingQuery, connectTimeout))
 
   /**
    * Load a bundle with optional configuration.
@@ -77,10 +78,14 @@ object ConductRController {
    */
   case object GetBundleInfoStream
 
+  case class GetEventStream(bundleId: String)
+
+  case class GetLogStream(bundleId: String)
+
   /**
-   * A flow of [[BundleInfo]]. Needs to be materialized after attaching sink.
+   * A flow of data for the screen. Needs to be materialized after attaching sink.
    */
-  case class BundleInfosSource(source: Source[Seq[BundleInfo], Cancellable])
+  case class DataSource[A](source: Source[A, Cancellable])
 
   /**
    * Represent a bundle execution - ignores the endpoint info for now as we
@@ -117,6 +122,16 @@ object ConductRController {
    * @param configurationFile the optional path to the bundle, has to be a `URI`, because `Path` is not serializable
    */
   case class BundleInstallation(uniqueAddress: UniqueAddress, bundleFile: URI, configurationFile: Option[URI])
+
+  case class Event(
+    time: String,
+    event: String,
+    description: String)
+
+  case class Log(
+    time: String,
+    host: String,
+    log: String)
 
   private val blockingIoDispatcher = "conductr-blocking-io-dispatcher"
 
@@ -156,7 +171,7 @@ object ConductRController {
 /**
  * An actor that represents the ConductR's control endpoint.
  */
-class ConductRController(uri: Uri, connectTimeout: Timeout)
+class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeout)
     extends Actor
     with ImplicitFlowMaterializer {
 
@@ -164,7 +179,9 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   import context.dispatcher
 
   override def receive: Receive = {
-    case GetBundleInfoStream   => fetchBundleFlow(sender())
+    case GetBundleInfoStream   => fetchBundleSource(sender())
+    case GetEventStream(b)     => fetchLoggingQuerySource[Event](sender(), b)
+    case GetLogStream(b)       => fetchLoggingQuerySource[Log](sender(), b)
     case request: LoadBundle   => loadBundle(request)
     case request: RunBundle    => runBundle(request)
     case request: StopBundle   => stopBundle(request)
@@ -177,7 +194,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def loadBundle(loadBundle: LoadBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
         bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
         configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
         entity <- Marshal(FormData(formBodyParts(loadBundle, bundleFileBodyPart, configFileBodyPart))).to[RequestEntity]
@@ -206,7 +223,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def runBundle(runBundle: RunBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${runBundle.bundleId}?scale=${runBundle.scale}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
@@ -216,7 +233,7 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def stopBundle(stopBundle: StopBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(PUT, s"/bundles/${stopBundle.bundleId}?scale=0"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
@@ -226,28 +243,45 @@ class ConductRController(uri: Uri, connectTimeout: Timeout)
   private def unloadBundle(unloadBundle: UnloadBundle): Unit = {
     val pendingResponse =
       for {
-        connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
         response <- request(HttpRequest(DELETE, s"/bundles/${unloadBundle.bundleId}"), connection)
         body <- Unmarshal(response.entity).to[String]
       } yield bodyOrThrow(response, body)
     pendingResponse.pipeTo(sender())
   }
 
-  private def fetchBundleFlow(originalSender: ActorRef): Unit = {
+  private def fetchBundleSource(originalSender: ActorRef): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
     val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1, _ => getBundles)
-    originalSender ! BundleInfosSource(source)
+    originalSender ! DataSource(source)
   }
 
   private def getBundles: Future[Seq[BundleInfo]] =
     for {
-      connection <- connect(uri.authority.host.address(), uri.authority.port)(context.system, connectTimeout)
+      connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
       response <- request(HttpRequest(GET, "/bundles"), connection)
       body <- Unmarshal(response.entity).to[String]
     } yield {
       val b = bodyOrThrow(response, body)
       Json.parse(b).as[Seq[BundleInfo]]
+    }
+
+  private def fetchLoggingQuerySource[A: Reads](originalSender: ActorRef, bundleId: String): Unit = {
+    import scala.concurrent.duration._
+    // TODO this needs to be driven by SSE and not by the timer
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1, _ => getLoggingQuery[A](bundleId))
+    originalSender ! DataSource(source)
+  }
+
+  private def getLoggingQuery[A: Reads](bundleId: String): Future[Seq[A]] =
+    for {
+      connection <- connect(loggingQuery.authority.host.address(), loggingQuery.authority.port)(context.system, connectTimeout)
+      response <- request(HttpRequest(GET, s"/events/$bundleId"), connection)
+      body <- Unmarshal(response.entity).to[String]
+    } yield {
+      val b = bodyOrThrow(response, body)
+      Json.parse(b).as[Seq[A]]
     }
 
   private def bodyOrThrow(response: HttpResponse, body: String): String =

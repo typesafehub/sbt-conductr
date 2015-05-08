@@ -13,19 +13,21 @@ import scala.concurrent.duration.DurationInt
 
 object Screen {
 
-  private case class Bundles(bundles: Seq[ConductRController.BundleInfo])
+  private case class Data[A](data: A)
 
   private case object CheckSize
 
-  def props(refresh: Boolean): Props =
-    Props(new Screen(refresh))
+  case class Layout(columns: Vector[Column.RegularColumn], notes: Vector[String])
+
+  def props[A](refresh: Boolean, layout: A => Layout): Props =
+    Props(new Screen(refresh, layout))
 }
 
 /**
  * Draws data to the screen. Data is subscribed from a ConductRController.BundleInfo flow,
  * which is received in a ConductRController.BundleInfosSource message and then materialized.
  */
-class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
+class Screen[A](refresh: Boolean, layout: A => Screen.Layout) extends Actor with ImplicitFlowMaterializer {
 
   import AnsiConsole.Implicits._
   import Column._
@@ -38,18 +40,23 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
 
   private var screenWidth = terminal.getWidth
 
-  private var bundles: Seq[ConductRController.BundleInfo] =
-    Nil
+  private var data: A = _
 
   def receive: Receive = {
-    case ConductRController.BundleInfosSource(source) =>
+    case ConductRController.DataSource(source) =>
       if (refresh)
-        source.runForeach(self ! Bundles(_))
+        source.runForeach(self ! Data(_))
       else
-        source.runWith(Sink.head).foreach(self ! Bundles(_))
+        source.runWith(Sink.head).foreach(self ! Data(_))
 
-    case Bundles(b) =>
-      bundles = b
+    case CheckSize =>
+      checkSize()
+
+    case Status.Failure(_) =>
+      context.stop(self)
+
+    case d: Data[A] =>
+      data = d.data
       if (refresh) {
         AnsiConsole.clear()
         printScreen()
@@ -60,39 +67,20 @@ class Screen(refresh: Boolean) extends Actor with ImplicitFlowMaterializer {
         println()
         context.stop(self)
       }
-
-    case CheckSize =>
-      checkSize()
-
-    case Status.Failure(_) =>
-      context.stop(self)
   }
 
   override def postStop(): Unit =
     resizeTask.cancel()
 
   private def printScreen(): Unit = {
-    val leftMostColumns =
-      Vector(
-        Id(bundles),
-        Name(bundles),
-        Replicated(bundles),
-        Starting(bundles),
-        Running(bundles)
-      )
+    val Screen.Layout(leftMostColumns, notes) = layout(data)
     val totalWidth = leftMostColumns.map(_.width).sum
-    val allColumns = leftMostColumns :+ Roles(bundles, screenWidth - totalWidth)
+    val allColumns = leftMostColumns :+ Spacer(screenWidth - totalWidth)
 
     println(allColumns.map(_.titleForPrint).reduce(_ + _).invert.render)
 
     val rowCounts = allColumns.map(_.data.map(_.size)).transpose.map(_.max)
-    val lines = {
-      val lines = allColumns.map(_.dataForPrint(rowCounts)).transpose
-      if (bundles.exists(_.hasError))
-        lines :+ Vector("@|red There are errors: use `conduct events` or `conduct logs` for further information|@")
-      else
-        lines
-    }
+    val lines = allColumns.map(_.dataForPrint(rowCounts)).transpose :+ notes
     for {
       line <- lines
       cell <- line

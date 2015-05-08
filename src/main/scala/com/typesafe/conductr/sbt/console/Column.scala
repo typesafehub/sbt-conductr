@@ -152,12 +152,61 @@ object Column {
   /**
    * Displays bundle cluster roles requirement.
    */
-  case class Roles(bundles: Seq[ConductRController.BundleInfo], width: Int = 20) extends RegularColumn {
+  case class Roles(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
     override val title = "ROLES"
+    override val width = 30
 
     override val data =
       bundles.map { bundle =>
         List(bundle.attributes.roles.mkString(","))
       }
+  }
+
+  case class Spacer(width: Int) extends RegularColumn {
+    override val title = ""
+
+    override val data = Seq(Seq.empty)
+  }
+
+  case class EventTime(events: Seq[ConductRController.Event]) extends RegularColumn {
+    override val title = "TIME"
+    override val width = 16
+
+    override val data = events.map { event => List(event.time) }
+  }
+
+  case class Event(events: Seq[ConductRController.Event]) extends RegularColumn {
+    override val title = "EVENT"
+    override val width = 50
+
+    override val data = events.map { event => List(event.event) }
+  }
+
+  case class Description(events: Seq[ConductRController.Event]) extends RegularColumn {
+    override val title = "DESC"
+    override val width = 50
+
+    override val data = events.map { event => List(event.description) }
+  }
+
+  case class LogTime(logs: Seq[ConductRController.Log]) extends RegularColumn {
+    override val title = "TIME"
+    override val width = 16
+
+    override val data = logs.map { event => List(event.time) }
+  }
+
+  case class Host(logs: Seq[ConductRController.Log]) extends RegularColumn {
+    override val title = "HOST"
+    override val width = 15
+
+    override val data = logs.map { event => List(event.log) }
+  }
+
+  case class Log(logs: Seq[ConductRController.Log]) extends RegularColumn {
+    override val title = "LOG"
+    override val width = 50
+
+    override val data = logs.map { event => List(event.log) }
   }
 }
