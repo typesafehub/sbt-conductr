@@ -130,11 +130,19 @@ private[conductr] object ConductR {
   def info(s: State): Unit =
     withActorSystem(s)(withConductRController(s)(console.Console.bundleInfo(refresh = false)))
 
-  def envConductrUrl(): Option[URL] = {
-    val ip = sys.env.get("CONDUCTR_IP")
-    val port = sys.env.getOrElse("CONDUCTR_PORT", 9005)
+  def events(bundleId: String, s: State): Unit =
+    println("This command is not yet available. Consult ConductR logs.")
+  //withActorSystem(s)(withConductRController(s)(console.Console.events(bundleId, refresh = false))) FIXME
 
-    ip.map(i => new URL(s"http://$i:$port"))
+  def logs(bundleId: String, s: State): Unit =
+    println("This command is not yet available. Consult your application logs.")
+  //withActorSystem(s)(withConductRController(s)(console.Console.logs(bundleId, refresh = false))) FIXME
+
+  def envUrl(envIp: String, defaultIp: String, envPort: String, defaultPort: Int, defaultProto: String): URL = {
+    val ip = sys.env.getOrElse(envIp, defaultIp)
+    val port = sys.env.getOrElse(envPort, defaultPort)
+
+    new URL(s"$defaultProto://$ip:$port")
   }
 
   def prepareConductrUrl(url: String): sbt.URL = {
@@ -175,11 +183,12 @@ private[conductr] object ConductR {
         val settings = extracted.structure.data
         val conductr =
           for {
-            url <- (conductrControlServerUrl in Global).get(settings)
+            conductrUrl <- (conductrControlServerUrl in Global).get(settings)
+            loggingQueryUrl <- (conductrLoggingQueryUrl in Global).get(settings)
             connectTimeout <- (conductrConnectTimeout in Global).get(settings)
           } yield {
-            state.log.info(s"Control Protocol set for $url. Use `controlServer` to set an alternate address.")
-            system.actorOf(ConductRController.props(HttpUri(url.toString), connectTimeout))
+            state.log.info(s"Control Protocol set for $conductrUrl. Use `controlServer` to set an alternate address.")
+            system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
           }
         conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
       }

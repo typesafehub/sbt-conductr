@@ -12,6 +12,7 @@ import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import scala.concurrent.{ Await, blocking }
 import scala.util.Failure
+import com.typesafe.conductr.sbt.console.Column._
 
 object Console {
 
@@ -23,32 +24,94 @@ object Console {
 
       import system.dispatcher
 
-      val screen = system.actorOf(Screen.props(refresh), "screen")
+      val screen = system.actorOf(Screen.props(refresh, (bundles: Seq[ConductRController.BundleInfo]) => {
+        val columns = Vector(
+          Id(bundles),
+          Name(bundles),
+          Replicated(bundles),
+          Starting(bundles),
+          Running(bundles),
+          Roles(bundles)
+        )
+        val notes = bundles.find(_.hasError).map(_ => "@|red There are errors: use `conduct events` or `conduct logs` for further information|@")
+        Screen.Layout(columns, notes.toVector)
+      }), "screen")
       conductr
         .ask(ConductRController.GetBundleInfoStream)(timeout)
-        .mapTo[ConductRController.BundleInfosSource]
+        .mapTo[ConductRController.DataSource[Seq[ConductRController.BundleInfo]]]
         .pipeTo(screen)
 
-      print(Ansi.ansi().saveCursorPosition())
-
-      if (refresh) {
-        val con = new ConsoleReader()
-        blocking {
-          con.readCharacter('q')
-        }
-        system.stop(screen)
-      } else {
-        // There is no way to wait for actor termination from a non-actor,
-        // other than using gracefulStop with a message that does nothing.
-        case object WaitingForYou
-        val f = gracefulStop(screen, timeout, WaitingForYou).andThen {
-          case Failure(cause) => system.stop(screen)
-        }
-        Await.ready(f, timeout)
-      }
-
-      print(Ansi.ansi().restorCursorPosition())
+      cleanUp(screen, refresh)
     }
+  }
+
+  def events(bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+    { implicit system =>
+
+      import system.dispatcher
+
+      val screen = system.actorOf(Screen.props(refresh, (events: Seq[ConductRController.Event]) => {
+        val columns = Vector(
+          EventTime(events),
+          Event(events),
+          Description(events)
+        )
+        Screen.Layout(columns, Vector.empty)
+      }), "screen")
+      conductr
+        .ask(ConductRController.GetEventStream(bundleId))(timeout)
+        .mapTo[ConductRController.DataSource[Seq[ConductRController.Event]]]
+        .pipeTo(screen)
+
+      cleanUp(screen, refresh)
+    }
+  }
+
+  def logs(bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+    { implicit system =>
+
+      import system.dispatcher
+
+      val screen = system.actorOf(Screen.props(refresh, (logs: Seq[ConductRController.Log]) => {
+        val columns = Vector(
+          LogTime(logs),
+          Host(logs),
+          Log(logs)
+        )
+        Screen.Layout(columns, Vector.empty)
+      }), "screen")
+      conductr
+        .ask(ConductRController.GetLogStream(bundleId))(timeout)
+        .mapTo[ConductRController.DataSource[Seq[ConductRController.Log]]]
+        .pipeTo(screen)
+
+      cleanUp(screen, refresh)
+    }
+  }
+
+  private def cleanUp(screen: ActorRef, refresh: Boolean)(implicit system: ActorSystem) = {
+
+    import system.dispatcher
+
+    print(Ansi.ansi().saveCursorPosition())
+
+    if (refresh) {
+      val con = new ConsoleReader()
+      blocking {
+        con.readCharacter('q')
+      }
+      system.stop(screen)
+    } else {
+      // There is no way to wait for actor termination from a non-actor,
+      // other than using gracefulStop with a message that does nothing.
+      case object WaitingForYou
+      val f = gracefulStop(screen, timeout, WaitingForYou).andThen {
+        case Failure(cause) => system.stop(screen)
+      }
+      Await.ready(f, timeout)
+    }
+
+    print(Ansi.ansi().restorCursorPosition())
   }
 
   object Implicits {

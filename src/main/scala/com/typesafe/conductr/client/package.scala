@@ -46,4 +46,12 @@ package object client {
   // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleInfo]`
   import ConductRController.BundleInfo
   implicit val bundleInfoFormat: Format[BundleInfo] = Json.format
+
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleInfo]`
+  import ConductRController.Event
+  implicit val eventFormat: Format[Event] = Json.format
+
+  // TODO This import is only needed for Play 2.3; with Play 2.4 we can use the qualified return type `Format[ConductRController.BundleInfo]`
+  import ConductRController.Log
+  implicit val logFormat: Format[Log] = Json.format
 }
