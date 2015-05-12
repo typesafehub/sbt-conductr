@@ -19,7 +19,7 @@ object Screen {
 
   case class Layout(columns: Vector[Column.RegularColumn], notes: Vector[String])
 
-  def props[A](refresh: Boolean, layout: A => Layout): Props =
+  def props[A <: Iterable[B], B](refresh: Boolean, layout: A => Layout): Props =
     Props(new Screen(refresh, layout))
 }
 
@@ -27,7 +27,7 @@ object Screen {
  * Draws data to the screen. Data is subscribed from a ConductRController.BundleInfo flow,
  * which is received in a ConductRController.BundleInfosSource message and then materialized.
  */
-class Screen[A](refresh: Boolean, layout: A => Screen.Layout) extends Actor with ImplicitFlowMaterializer {
+class Screen[A <: Iterable[B], B](refresh: Boolean, layout: A => Screen.Layout) extends Actor with ImplicitFlowMaterializer {
 
   import AnsiConsole.Implicits._
   import Column._
@@ -75,7 +75,7 @@ class Screen[A](refresh: Boolean, layout: A => Screen.Layout) extends Actor with
   private def printScreen(): Unit = {
     val Screen.Layout(leftMostColumns, notes) = layout(data)
     val totalWidth = leftMostColumns.map(_.width).sum
-    val allColumns = leftMostColumns :+ Spacer(screenWidth - totalWidth)
+    val allColumns = leftMostColumns :+ Spacer(data.size, screenWidth - totalWidth)
 
     println(allColumns.map(_.titleForPrint).reduce(_ + _).invert.render)
 

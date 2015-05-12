@@ -30,8 +30,7 @@ object Console {
           Name(bundles),
           Replicated(bundles),
           Starting(bundles),
-          Running(bundles),
-          Roles(bundles)
+          Running(bundles)
         )
         val notes = bundles.find(_.hasError).map(_ => "@|red There are errors: use `conduct events` or `conduct logs` for further information|@")
         Screen.Layout(columns, notes.toVector)
