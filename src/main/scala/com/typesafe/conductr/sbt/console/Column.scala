@@ -149,23 +149,10 @@ object Column {
       }
   }
 
-  /**
-   * Displays bundle cluster roles requirement.
-   */
-  case class Roles(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
-    override val title = "ROLES"
-    override val width = 30
-
-    override val data =
-      bundles.map { bundle =>
-        List(bundle.attributes.roles.mkString(","))
-      }
-  }
-
-  case class Spacer(width: Int) extends RegularColumn {
+  case class Spacer(height: Int, width: Int) extends RegularColumn {
     override val title = ""
 
-    override val data = Seq(Seq.empty)
+    override val data = Seq.fill(height)(Seq.empty)
   }
 
   case class EventTime(events: Seq[ConductRController.Event]) extends RegularColumn {
