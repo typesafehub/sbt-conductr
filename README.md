@@ -52,7 +52,7 @@ config:dist
 Add the `sbt-conductr` plugin:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "0.35.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "0.36.0")
 ```
 
 You must also enable the plugin explicitly for your project:
