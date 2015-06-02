@@ -2,9 +2,9 @@ import sbt._
 import sbt.Resolver.bintrayRepo
 
 object Version {
-  val akka             = "2.3.10"
-  val akkaContribExtra = "1.16.0"
-  val akkaHttp         = "1.0-RC1"
+  val akka             = "2.3.11"
+  val akkaContribExtra = "1.17.0-SNAPSHOT"
+  val akkaHttp         = "1.0-RC3"
   val jansi            = "1.11"
   val jline            = "2.12"
   val play             = "2.3.8"
@@ -14,15 +14,15 @@ object Version {
 }
 
 object Library {
-  val akkaContribExtra = "com.typesafe.akka"    %% "akka-contrib-extra"           % Version.akkaContribExtra
-  val akkaHttp         = "com.typesafe.akka"    %% "akka-http-scala-experimental" % Version.akkaHttp
-  val akkaTestkit      = "com.typesafe.akka"    %% "akka-testkit"                 % Version.akka
-  val jansi            = "org.fusesource.jansi" %  "jansi"                        % Version.jansi
-  val jline            = "jline"                %  "jline"                        % Version.jline
-  val playJson         = "com.typesafe.play"    %% "play-json"                    % Version.play
-  val sbtBundle        = "com.typesafe.sbt"     %  "sbt-bundle"                   % Version.sbtBundle
-  val scalaTest        = "org.scalatest"        %% "scalatest"                    % Version.scalaTest
-  val scalactic        = "org.scalactic"        %% "scalactic"                    % Version.scalactic
+  val akkaContribExtra = "com.typesafe.akka"    %% "akka-contrib-extra"     % Version.akkaContribExtra
+  val akkaHttp         = "com.typesafe.akka"    %% "akka-http-experimental" % Version.akkaHttp
+  val akkaTestkit      = "com.typesafe.akka"    %% "akka-testkit"           % Version.akka
+  val jansi            = "org.fusesource.jansi" %  "jansi"                  % Version.jansi
+  val jline            = "jline"                %  "jline"                  % Version.jline
+  val playJson         = "com.typesafe.play"    %% "play-json"              % Version.play
+  val sbtBundle        = "com.typesafe.sbt"     %  "sbt-bundle"             % Version.sbtBundle
+  val scalaTest        = "org.scalatest"        %% "scalatest"              % Version.scalaTest
+  val scalactic        = "org.scalactic"        %% "scalactic"              % Version.scalactic
 }
 
 object Resolver {

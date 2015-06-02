@@ -253,7 +253,7 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   private def fetchBundleSource(originalSender: ActorRef): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1, _ => getBundles)
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => getBundles)
     originalSender ! DataSource(source)
   }
 
@@ -270,7 +270,7 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   private def fetchLoggingQuerySource[A: Reads](originalSender: ActorRef, bundleId: String): Unit = {
     import scala.concurrent.duration._
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1, _ => getLoggingQuery[A](bundleId))
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => getLoggingQuery[A](bundleId))
     originalSender ! DataSource(source)
   }
 
