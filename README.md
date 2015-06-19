@@ -42,7 +42,7 @@ the `BundleId` to use for subsequent commands on that bundle.
 When loading a bundle you can also load configuration if there is any e.g.:
 
 ```bash
-config:dist
+configuration:dist
 ```
 
 ...and then hit the tab key after specifying the bundle for `conduct load`.
