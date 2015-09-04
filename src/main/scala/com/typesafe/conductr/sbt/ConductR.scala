@@ -13,7 +13,7 @@ import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle }
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsError, JsSuccess, JsString, Json }
 import sbt._
 import scala.concurrent.Await
 import scala.util.{ Failure, Success }
@@ -51,12 +51,12 @@ private[conductr] object ConductR {
           Await.ready(response, loadTimeout.duration)
           response.value.get match {
             case Success(s) =>
-              Json.parse(s) \ "bundleId" match {
-                case JsString(bundleId) =>
+              (Json.parse(s) \ "bundleId").validate[String] match {
+                case JsSuccess(bundleId, _) =>
                   state.log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
                   bundleId
-                case other =>
-                  sys.error(s"Unexpected response: $other")
+                case e: JsError =>
+                  sys.error(s"Unexpected response: $e")
               }
             case Failure(e) =>
               sys.error(s"Problem loading the bundle: ${e.getMessage}")
@@ -77,12 +77,12 @@ private[conductr] object ConductR {
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
-          Json.parse(s) \ "requestId" match {
-            case JsString(requestId) =>
+          (Json.parse(s) \ "requestId").validate[String] match {
+            case JsSuccess(requestId, _) =>
               state.log.info(s"Request for running has been delivered with id: $requestId")
               requestId
-            case other =>
-              sys.error(s"Unexpected response: $other")
+            case e: JsError =>
+              sys.error(s"Unexpected response: $e")
           }
         case Failure(e) =>
           sys.error(s"Problem running the bundle: ${e.getMessage}")
@@ -96,12 +96,12 @@ private[conductr] object ConductR {
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
-          Json.parse(s) \ "requestId" match {
-            case JsString(requestId) =>
+          (Json.parse(s) \ "requestId").validate[String] match {
+            case JsSuccess(requestId, _) =>
               state.log.info(s"Request for stopping has been delivered with id: $requestId")
               requestId
-            case other =>
-              sys.error(s"Unexpected response: $other")
+            case e: JsError =>
+              sys.error(s"Unexpected response: $e")
           }
         case Failure(e) =>
           sys.error(s"Problem stopping the bundle: ${e.getMessage}")
@@ -115,12 +115,12 @@ private[conductr] object ConductR {
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
-          Json.parse(s) \ "requestId" match {
-            case JsString(requestId) =>
+          (Json.parse(s) \ "requestId").validate[String] match {
+            case JsSuccess(requestId, _) =>
               state.log.info(s"Request for unloading has been delivered with id: $requestId")
               requestId
-            case other =>
-              sys.error(s"Unexpected response: $other")
+            case e: JsError =>
+              sys.error(s"Unexpected response: $e")
           }
         case Failure(e) =>
           sys.error(s"Problem unloading the bundle: ${e.getMessage}")

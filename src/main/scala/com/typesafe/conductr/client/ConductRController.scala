@@ -16,7 +16,7 @@ import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, MediaTypes, Request
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.pipe
 import akka.stream.actor.ActorPublisher
-import akka.stream.scaladsl.{ Flow, ImplicitFlowMaterializer, Sink, Source }
+import akka.stream.scaladsl.{ Flow, ImplicitMaterializer, Sink, Source }
 import akka.util.{ ByteString, Timeout }
 import java.net.{ URI, URL }
 import play.api.libs.json.Json
@@ -173,7 +173,7 @@ object ConductRController {
  */
 class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeout)
     extends Actor
-    with ImplicitFlowMaterializer {
+    with ImplicitMaterializer {
 
   import ConductRController._
   import context.dispatcher
