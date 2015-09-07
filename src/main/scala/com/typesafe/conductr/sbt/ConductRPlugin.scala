@@ -10,7 +10,6 @@ import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 
 import com.typesafe.sbt.SbtNativePackager
-import SbtNativePackager.Universal
 import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.universal.UniversalPlugin
 import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
@@ -30,31 +29,37 @@ object ConductRPlugin extends AutoPlugin {
     val conduct = ConductRKeys.conduct
   }
 
-  override def `requires`: Plugins = SbtNativePackager && UniversalPlugin && JavaAppPackaging
+  override def trigger = allRequirements
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
       onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
       onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
+
+      aggregate in conduct := false,
+
+      dist in Bundle := file(""),
+      dist in BundleConfiguration := file(""),
+
+      conductrConnectTimeout := 30.seconds,
+      conductrLoadTimeout := 10.minutes,
+      conductrRequestTimeout := 30.seconds,
+
       conductrControlServerUrl := envUrl("CONDUCTR_IP", DefaultConductrHost, "CONDUCTR_PORT", DefaultConductrPort, DefaultConductrProtocol),
-      conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol),
-      conductrConnectTimeout := 30.seconds
+      conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol)
     )
 
   override def projectSettings: Seq[Setting[_]] =
-    List(
+    super.projectSettings ++ List(
       commands ++= Seq(controlServer),
       conduct := conductTask.value.evaluated,
+
       conductrDiscoveredDist <<=
-        (dist in Bundle).storeAs(conductrDiscoveredDist in Global)
+        (dist in Bundle).storeAs(conductrDiscoveredDist)
         .triggeredBy(dist in Bundle),
       conductrDiscoveredConfigDist <<=
-        (dist in BundleConfiguration).storeAs(conductrDiscoveredConfigDist in Global)
-        .triggeredBy(dist in BundleConfiguration),
-      BundleKeys.system := (packageName in Universal).value,
-      BundleKeys.roles := Set.empty,
-      conductrRequestTimeout := 30.seconds,
-      conductrLoadTimeout := 10.minutes
+        (dist in BundleConfiguration).storeAs(conductrDiscoveredConfigDist)
+        .triggeredBy(dist in BundleConfiguration)
     )
 
   // Input parsing and action
@@ -65,12 +70,24 @@ object ConductRPlugin extends AutoPlugin {
   }
 
   private object Parsers {
-    lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] =
-      Defaults.loadForParser(conductrDiscoveredDist in Global) { (state, bundle) =>
-        val configSetting = conductrDiscoveredConfigDist in Global
-        val bundleConfig = Defaults.loadFromContext(configSetting, configSetting.scopedKey, state)
-        (Space ~> (loadSubtask(bundle, bundleConfig) | runSubtask | stopSubtask | unloadSubtask | infoSubtask | eventsSubtask | logsSubtask)) ?
+    lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] = {
+      val init = Def.value { (bundle: Option[File], bundleConfig: Option[File]) =>
+        (Space ~> (
+          loadSubtask(bundle, bundleConfig) |
+          runSubtask |
+          stopSubtask |
+          unloadSubtask |
+          infoSubtask |
+          eventsSubtask |
+          logsSubtask)) ?
       }
+      (resolvedScoped, init) { (ctx, parser) =>
+        s: State =>
+          val bundle = loadFromContext(conductrDiscoveredDist, ctx, s)
+          val bundleConfig = loadFromContext(conductrDiscoveredConfigDist, ctx, s)
+          parser(bundle, bundleConfig)
+      }
+    }
     def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[LoadSubtask] =
       (token("load") ~> Space ~> bundle(availableBundle) ~
         bundleConfiguration(availableBundleConfiguration).?) map { case (b, config) => LoadSubtask(b, config) }
@@ -112,13 +129,11 @@ object ConductRPlugin extends AutoPlugin {
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
       val s = state.value
-      val stm = BundleKeys.system.value
-      val roles = BundleKeys.roles.value
       val loadTimeout = conductrLoadTimeout.value
       val requestTimeout = conductrRequestTimeout.value
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
-        case Some(LoadSubtask(b, config)) => ConductR.loadBundle(b, config, stm, roles, loadTimeout, s)
+        case Some(LoadSubtask(b, config)) => ConductR.loadBundle(b, config, loadTimeout, s)
         case Some(RunSubtask(b, scale))   => ConductR.runBundle(b, scale, requestTimeout, s)
         case Some(StopSubtask(b))         => ConductR.stopBundle(b, requestTimeout, s)
         case Some(UnloadSubtask(b))       => ConductR.unloadBundleTask(b, requestTimeout, s)

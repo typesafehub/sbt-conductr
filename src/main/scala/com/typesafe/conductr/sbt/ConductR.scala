@@ -13,7 +13,7 @@ import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle }
 import org.scalactic.{ Accumulation, Bad, Good, One, Or }
-import play.api.libs.json.{ JsError, JsSuccess, JsString, Json }
+import play.api.libs.json.{ JsError, JsSuccess, Json }
 import sbt._
 import scala.concurrent.Await
 import scala.util.{ Failure, Success }
@@ -28,46 +28,46 @@ private[conductr] object ConductR {
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
-  def loadBundle(bundle: URI, config: Option[URI], stm: String, roles: Set[String],
-    loadTimeout: Timeout, state: State): String =
-    {
-      def get[A](key: SettingKey[A]) =
-        Project.extract(state).getOpt(key)
-          .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-      def doLoadBundle(nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
-        withConductRController(state) { conductr =>
-          state.log.info("Loading bundle to ConductR ...")
-          val request =
-            LoadBundle(
-              HttpUri(bundle.toString),
-              config map (u => HttpUri(u.toString)),
-              stm,
-              nrOfCpus,
-              memory.underlying,
-              diskSpace.underlying,
-              roles
-            )
-          val response = conductr.ask(request)(loadTimeout).mapTo[String]
-          Await.ready(response, loadTimeout.duration)
-          response.value.get match {
-            case Success(s) =>
-              (Json.parse(s) \ "bundleId").validate[String] match {
-                case JsSuccess(bundleId, _) =>
-                  state.log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
-                  bundleId
-                case e: JsError =>
-                  sys.error(s"Unexpected response: $e")
-              }
-            case Failure(e) =>
-              sys.error(s"Problem loading the bundle: ${e.getMessage}")
-          }
+  def loadBundle(bundle: URI, config: Option[URI], loadTimeout: Timeout, state: State): String = {
+    def get[A](key: SettingKey[A]) =
+      Project.extract(state).getOpt(key)
+        .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
+    def doLoadBundle(stm: String, roles: Set[String], nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
+      withConductRController(state) { conductr =>
+        state.log.info("Loading bundle to ConductR ...")
+        val request =
+          LoadBundle(
+            HttpUri(bundle.toString),
+            config map (u => HttpUri(u.toString)),
+            stm,
+            nrOfCpus,
+            memory.underlying,
+            diskSpace.underlying,
+            roles
+          )
+        val response = conductr.ask(request)(loadTimeout).mapTo[String]
+        Await.ready(response, loadTimeout.duration)
+        response.value.get match {
+          case Success(s) =>
+            (Json.parse(s) \ "bundleId").validate[String] match {
+              case JsSuccess(bundleId, _) =>
+                state.log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
+                bundleId
+              case e: JsError =>
+                sys.error(s"Unexpected response: $e")
+            }
+          case Failure(e) =>
+            sys.error(s"Problem loading the bundle: ${e.getMessage}")
         }
       }
-      Accumulation.withGood(get(BundleKeys.nrOfCpus), get(BundleKeys.memory), get(BundleKeys.diskSpace))(doLoadBundle).fold(
-        identity,
-        errors => sys.error(errors.mkString(f"%n"))
-      )
     }
+    Accumulation.withGood(
+      get(BundleKeys.system),
+      get(BundleKeys.roles),
+      get(BundleKeys.nrOfCpus),
+      get(BundleKeys.memory),
+      get(BundleKeys.diskSpace))(doLoadBundle).fold(identity, errors => sys.error(errors.mkString(f"%n")))
+  }
 
   def runBundle(bundleId: String, scale: Option[Int],
     requestTimeout: Timeout, state: State): String =
