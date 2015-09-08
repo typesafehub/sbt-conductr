@@ -6,7 +6,7 @@ package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ Actor, Props, Status }
-import akka.stream.scaladsl.{ ImplicitFlowMaterializer, Sink }
+import akka.stream.scaladsl.{ ImplicitMaterializer, Sink }
 import com.typesafe.conductr.client.ConductRController
 import jline.TerminalFactory
 import scala.concurrent.duration.DurationInt
@@ -27,7 +27,7 @@ object Screen {
  * Draws data to the screen. Data is subscribed from a ConductRController.BundleInfo flow,
  * which is received in a ConductRController.BundleInfosSource message and then materialized.
  */
-class Screen[A <: Iterable[B], B](refresh: Boolean, layout: A => Screen.Layout) extends Actor with ImplicitFlowMaterializer {
+class Screen[A <: Iterable[B], B](refresh: Boolean, layout: A => Screen.Layout) extends Actor with ImplicitMaterializer {
 
   import AnsiConsole.Implicits._
   import Column._

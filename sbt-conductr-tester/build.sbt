@@ -2,7 +2,7 @@ import ByteConversions._
 
 lazy val root = project
   .in(file("."))
-  .enablePlugins(ConductRPlugin)
+  .enablePlugins(JavaAppPackaging)
 
 name := "sbt-conductr-tester"
 version := "1.0.0"
@@ -16,4 +16,4 @@ BundleKeys.diskSpace := 5.MB
 BundleKeys.roles := Set("web-server")
 BundleKeys.endpoints := Map.empty
 
-configurationName := "web-server"
+BundleKeys.configurationName := "web-server"

@@ -3,11 +3,11 @@ import sbt.Resolver.bintrayRepo
 
 object Version {
   val akka             = "2.3.11"
-  val akkaContribExtra = "1.17.0"
-  val akkaHttp         = "1.0-RC3"
+  val akkaContribExtra = "1.18.0"
+  val akkaHttp         = "1.0"
   val jansi            = "1.11"
   val jline            = "2.12"
-  val play             = "2.3.8"
+  val play             = "2.3.10"
   val sbtBundle        = "1.0.0"
   val scalaTest        = "2.2.4"
   val scalactic        = "2.2.4"
