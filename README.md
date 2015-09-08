@@ -11,6 +11,7 @@ also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#
 sbt-conductr is enabled by simply declaring its dependency:
 
 ```scala
+resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.1")
 ```
 
