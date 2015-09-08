@@ -11,7 +11,7 @@ also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#
 sbt-conductr is enabled by simply declaring its dependency:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.0")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.0.1")
 ```
 
 The plugin has no requirements for other plugins to be enabled. 
