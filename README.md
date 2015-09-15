@@ -79,4 +79,11 @@ conduct run            | Runs a bundle given a bundle id with an optional absolu
 conduct stop           | Stops all executions of a bundle given a bundle id
 conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 
+In addition the following settings are available:
+
+Property           | Description
+-------------------|------------
+conductrApiVersion | The api version to use when communicating with ConductR. Defaults to 1.0 which is required by ConductR 1.0.
+
+
 &copy; Typesafe Inc., 2014-2015

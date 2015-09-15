@@ -1,5 +1,4 @@
 import ByteConversions._
-import com.typesafe.conductr.sbt.ConductRKeys._
 
 lazy val root = project
   .in(file("."))
@@ -34,7 +33,7 @@ testControlServer := {
 
     // check input == value of conductrControlServerUrl
     input ==
-      (conductrControlServerUrl in Global).get(settings).map(_.toString)
+      (ConductRKeys.conductrControlServerUrl in Global).get(settings).map(_.toString)
         .map(input => input.substring(7,input.length)) // string out 'http://'
         .getOrElse("")
   }.fold(

@@ -19,7 +19,7 @@ object Console {
   import scala.concurrent.duration._
   val timeout = 10.second
 
-  def bundleInfo(refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+  def bundleInfo(apiVersion: ConductRController.ApiVersion.Value, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       import system.dispatcher
@@ -36,7 +36,7 @@ object Console {
         Screen.Layout(columns, notes.toVector)
       }), "screen")
       conductr
-        .ask(ConductRController.GetBundleInfoStream)(timeout)
+        .ask(ConductRController.GetBundleInfoStream(apiVersion))(timeout)
         .mapTo[ConductRController.DataSource[Seq[ConductRController.BundleInfo]]]
         .pipeTo(screen)
 
@@ -44,7 +44,7 @@ object Console {
     }
   }
 
-  def events(bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+  def events(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       import system.dispatcher
@@ -58,7 +58,7 @@ object Console {
         Screen.Layout(columns, Vector.empty)
       }), "screen")
       conductr
-        .ask(ConductRController.GetEventStream(bundleId))(timeout)
+        .ask(ConductRController.GetEventStream(apiVersion, bundleId))(timeout)
         .mapTo[ConductRController.DataSource[Seq[ConductRController.Event]]]
         .pipeTo(screen)
 
@@ -66,7 +66,7 @@ object Console {
     }
   }
 
-  def logs(bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+  def logs(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       import system.dispatcher
@@ -80,7 +80,7 @@ object Console {
         Screen.Layout(columns, Vector.empty)
       }), "screen")
       conductr
-        .ask(ConductRController.GetLogStream(bundleId))(timeout)
+        .ask(ConductRController.GetLogStream(apiVersion, bundleId))(timeout)
         .mapTo[ConductRController.DataSource[Seq[ConductRController.Log]]]
         .pipeTo(screen)
 
