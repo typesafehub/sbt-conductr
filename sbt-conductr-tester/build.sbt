@@ -13,7 +13,6 @@ scalaVersion := "2.11.6"
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 10.MiB
 BundleKeys.diskSpace := 5.MB
-BundleKeys.roles := Set("web-server")
 BundleKeys.endpoints := Map.empty
 
 BundleKeys.configurationName := "web-server"

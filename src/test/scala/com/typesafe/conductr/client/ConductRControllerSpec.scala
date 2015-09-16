@@ -20,47 +20,43 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
 
   // FIXME: Test required for GetBundleStream
 
+  import ConductRController._
+
   "The controller" should {
     "send a load bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
       testProbe.send(
         controller,
-        ConductRController.LoadBundle(Uri(testBundle.toURI.toString), None, "some-system", 1.0, 1024, 1024, Set("web-server"))
+        ConductRController.LoadBundle(ApiVersion.V10, "some-name", "1.0", "some-system", "1.0", 1.0, 1024, 1024, Set("web-server"), Uri(testBundle.toURI.toString), None)
       )
       testProbe expectMsg "hello"
     }
 
+    "send a load bundle request and reply with some id for the 1.1 protocol" in withController { controller =>
+      val testProbe = TestProbe()
+      testProbe.send(
+        controller,
+        ConductRController.LoadBundle(ApiVersion.V11, "some-name", "2.0", "some-system", "3.0", 1.0, 1024, 1024, Set("web-server"), Uri(testBundle.toURI.toString), None)
+      )
+      testProbe expectMsg "hello again"
+    }
+
     "send a start bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.RunBundle("hello", 2))
+      testProbe.send(controller, ConductRController.RunBundle(ApiVersion.V10, "hello", 2))
       testProbe expectMsg "hello back"
     }
 
     "send a stop bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.StopBundle("hello"))
+      testProbe.send(controller, ConductRController.StopBundle(ApiVersion.V10, "hello"))
       testProbe expectMsg "hello gone"
     }
 
     "send an unload bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.UnloadBundle("hello"))
+      testProbe.send(controller, ConductRController.UnloadBundle(ApiVersion.V10, "hello"))
       testProbe expectMsg "hello really gone"
-    }
-  }
-
-  "Bundle URI" should {
-    "be converted to bundle name" in {
-      val pathsToNames = Map(
-        "path/to/bundle.zip" -> "bundle",
-        "path/to/bundle-5ca1ab1e.zip" -> "bundle",
-        "path/to/bundle-1.0.0-M2.zip" -> "bundle-1.0.0-M2"
-      )
-
-      val toBundleName = PrivateMethod[String]('toBundleName)
-      pathsToNames foreach {
-        case (path, name) => ConductRController.invokePrivate(toBundleName(Uri(s"file://$path"))) shouldBe name
-      }
     }
   }
 
@@ -81,6 +77,8 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
       override def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]) =
         if (request.method == HttpMethods.POST && request.uri == Uri("/bundles"))
           Future.successful(HttpResponse(entity = "hello"))
+        else if (request.method == HttpMethods.POST && request.uri == Uri("/v1.1/bundles"))
+          Future.successful(HttpResponse(entity = "hello again"))
         else if (request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=2"))
           Future.successful(HttpResponse(entity = "hello back"))
         else if (request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=0"))

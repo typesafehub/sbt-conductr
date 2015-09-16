@@ -20,30 +20,41 @@ import scala.util.{ Failure, Success }
 
 private[conductr] object ConductR {
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
-  import ConductRKeys._
+  import Import._
 
   final val DefaultConductrProtocol = "http"
   final val DefaultConductrHost = "127.0.0.1"
   final val DefaultConductrPort = 9005
+
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
-  def loadBundle(bundle: URI, config: Option[URI], loadTimeout: Timeout, state: State): String = {
+  def loadBundle(apiVersion: String, bundle: URI, config: Option[URI], loadTimeout: Timeout, state: State): String = {
     def get[A](key: SettingKey[A]) =
-      Project.extract(state).getOpt(key)
+      getOpt(key)
         .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-    def doLoadBundle(stm: String, roles: Set[String], nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
+    def getOpt[A](key: SettingKey[A]) =
+      Project.extract(state).getOpt(key)
+    def doLoadBundle(normalizedName: String, version: String, system: String, roles: Set[String], nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
       withConductRController(state) { conductr =>
         state.log.info("Loading bundle to ConductR ...")
+
+        val compatibilityVersion = getOpt(BundleKeys.compatibilityVersion).getOrElse(version)
+        val systemVersion = getOpt(BundleKeys.systemVersion).getOrElse(compatibilityVersion)
+
         val request =
           LoadBundle(
-            HttpUri(bundle.toString),
-            config map (u => HttpUri(u.toString)),
-            stm,
+            toApiVersion(apiVersion),
+            normalizedName,
+            compatibilityVersion,
+            system,
+            systemVersion,
             nrOfCpus,
             memory.underlying,
             diskSpace.underlying,
-            roles
+            roles,
+            HttpUri(bundle.toString),
+            config.map(u => HttpUri(u.toString))
           )
         val response = conductr.ask(request)(loadTimeout).mapTo[String]
         Await.ready(response, loadTimeout.duration)
@@ -62,6 +73,8 @@ private[conductr] object ConductR {
       }
     }
     Accumulation.withGood(
+      get(Keys.normalizedName in Bundle),
+      get(Keys.version),
       get(BundleKeys.system),
       get(BundleKeys.roles),
       get(BundleKeys.nrOfCpus),
@@ -69,11 +82,11 @@ private[conductr] object ConductR {
       get(BundleKeys.diskSpace))(doLoadBundle).fold(identity, errors => sys.error(errors.mkString(f"%n")))
   }
 
-  def runBundle(bundleId: String, scale: Option[Int],
+  def runBundle(apiVersion: String, bundleId: String, scale: Option[Int],
     requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
       state.log.info(s"Running bundle $bundleId ...")
-      val response = conductr.ask(RunBundle(bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
+      val response = conductr.ask(RunBundle(toApiVersion(apiVersion), bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
@@ -89,10 +102,10 @@ private[conductr] object ConductR {
       }
     }
 
-  def stopBundle(bundleId: String, requestTimeout: Timeout, state: State): String =
+  def stopBundle(apiVersion: String, bundleId: String, requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
       state.log.info(s"Stopping all bundle $bundleId instances ...")
-      val response = conductr.ask(StopBundle(bundleId))(requestTimeout).mapTo[String]
+      val response = conductr.ask(StopBundle(toApiVersion(apiVersion), bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
@@ -108,10 +121,10 @@ private[conductr] object ConductR {
       }
     }
 
-  def unloadBundleTask(bundleId: String, requestTimeout: Timeout, state: State): String =
+  def unloadBundleTask(apiVersion: String, bundleId: String, requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
       state.log.info(s"Unloading bundle $bundleId ...")
-      val response = conductr.ask(UnloadBundle(bundleId))(requestTimeout).mapTo[String]
+      val response = conductr.ask(UnloadBundle(toApiVersion(apiVersion), bundleId))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>
@@ -127,14 +140,14 @@ private[conductr] object ConductR {
       }
     }
 
-  def info(s: State): Unit =
-    withActorSystem(s)(withConductRController(s)(console.Console.bundleInfo(refresh = false)))
+  def info(apiVersion: String, state: State): Unit =
+    withActorSystem(state)(withConductRController(state)(console.Console.bundleInfo(toApiVersion(apiVersion), refresh = false)))
 
-  def events(bundleId: String, s: State): Unit =
+  def events(apiVersion: String, bundleId: String, state: State): Unit =
     println("This command is not yet available. Consult ConductR logs.")
   //withActorSystem(s)(withConductRController(s)(console.Console.events(bundleId, refresh = false))) FIXME
 
-  def logs(bundleId: String, s: State): Unit =
+  def logs(apiVersion: String, bundleId: String, state: State): Unit =
     println("This command is not yet available. Consult your application logs.")
   //withActorSystem(s)(withConductRController(s)(console.Console.logs(bundleId, refresh = false))) FIXME
 
@@ -183,9 +196,9 @@ private[conductr] object ConductR {
         val settings = extracted.structure.data
         val conductr =
           for {
-            conductrUrl <- (conductrControlServerUrl in Global).get(settings)
-            loggingQueryUrl <- (conductrLoggingQueryUrl in Global).get(settings)
-            connectTimeout <- (conductrConnectTimeout in Global).get(settings)
+            conductrUrl <- (ConductRKeys.conductrControlServerUrl in Global).get(settings)
+            loggingQueryUrl <- (ConductRKeys.conductrLoggingQueryUrl in Global).get(settings)
+            connectTimeout <- (ConductRKeys.conductrConnectTimeout in Global).get(settings)
           } yield {
             state.log.info(s"Control Protocol set for $conductrUrl. Use `controlServer` to set an alternate address.")
             system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
@@ -218,4 +231,11 @@ private[conductr] object ConductR {
     finally
       thread.setContextClassLoader(oldLoader)
   }
+
+  private def toApiVersion(apiVersion: String): ConductRController.ApiVersion.Value =
+    try
+      ConductRController.ApiVersion.withName(apiVersion)
+    catch {
+      case _: NoSuchElementException => sys.error(s"Unknown API version: $apiVersion")
+    }
 }

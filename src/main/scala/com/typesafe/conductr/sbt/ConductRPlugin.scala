@@ -4,15 +4,11 @@
 
 package com.typesafe.conductr.sbt
 
-import sbt.Keys._
 import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 
-import com.typesafe.sbt.SbtNativePackager
 import com.typesafe.sbt.packager.Keys._
-import com.typesafe.sbt.packager.universal.UniversalPlugin
-import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
 import scala.concurrent.duration.DurationInt
 import language.postfixOps
 import ConductR._
@@ -21,44 +17,44 @@ import ConductR._
  * An sbt plugin that interact's with Typesafe ConductR's controller and potentially other components.
  */
 object ConductRPlugin extends AutoPlugin {
-  import ConductRKeys._
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
+  import Import._
   import sbinary.DefaultProtocol.FileFormat
 
-  object autoImport {
-    val conduct = ConductRKeys.conduct
-  }
+  val autoImport = Import
 
   override def trigger = allRequirements
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      onLoad := onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
-      onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(onUnload.value),
+      Keys.onLoad := Keys.onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
+      Keys.onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(Keys.onUnload.value),
 
-      aggregate in conduct := false,
+      Keys.aggregate in ConductRKeys.conduct := false,
 
       dist in Bundle := file(""),
       dist in BundleConfiguration := file(""),
 
-      conductrConnectTimeout := 30.seconds,
-      conductrLoadTimeout := 10.minutes,
-      conductrRequestTimeout := 30.seconds,
+      ConductRKeys.conductrConnectTimeout := 30.seconds,
+      ConductRKeys.conductrLoadTimeout := 10.minutes,
+      ConductRKeys.conductrRequestTimeout := 30.seconds,
 
-      conductrControlServerUrl := envUrl("CONDUCTR_IP", DefaultConductrHost, "CONDUCTR_PORT", DefaultConductrPort, DefaultConductrProtocol),
-      conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol)
+      ConductRKeys.conductrControlServerUrl := envUrl("CONDUCTR_IP", DefaultConductrHost, "CONDUCTR_PORT", DefaultConductrPort, DefaultConductrProtocol),
+      ConductRKeys.conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol),
+
+      ConductRKeys.conductrApiVersion := "1.0"
     )
 
   override def projectSettings: Seq[Setting[_]] =
     super.projectSettings ++ List(
-      commands ++= Seq(controlServer),
-      conduct := conductTask.value.evaluated,
+      Keys.commands ++= Seq(controlServer),
+      ConductRKeys.conduct := conductTask.value.evaluated,
 
-      conductrDiscoveredDist <<=
-        (dist in Bundle).storeAs(conductrDiscoveredDist)
+      ConductRKeys.conductrDiscoveredDist <<=
+        (dist in Bundle).storeAs(ConductRKeys.conductrDiscoveredDist)
         .triggeredBy(dist in Bundle),
-      conductrDiscoveredConfigDist <<=
-        (dist in BundleConfiguration).storeAs(conductrDiscoveredConfigDist)
+      ConductRKeys.conductrDiscoveredConfigDist <<=
+        (dist in BundleConfiguration).storeAs(ConductRKeys.conductrDiscoveredConfigDist)
         .triggeredBy(dist in BundleConfiguration)
     )
 
@@ -66,7 +62,7 @@ object ConductRPlugin extends AutoPlugin {
 
   private def controlServer: Command = Command.single("controlServer") { (prevState, url) =>
     val extracted = Project.extract(prevState)
-    extracted.append(Seq(conductrControlServerUrl in Global := prepareConductrUrl(url)), prevState)
+    extracted.append(Seq(ConductRKeys.conductrControlServerUrl in Global := prepareConductrUrl(url)), prevState)
   }
 
   private object Parsers {
@@ -81,10 +77,10 @@ object ConductRPlugin extends AutoPlugin {
           eventsSubtask |
           logsSubtask)) ?
       }
-      (resolvedScoped, init) { (ctx, parser) =>
+      (Keys.resolvedScoped, init) { (ctx, parser) =>
         s: State =>
-          val bundle = loadFromContext(conductrDiscoveredDist, ctx, s)
-          val bundleConfig = loadFromContext(conductrDiscoveredConfigDist, ctx, s)
+          val bundle = loadFromContext(ConductRKeys.conductrDiscoveredDist, ctx, s)
+          val bundleConfig = loadFromContext(ConductRKeys.conductrDiscoveredConfigDist, ctx, s)
           parser(bundle, bundleConfig)
       }
     }
@@ -128,19 +124,20 @@ object ConductRPlugin extends AutoPlugin {
 
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
-      val s = state.value
-      val loadTimeout = conductrLoadTimeout.value
-      val requestTimeout = conductrRequestTimeout.value
+      val apiVersion = ConductRKeys.conductrApiVersion.value
+      val state = Keys.state.value
+      val loadTimeout = ConductRKeys.conductrLoadTimeout.value
+      val requestTimeout = ConductRKeys.conductrRequestTimeout.value
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
-        case Some(LoadSubtask(b, config)) => ConductR.loadBundle(b, config, loadTimeout, s)
-        case Some(RunSubtask(b, scale))   => ConductR.runBundle(b, scale, requestTimeout, s)
-        case Some(StopSubtask(b))         => ConductR.stopBundle(b, requestTimeout, s)
-        case Some(UnloadSubtask(b))       => ConductR.unloadBundleTask(b, requestTimeout, s)
-        case Some(InfoSubtask)            => ConductR.info(s)
-        case Some(EventsSubtask(b))       => ConductR.events(b, s)
-        case Some(LogsSubtask(b))         => ConductR.logs(b, s)
-        case None                         => println("Usage: conduct <subtask>")
+        case Some(LoadSubtask(bundle, config)) => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
+        case Some(RunSubtask(bundleId, scale)) => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
+        case Some(StopSubtask(bundleId))       => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
+        case Some(UnloadSubtask(bundleId))     => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
+        case Some(InfoSubtask)                 => ConductR.info(apiVersion, state)
+        case Some(EventsSubtask(bundleId))     => ConductR.events(apiVersion, bundleId, state)
+        case Some(LogsSubtask(bundleId))       => ConductR.logs(apiVersion, bundleId, state)
+        case None                              => println("Usage: conduct <subtask>")
       }
     }
 }
