@@ -67,6 +67,32 @@ configuration:dist
 
 ...and then hit the tab key after specifying the bundle for `conduct load`.
 
+### Retrieve logs and events
+
+The log messages and events of a particular bundle can be displayed with the commands:
+
+```bash
+conduct logs my-bundle
+conduct events my-bundle
+```
+
+Make sure that your logging infrastructure is up an running. Otherwise the command will timeout: 
+
+```
+[trace] Stack trace suppressed: run last conductr-service-lookup/*:conduct for the full output.
+[error] (conductr-service-lookup/*:conduct) java.util.concurrent.TimeoutException: Futures timed out after [5 seconds]
+[error] Total time: 5 s, completed Sep 28, 2015 11:40:47 AM
+```
+
+With [sbt-conductr-sandbox](https://github.com/typesafehub/sbt-conductr-sandbox) you can start the default logging infrastructure during ConductR cluster startup easily:
+
+```bash
+sandbox run --withFeatures logging
+conduct logs my-bundle
+```
+
+Give the logging infrastructure enough time to start before entering the `logs` or `events` command.
+
 ### Settings
 
 The following `sbt-conductr` commands are available:
@@ -78,6 +104,8 @@ conduct load           | Loads a bundle and an optional configuration to the Con
 conduct run            | Runs a bundle given a bundle id with an optional absolute scale value specified with --scale
 conduct stop           | Stops all executions of a bundle given a bundle id
 conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
+conduct logs           | Retrieves log messages of a given bundle
+conduct events         | Retrieves events of a given bundle
 
 In addition the following settings are available:
 

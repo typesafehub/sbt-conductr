@@ -7,6 +7,7 @@ object Version {
   val akkaHttp         = "1.0"
   val jansi            = "1.11"
   val jline            = "2.12"
+  val jodaTime         = "2.8.2"
   val play             = "2.3.10"
   val sbtBundle        = "1.1.0"
   val scalaTest        = "2.2.4"
@@ -19,6 +20,7 @@ object Library {
   val akkaTestkit      = "com.typesafe.akka"    %% "akka-testkit"           % Version.akka
   val jansi            = "org.fusesource.jansi" %  "jansi"                  % Version.jansi
   val jline            = "jline"                %  "jline"                  % Version.jline
+  val jodaTime         = "joda-time"            %  "joda-time"              % Version.jodaTime
   val playJson         = "com.typesafe.play"    %% "play-json"              % Version.play
   val sbtBundle        = "com.typesafe.sbt"     %  "sbt-bundle"             % Version.sbtBundle
   val scalaTest        = "org.scalatest"        %% "scalatest"              % Version.scalaTest
