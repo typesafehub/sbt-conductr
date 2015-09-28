@@ -9,6 +9,7 @@ libraryDependencies ++= List(
   Library.akkaHttp,
   Library.jansi,
   Library.jline,
+  Library.jodaTime,
   Library.playJson,
   Library.scalactic,
   Library.akkaTestkit % "test",

@@ -12,17 +12,17 @@ import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.HttpEntity.IndefiniteLength
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.Multipart.FormData
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, MediaTypes, RequestEntity, Uri }
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.pipe
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{ Flow, ImplicitMaterializer, Sink, Source }
 import akka.util.{ ByteString, Timeout }
 import java.net.{ URI, URL }
-import play.api.libs.json.Json
+import play.api.libs.json.{ Reads, Json }
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import play.api.libs.json.Reads
+import scala.concurrent.duration._
 
 object ConductRController {
 
@@ -71,6 +71,7 @@ object ConductRController {
 
   /**
    * Run a bundle/config combination. Returns a request id for tracking purposes.
+   * @param apiVersion The HTTP API version of ConductR
    * @param bundleId The bundle/config combination to start
    * @param scale The number of instances to scale up or down to.
    */
@@ -78,24 +79,39 @@ object ConductRController {
 
   /**
    * Stop a bundle/config combination. Returns a request id for tracking purposes.
+   * @param apiVersion The HTTP API version of ConductR
    * @param bundleId The bundle/config combination to stop
    */
   case class StopBundle(apiVersion: ApiVersion.Value, bundleId: String)
 
   /**
    * Unload a bundle from the storage managed by the RR.
+   * @param apiVersion The HTTP API version of ConductR
    * @param bundleId the bundle id to unload
    */
   case class UnloadBundle(apiVersion: ApiVersion.Value, bundleId: String)
 
   /**
    * Request for a [[BundleInfo]] stream.
+   * @param apiVersion The HTTP API version of ConductR
    */
   case class GetBundleInfoStream(apiVersion: ApiVersion.Value)
 
-  case class GetEventStream(apiVersion: ApiVersion.Value, bundleId: String)
+  /**
+   * Retrieve events by bundle
+   * @param apiVersion The HTTP API version of ConductR
+   * @param bundleId the bundle id to retrieve events from
+   * @param lines Number of lines to display
+   */
+  case class GetBundleEvents(apiVersion: ApiVersion.Value, bundleId: String, lines: Int)
 
-  case class GetLogStream(apiVersion: ApiVersion.Value, bundleId: String)
+  /**
+   * Retrieve log messages by bundle
+   * @param apiVersion The HTTP API version of ConductR
+   * @param bundleId the bundle id to retrieve log messages from
+   * @param lines Number of lines to display
+   */
+  case class GetBundleLogs(apiVersion: ApiVersion.Value, bundleId: String, lines: Int)
 
   /**
    * A flow of data for the screen. Needs to be materialized after attaching sink.
@@ -139,14 +155,14 @@ object ConductRController {
   case class BundleInstallation(uniqueAddress: UniqueAddress, bundleFile: URI, configurationFile: Option[URI])
 
   case class Event(
-    time: String,
+    timestamp: String,
     event: String,
     description: String)
 
   case class Log(
-    time: String,
+    timestamp: String,
     host: String,
-    log: String)
+    message: String)
 
   private val blockingIoDispatcher = "conductr-blocking-io-dispatcher"
 
@@ -188,9 +204,9 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   import context.dispatcher
 
   override def receive: Receive = {
-    case request: GetBundleInfoStream => fetchBundleSource(sender(), request)
-    case request: GetEventStream      => fetchLoggingQuerySource[Event](sender(), request.apiVersion, request.bundleId)
-    case request: GetLogStream        => fetchLoggingQuerySource[Log](sender(), request.apiVersion, request.bundleId)
+    case request: GetBundleInfoStream => getBundleInfo(request)
+    case request: GetBundleEvents     => getBundleEvents(request)
+    case request: GetBundleLogs       => getBundleLogs(request)
     case request: LoadBundle          => loadBundle(request)
     case request: RunBundle           => runBundle(request)
     case request: StopBundle          => stopBundle(request)
@@ -203,16 +219,30 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
     Source.single(request).via(connection).runWith(Sink.head)
 
+  private def httpRequest[A: Reads](method: HttpMethod, uri: String, entity: Option[RequestEntity] = None, parse: Boolean = false): Future[A] = {
+    def bodyOrThrow(response: HttpResponse, body: String): String =
+      if (response.status.isSuccess()) body else throw new IllegalStateException(body)
+
+    val req = entity.map(e => HttpRequest(method, uri, entity = e)).getOrElse(HttpRequest(method, uri))
+    for {
+      connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
+      response <- request(req, connection)
+      body <- Unmarshal(response.entity).to[String]
+    } yield {
+      val b = bodyOrThrow(response, body)
+      if (parse) Json.parse(b).as[A] else b.asInstanceOf[A]
+    }
+  }
+
   private def loadBundle(loadBundle: LoadBundle): Unit = {
-    val pendingResponse =
-      for {
-        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
-        bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
-        configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
-        entity <- Marshal(FormData(formBodyParts(loadBundle, bundleFileBodyPart, configFileBodyPart))).to[RequestEntity]
-        response <- request(HttpRequest(POST, s"${apiVersionPath(loadBundle.apiVersion)}/bundles", entity = entity), connection)
-        body <- Unmarshal(response.entity).to[String]
-      } yield bodyOrThrow(response, body)
+    val uri = s"${apiVersionPath(loadBundle.apiVersion)}/bundles"
+    val bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
+    val configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
+    val pendingResponse = for {
+      entity <- Marshal(FormData(formBodyParts(loadBundle, bundleFileBodyPart, configFileBodyPart))).to[RequestEntity]
+      response <- httpRequest[String](POST, uri, entity = Some(entity))
+    } yield response
+
     pendingResponse.pipeTo(sender())
   }
 
@@ -246,72 +276,38 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   }
 
   private def runBundle(runBundle: RunBundle): Unit = {
-    val pendingResponse =
-      for {
-        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(PUT, s"${apiVersionPath(runBundle.apiVersion)}/bundles/${runBundle.bundleId}?scale=${runBundle.scale}"), connection)
-        body <- Unmarshal(response.entity).to[String]
-      } yield bodyOrThrow(response, body)
-    pendingResponse.pipeTo(sender())
+    val uri = s"${apiVersionPath(runBundle.apiVersion)}/bundles/${runBundle.bundleId}?scale=${runBundle.scale}"
+    httpRequest[String](PUT, uri).pipeTo(sender())
   }
 
   private def stopBundle(stopBundle: StopBundle): Unit = {
-    val pendingResponse =
-      for {
-        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(PUT, s"${apiVersionPath(stopBundle.apiVersion)}/bundles/${stopBundle.bundleId}?scale=0"), connection)
-        body <- Unmarshal(response.entity).to[String]
-      } yield bodyOrThrow(response, body)
-    pendingResponse.pipeTo(sender())
+    val uri = s"${apiVersionPath(stopBundle.apiVersion)}/bundles/${stopBundle.bundleId}?scale=0"
+    httpRequest[String](PUT, uri).pipeTo(sender())
   }
 
   private def unloadBundle(unloadBundle: UnloadBundle): Unit = {
-    val pendingResponse =
-      for {
-        connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
-        response <- request(HttpRequest(DELETE, s"${apiVersionPath(unloadBundle.apiVersion)}/bundles/${unloadBundle.bundleId}"), connection)
-        body <- Unmarshal(response.entity).to[String]
-      } yield bodyOrThrow(response, body)
-    pendingResponse.pipeTo(sender())
+    val uri = s"${apiVersionPath(unloadBundle.apiVersion)}/bundles/${unloadBundle.bundleId}"
+    httpRequest[String](DELETE, uri).pipeTo(sender())
   }
 
-  private def fetchBundleSource(originalSender: ActorRef, getBundleInfoStream: GetBundleInfoStream): Unit = {
-    import scala.concurrent.duration._
+  private def getBundleInfo(getBundleInfoStream: GetBundleInfoStream): Unit = {
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => getBundles(getBundleInfoStream))
-    originalSender ! DataSource(source)
+    val uri = s"${apiVersionPath(getBundleInfoStream.apiVersion)}/bundles"
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => httpRequest[Seq[BundleInfo]](GET, uri, parse = true))
+    sender() ! DataSource(source)
   }
 
-  private def getBundles(getBundleInfoStream: GetBundleInfoStream): Future[Seq[BundleInfo]] =
-    for {
-      connection <- connect(conductr.authority.host.address(), conductr.authority.port)(context.system, connectTimeout)
-      response <- request(HttpRequest(GET, s"${apiVersionPath(getBundleInfoStream.apiVersion)}/bundles"), connection)
-      body <- Unmarshal(response.entity).to[String]
-    } yield {
-      val b = bodyOrThrow(response, body)
-      Json.parse(b).as[Seq[BundleInfo]]
-    }
-
-  private def fetchLoggingQuerySource[A: Reads](originalSender: ActorRef, apiVersion: ApiVersion.Value, bundleId: String): Unit = {
-    import scala.concurrent.duration._
+  private def getBundleEvents(getBundleEvents: GetBundleEvents): Unit = {
     // TODO this needs to be driven by SSE and not by the timer
-    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => getLoggingQuery[A](apiVersion, bundleId))
-    originalSender ! DataSource(source)
+    val uri = s"${apiVersionPath(getBundleEvents.apiVersion)}/bundles/${getBundleEvents.bundleId}/events?count=${getBundleEvents.lines}"
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => httpRequest[Seq[Event]](GET, uri, parse = true))
+    sender() ! DataSource(source)
   }
 
-  private def getLoggingQuery[A: Reads](apiVersion: ApiVersion.Value, bundleId: String): Future[Seq[A]] =
-    for {
-      connection <- connect(loggingQuery.authority.host.address(), loggingQuery.authority.port)(context.system, connectTimeout)
-      response <- request(HttpRequest(GET, s"${apiVersionPath(apiVersion)}/events/$bundleId"), connection)
-      body <- Unmarshal(response.entity).to[String]
-    } yield {
-      val b = bodyOrThrow(response, body)
-      Json.parse(b).as[Seq[A]]
-    }
-
-  private def bodyOrThrow(response: HttpResponse, body: String): String =
-    if (response.status.isSuccess())
-      body
-    else
-      throw new IllegalStateException(body)
+  private def getBundleLogs(getBundleLogs: GetBundleLogs): Unit = {
+    // TODO this needs to be driven by SSE and not by the timer
+    val uri = s"${apiVersionPath(getBundleLogs.apiVersion)}/bundles/${getBundleLogs.bundleId}/logs?count=${getBundleLogs.lines}"
+    val source = Source(100.millis, 2.seconds, () => ()).mapAsync(1)(_ => httpRequest[Seq[Log]](GET, uri, parse = true))
+    sender() ! DataSource(source)
+  }
 }

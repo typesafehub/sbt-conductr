@@ -143,13 +143,15 @@ private[conductr] object ConductR {
   def info(apiVersion: String, state: State): Unit =
     withActorSystem(state)(withConductRController(state)(console.Console.bundleInfo(toApiVersion(apiVersion), refresh = false)))
 
-  def events(apiVersion: String, bundleId: String, state: State): Unit =
-    println("This command is not yet available. Consult ConductR logs.")
-  //withActorSystem(s)(withConductRController(s)(console.Console.events(bundleId, refresh = false))) FIXME
+  def events(apiVersion: String, bundleId: String, lines: Option[Int], state: State): Unit =
+    withActorSystem(state) {
+      withConductRController(state)(console.Console.bundleEvents(toApiVersion(apiVersion), bundleId, lines.getOrElse(10), refresh = false))
+    }
 
-  def logs(apiVersion: String, bundleId: String, state: State): Unit =
-    println("This command is not yet available. Consult your application logs.")
-  //withActorSystem(s)(withConductRController(s)(console.Console.logs(bundleId, refresh = false))) FIXME
+  def logs(apiVersion: String, bundleId: String, lines: Option[Int], state: State): Unit =
+    withActorSystem(state) {
+      withConductRController(state)(console.Console.bundleLogs(toApiVersion(apiVersion), bundleId, lines.getOrElse(10), refresh = false))
+    }
 
   def envUrl(envIp: String, defaultIp: String, envPort: String, defaultPort: Int, defaultProto: String): URL = {
     val ip = sys.env.getOrElse(envIp, defaultIp)

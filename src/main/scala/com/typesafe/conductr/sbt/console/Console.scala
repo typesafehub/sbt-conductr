@@ -17,7 +17,7 @@ import com.typesafe.conductr.sbt.console.Column._
 object Console {
 
   import scala.concurrent.duration._
-  val timeout = 10.second
+  val timeout = 5.seconds
 
   def bundleInfo(apiVersion: ConductRController.ApiVersion.Value, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
@@ -44,7 +44,7 @@ object Console {
     }
   }
 
-  def events(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+  def bundleEvents(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, lines: Int, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       import system.dispatcher
@@ -58,7 +58,7 @@ object Console {
         Screen.Layout(columns, Vector.empty)
       }), "screen")
       conductr
-        .ask(ConductRController.GetEventStream(apiVersion, bundleId))(timeout)
+        .ask(ConductRController.GetBundleEvents(apiVersion, bundleId, lines))(timeout)
         .mapTo[ConductRController.DataSource[Seq[ConductRController.Event]]]
         .pipeTo(screen)
 
@@ -66,7 +66,7 @@ object Console {
     }
   }
 
-  def logs(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
+  def bundleLogs(apiVersion: ConductRController.ApiVersion.Value, bundleId: String, lines: Int, refresh: Boolean): ActorRef => ActorSystem => Unit = { implicit conductr =>
     { implicit system =>
 
       import system.dispatcher
@@ -80,7 +80,7 @@ object Console {
         Screen.Layout(columns, Vector.empty)
       }), "screen")
       conductr
-        .ask(ConductRController.GetLogStream(apiVersion, bundleId))(timeout)
+        .ask(ConductRController.GetBundleLogs(apiVersion, bundleId, lines))(timeout)
         .mapTo[ConductRController.DataSource[Seq[ConductRController.Log]]]
         .pipeTo(screen)
 
@@ -124,5 +124,4 @@ object Console {
       }
     }
   }
-
 }

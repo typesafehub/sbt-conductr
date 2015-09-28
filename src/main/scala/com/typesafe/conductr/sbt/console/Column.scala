@@ -6,11 +6,16 @@ package com.typesafe.conductr.sbt
 package console
 
 import com.typesafe.conductr.client.ConductRController
+import jline.TerminalFactory
+import org.joda.time.DateTime
 
 object Column {
 
   import AnsiConsole.Implicits._
   import Console.Implicits._
+
+  private final val Space = " "
+  private final val NewLine = "\n"
 
   /**
    * A fixed width column with no additional functionality.
@@ -60,24 +65,46 @@ object Column {
     protected def justify(s: String): String
 
     protected def space(length: Int): String =
-      Stream.continually(" ").take(length).mkString
+      Stream.continually(Space).take(length).mkString
 
     /**
      * Add '... ' if string is over the allowed width.
      */
-    private def ellipsize(s: String): String = {
+    private[console] def ellipsize(s: String): String = {
       val ellipsis = "... "
-      if (s.visibleLength >= width)
+      if (s.visibleLength > width)
         s.take(width - ellipsis.length) + ellipsis
       else
         s
     }
   }
 
-  trait LeftJustified { self: RegularColumn =>
+  /**
+   * The wrapping column wraps the text instead of cutting it based on the column length.
+   * If the text is longer than the width of the column, one additional line as separation are added. This
+   * new line is necessary so that the next row is displayed on a new line.
+   */
+  trait WrappingColumn extends RegularColumn {
+
+    /**
+     * Left margin. If the text character count is greater than the column with this margin size
+     * is used to align the the second line of the text within the column.
+     */
+    def marginLeft: Int
+
     override protected def justify(s: String): String = {
-      s + space(width - s.visibleLength)
+      val formattedText =
+        if (s.visibleLength > width) s.grouped(width).mkString(Space * marginLeft) else s
+      super.justify(formattedText)
     }
+
+    override private[console] def ellipsize(s: String): String =
+      if (s.visibleLength > width) s + NewLine else s
+  }
+
+  trait LeftJustified { self: RegularColumn =>
+    override protected def justify(s: String): String =
+      s + space(width - s.visibleLength)
   }
 
   trait RightJustified { self: RegularColumn =>
@@ -157,9 +184,9 @@ object Column {
 
   case class EventTime(events: Seq[ConductRController.Event]) extends RegularColumn {
     override val title = "TIME"
-    override val width = 16
+    override val width = 11
 
-    override val data = events.map { event => List(event.time) }
+    override val data = events.map { event => List(DateTime.parse(event.timestamp).toString("hh:mm:ss")) }
   }
 
   case class Event(events: Seq[ConductRController.Event]) extends RegularColumn {
@@ -169,31 +196,33 @@ object Column {
     override val data = events.map { event => List(event.event) }
   }
 
-  case class Description(events: Seq[ConductRController.Event]) extends RegularColumn {
+  case class Description(events: Seq[ConductRController.Event]) extends WrappingColumn {
     override val title = "DESC"
-    override val width = 50
+    override val marginLeft = 61
+    override val width = TerminalFactory.get().getWidth - marginLeft
 
     override val data = events.map { event => List(event.description) }
   }
 
   case class LogTime(logs: Seq[ConductRController.Log]) extends RegularColumn {
     override val title = "TIME"
-    override val width = 16
+    override val width = 11
 
-    override val data = logs.map { event => List(event.time) }
+    override val data = logs.map { event => List(DateTime.parse(event.timestamp).toString("hh:mm:ss")) }
   }
 
   case class Host(logs: Seq[ConductRController.Log]) extends RegularColumn {
     override val title = "HOST"
     override val width = 15
 
-    override val data = logs.map { event => List(event.log) }
+    override val data = logs.map { event => List(event.host) }
   }
 
-  case class Log(logs: Seq[ConductRController.Log]) extends RegularColumn {
+  case class Log(logs: Seq[ConductRController.Log]) extends WrappingColumn {
     override val title = "LOG"
-    override val width = 50
+    override val marginLeft = 26
+    override val width = TerminalFactory.get().getWidth - marginLeft
 
-    override val data = logs.map { event => List(event.log) }
+    override val data = logs.map { event => List(event.message.trim) }
   }
 }

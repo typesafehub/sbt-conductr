@@ -99,9 +99,9 @@ object ConductRPlugin extends AutoPlugin {
     def infoSubtask: Parser[InfoSubtask.type] =
       token("info") map { case _ => InfoSubtask }
     def eventsSubtask: Parser[EventsSubtask] =
-      (token("events") ~> Space ~> bundleId(List("fixme"))) map { case b => EventsSubtask(b) }
+      (token("events") ~> Space ~> bundleId(List("fixme")) ~ lines.?) map { case (b, lines) => EventsSubtask(b, lines) }
     def logsSubtask: Parser[LogsSubtask] =
-      (token("logs") ~> Space ~> bundleId(List("fixme"))) map { case b => LogsSubtask(b) }
+      (token("logs") ~> Space ~> bundleId(List("fixme")) ~ lines.?) map { case (b, lines) => LogsSubtask(b, lines) }
 
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
@@ -110,7 +110,11 @@ object ConductRPlugin extends AutoPlugin {
 
     def bundleId(x: Seq[String]): Parser[String] = StringBasic examples (x: _*)
 
-    def scale: Parser[Int] = Space ~> "--scale" ~> Space ~> IntBasic
+    def positiveNumber: Parser[Int] = Space ~> NatBasic
+
+    def scale: Parser[Int] = Space ~> "--scale" ~> positiveNumber
+
+    def lines: Parser[Int] = Space ~> "--lines" ~> positiveNumber
   }
 
   private sealed trait ConductSubtask
@@ -119,8 +123,8 @@ object ConductRPlugin extends AutoPlugin {
   private case class StopSubtask(bundleId: String) extends ConductSubtask
   private case class UnloadSubtask(bundleId: String) extends ConductSubtask
   private case object InfoSubtask extends ConductSubtask
-  private case class EventsSubtask(bundleId: String) extends ConductSubtask
-  private case class LogsSubtask(bundleId: String) extends ConductSubtask
+  private case class EventsSubtask(bundleId: String, lines: Option[Int]) extends ConductSubtask
+  private case class LogsSubtask(bundleId: String, lines: Option[Int]) extends ConductSubtask
 
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
@@ -130,14 +134,14 @@ object ConductRPlugin extends AutoPlugin {
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
-        case Some(LoadSubtask(bundle, config)) => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
-        case Some(RunSubtask(bundleId, scale)) => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
-        case Some(StopSubtask(bundleId))       => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
-        case Some(UnloadSubtask(bundleId))     => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
-        case Some(InfoSubtask)                 => ConductR.info(apiVersion, state)
-        case Some(EventsSubtask(bundleId))     => ConductR.events(apiVersion, bundleId, state)
-        case Some(LogsSubtask(bundleId))       => ConductR.logs(apiVersion, bundleId, state)
-        case None                              => println("Usage: conduct <subtask>")
+        case Some(LoadSubtask(bundle, config))    => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
+        case Some(RunSubtask(bundleId, scale))    => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
+        case Some(StopSubtask(bundleId))          => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
+        case Some(UnloadSubtask(bundleId))        => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
+        case Some(InfoSubtask)                    => ConductR.info(apiVersion, state)
+        case Some(EventsSubtask(bundleId, lines)) => ConductR.events(apiVersion, bundleId, lines, state)
+        case Some(LogsSubtask(bundleId, lines))   => ConductR.logs(apiVersion, bundleId, lines, state)
+        case None                                 => println("Usage: conduct <subtask>")
       }
     }
 }
