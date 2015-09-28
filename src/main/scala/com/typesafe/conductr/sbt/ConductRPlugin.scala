@@ -110,7 +110,7 @@ object ConductRPlugin extends AutoPlugin {
 
     def bundleId(x: Seq[String]): Parser[String] = StringBasic examples (x: _*)
 
-    def scale: Parser[Int] = Space ~> IntBasic
+    def scale: Parser[Int] = Space ~> "--scale" ~> Space ~> IntBasic
   }
 
   private sealed trait ConductSubtask
