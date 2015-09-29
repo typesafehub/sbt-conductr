@@ -92,14 +92,14 @@ object Console {
 
     import system.dispatcher
 
-    print(Ansi.ansi().saveCursorPosition())
-
     if (refresh) {
+      print(Ansi.ansi().saveCursorPosition())
       val con = new ConsoleReader()
       blocking {
         con.readCharacter('q')
       }
       system.stop(screen)
+      print(Ansi.ansi().restorCursorPosition())
     } else {
       // There is no way to wait for actor termination from a non-actor,
       // other than using gracefulStop with a message that does nothing.
@@ -109,8 +109,6 @@ object Console {
       }
       Await.ready(f, timeout)
     }
-
-    print(Ansi.ansi().restorCursorPosition())
   }
 
   object Implicits {
