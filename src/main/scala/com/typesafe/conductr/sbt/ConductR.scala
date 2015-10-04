@@ -4,7 +4,9 @@
 
 package com.typesafe.conductr.sbt
 
+import java.io.{ IOException, InputStreamReader }
 import java.net.URL
+import java.util.zip.{ ZipException, ZipFile }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model.{ Uri => HttpUri }
@@ -12,11 +14,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
 import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle }
-import org.scalactic.{ Accumulation, Bad, Good, One, Or }
+import com.typesafe.config.{ Config, ConfigFactory }
+import org.scalactic.{ Accumulation, Bad, One, Or }
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 import sbt._
 import scala.concurrent.Await
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
+import collection.JavaConverters._
 
 private[conductr] object ConductR {
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
@@ -30,18 +34,36 @@ private[conductr] object ConductR {
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   def loadBundle(apiVersion: String, bundle: URI, config: Option[URI], loadTimeout: Timeout, state: State): String = {
-    def get[A](key: SettingKey[A]) =
-      getOpt(key)
-        .fold(Bad(One(s"Setting ${key.key.label} must be defined!")): A Or One[String])(Good(_))
-    def getOpt[A](key: SettingKey[A]) =
-      Project.extract(state).getOpt(key)
-    def doLoadBundle(normalizedName: String, version: String, system: String, roles: Set[String], nrOfCpus: Double, memory: Bytes, diskSpace: Bytes) = {
+    def getSchedulingParams = {
+      def parseBundleConfig(bundle: URI) =
+        try {
+          val zipFile = new ZipFile(bundle.getPath)
+          val zipEntry = zipFile.entries.asScala.find(_.getName contains "bundle.conf")
+          val config = zipEntry.map(e => ConfigFactory.parseReader(new InputStreamReader(zipFile.getInputStream(e))))
+          Or.from(config, One(s"Zip file $bundle doesn't contain a bundle.conf file."))
+        } catch {
+          case _: IOException  => Bad(One(s"File $bundle doesn't exist."))
+          case _: ZipException => Bad(One(s"File $bundle has not a valid zip format."))
+        }
+      def mergeSchedulingParams(baseConfig: Config, overlayConfigOpt: Option[Config]) = {
+        val config = overlayConfigOpt.fold(baseConfig)(_.withFallback(baseConfig))
+        (
+          config.getString("name"),
+          config.getString("compatibilityVersion"),
+          config.getString("systemVersion"),
+          config.getString("system"),
+          config.getStringList("roles").asScala.toSet,
+          config.getDouble("nrOfCpus"),
+          config.getLong("memory"),
+          config.getLong("diskSpace"))
+      }
+      val baseBundleConf = parseBundleConfig(bundle)
+      val overlayBundleConf = Accumulation.convertOptionToCombinable(config.map(parseBundleConfig(_))).combined
+      Accumulation.withGood(baseBundleConf, overlayBundleConf)(mergeSchedulingParams)
+    }
+    val doLoadBundle = (normalizedName: String, compatibilityVersion: String, systemVersion: String, system: String, roles: Set[String], nrOfCpus: Double, memory: Long, diskSpace: Long) => {
       withConductRController(state) { conductr =>
         state.log.info("Loading bundle to ConductR ...")
-
-        val compatibilityVersion = getOpt(BundleKeys.compatibilityVersion).getOrElse(version)
-        val systemVersion = getOpt(BundleKeys.systemVersion).getOrElse(compatibilityVersion)
-
         val request =
           LoadBundle(
             toApiVersion(apiVersion),
@@ -50,8 +72,8 @@ private[conductr] object ConductR {
             system,
             systemVersion,
             nrOfCpus,
-            memory.underlying,
-            diskSpace.underlying,
+            memory,
+            diskSpace,
             roles,
             HttpUri(bundle.toString),
             config.map(u => HttpUri(u.toString))
@@ -72,14 +94,9 @@ private[conductr] object ConductR {
         }
       }
     }
-    Accumulation.withGood(
-      get(Keys.normalizedName in Bundle),
-      get(Keys.version),
-      get(BundleKeys.system),
-      get(BundleKeys.roles),
-      get(BundleKeys.nrOfCpus),
-      get(BundleKeys.memory),
-      get(BundleKeys.diskSpace))(doLoadBundle).fold(identity, errors => sys.error(errors.mkString(f"%n")))
+    getSchedulingParams.fold(
+      params => doLoadBundle.tupled(params),
+      errors => sys.error(errors.mkString(f"%n")))
   }
 
   def runBundle(apiVersion: String, bundleId: String, scale: Option[Int],
