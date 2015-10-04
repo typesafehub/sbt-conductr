@@ -221,7 +221,7 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
 
   private def httpRequest[A: Reads](method: HttpMethod, uri: String, entity: Option[RequestEntity] = None, parse: Boolean = false): Future[A] = {
     def bodyOrThrow(response: HttpResponse, body: String): String =
-      if (response.status.isSuccess()) body else throw new IllegalStateException(body)
+      if (response.status.isSuccess() && response.status != StatusCodes.MultipleChoices) body else throw new IllegalStateException(body)
 
     val req = entity.map(e => HttpRequest(method, uri, entity = e)).getOrElse(HttpRequest(method, uri))
     for {
