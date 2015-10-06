@@ -9,7 +9,7 @@ object Version {
   val jline            = "2.12"
   val jodaTime         = "2.8.2"
   val play             = "2.3.10"
-  val sbtBundle        = "1.1.0"
+  val sbtBundle        = "1.2.1"
   val scalaTest        = "2.2.4"
   val scalactic        = "2.2.4"
 }
