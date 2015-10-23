@@ -77,7 +77,8 @@ object ConductRPlugin extends AutoPlugin {
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] = {
       val init = Def.value { (bundle: Option[File], bundleConfig: Option[File]) =>
-        (Space ~> (
+        (OptSpace ~> (
+          helpSubtask |
           loadSubtask(bundle, bundleConfig) |
           runSubtask |
           stopSubtask |
@@ -93,24 +94,39 @@ object ConductRPlugin extends AutoPlugin {
           parser(bundle, bundleConfig)
       }
     }
+    def helpSubtask: Parser[HelpSubtask.type] =
+      token("help") | token("-h") | token("--help") | token("usage") | token("--usage") map { case _ => HelpSubtask }
     def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[LoadSubtask] =
-      (token("load") ~> Space ~> bundle(availableBundle) ~
-        bundleConfiguration(availableBundleConfiguration).?) map { case (b, config) => LoadSubtask(b, config) }
+      (token("load") ~> Space ~> bundle(availableBundle) ~ bundleConfiguration(availableBundleConfiguration).?)
+        .map { case (b, config) => LoadSubtask(b, config) }
+        .!!!("usage: conduct load BUNDLE")
     def runSubtask: Parser[RunSubtask] =
       // FIXME: Should default to last loadBundle result
-      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.?) map { case (b, scale) => RunSubtask(b, scale) }
+      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.?)
+        .map { case (b, scale) => RunSubtask(b, scale) }
+        .!!!("usage: conduct run BUNDLE_ID [--scale SCALE]")
     def stopSubtask: Parser[StopSubtask] =
       // FIXME: Should default to last bundle started
-      (token("stop") ~> Space ~> bundleId(List("fixme"))) map { case b => StopSubtask(b) }
+      (token("stop") ~> Space ~> bundleId(List("fixme")))
+        .map { case b => StopSubtask(b) }
+        .!!!("usage: conduct stop BUNDLE_ID")
     def unloadSubtask: Parser[UnloadSubtask] =
       // FIXME: Should default to last bundle loaded
-      (token("unload") ~> Space ~> bundleId(List("fixme"))) map { case b => UnloadSubtask(b) }
+      (token("unload") ~> Space ~> bundleId(List("fixme")))
+        .map { case b => UnloadSubtask(b) }
+        .!!!("usage: conduct unload BUNDLE")
     def infoSubtask: Parser[InfoSubtask.type] =
-      token("info") map { case _ => InfoSubtask }
+      token("info")
+        .map { case _ => InfoSubtask }
+        .!!!("usage: conduct info")
     def eventsSubtask: Parser[EventsSubtask] =
-      (token("events") ~> Space ~> bundleId(List("fixme")) ~ lines.?) map { case (b, lines) => EventsSubtask(b, lines) }
-    def logsSubtask: Parser[LogsSubtask] =
-      (token("logs") ~> Space ~> bundleId(List("fixme")) ~ lines.?) map { case (b, lines) => LogsSubtask(b, lines) }
+      (token("events") ~> Space ~> bundleId(List("fixme")) ~ lines.?)
+        .map { case (b, lines) => EventsSubtask(b, lines) }
+        .!!!("usage: conduct events BUNDLE_ID [--lines LINES]")
+    def logsSubtask: Parser[ConductSubtask] =
+      (token("logs") ~> Space ~> bundleId(List("fixme")) ~ lines.?)
+        .map { case (b, lines) => LogsSubtask(b, lines) }
+        .!!!("usage: conduct logs BUNDLE_ID [--lines LINES]")
 
     def bundle(bundle: Option[File]): Parser[URI] =
       token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
@@ -127,6 +143,7 @@ object ConductRPlugin extends AutoPlugin {
   }
 
   private sealed trait ConductSubtask
+  private case object HelpSubtask extends ConductSubtask
   private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductSubtask
   private case class RunSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
   private case class StopSubtask(bundleId: String) extends ConductSubtask
@@ -143,6 +160,7 @@ object ConductRPlugin extends AutoPlugin {
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
       val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
       subtaskOpt match {
+        case Some(HelpSubtask)                    => conductUsage
         case Some(LoadSubtask(bundle, config))    => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
         case Some(RunSubtask(bundleId, scale))    => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
         case Some(StopSubtask(bundleId))          => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
@@ -150,7 +168,26 @@ object ConductRPlugin extends AutoPlugin {
         case Some(InfoSubtask)                    => ConductR.info(apiVersion, state)
         case Some(EventsSubtask(bundleId, lines)) => ConductR.events(apiVersion, bundleId, lines, state)
         case Some(LogsSubtask(bundleId, lines))   => ConductR.logs(apiVersion, bundleId, lines, state)
-        case None                                 => println("Usage: conduct <subtask>")
+        case None                                 => conductUsage
       }
     }
+
+  private def conductUsage = {
+    val output =
+      s"""
+         |usage: conduct {help, info, services, load, run, stop, unload, events, logs}
+         |
+         |subcommands:
+         |  help                print usage information of conduct command
+         |  info                print bundle information
+         |  services            print service information
+         |  load                load a bundle
+         |  run                 run a bundle
+         |  stop                stop a bundle
+         |  unload              unload a bundle
+         |  events              show bundle events
+         |  logs                show bundle logs
+       """.stripMargin
+    println(output)
+  }
 }
