@@ -13,6 +13,8 @@ import scala.concurrent.duration.DurationInt
 import language.postfixOps
 import ConductR._
 
+import scala.util.Try
+
 /**
  * An sbt plugin that interact's with Typesafe ConductR's controller and potentially other components.
  */
@@ -57,6 +59,13 @@ object ConductRPlugin extends AutoPlugin {
         (dist in BundleConfiguration).storeAs(ConductRKeys.conductrDiscoveredConfigDist)
         .triggeredBy(dist in BundleConfiguration)
     )
+
+  def resolveDefaultHostIp: String =
+    Try("docker-machine ip default".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
+      Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
+        "hostname".!!.trim
+      }
+    }
 
   // Input parsing and action
 

@@ -19,7 +19,7 @@ import org.scalactic.{ Accumulation, Bad, One, Or }
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 import sbt._
 import scala.concurrent.Await
-import scala.util.{ Try, Failure, Success }
+import scala.util.{ Failure, Success }
 import collection.JavaConverters._
 
 private[conductr] object ConductR {
@@ -27,7 +27,7 @@ private[conductr] object ConductR {
   import Import._
 
   final val DefaultConductrProtocol = "http"
-  final val DefaultConductrHost = "127.0.0.1"
+  final val DefaultConductrHost = ConductRPlugin.resolveDefaultHostIp
   final val DefaultConductrPort = 9005
 
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")

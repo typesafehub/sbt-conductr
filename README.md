@@ -17,8 +17,11 @@ addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.1.1")
 
 The plugin has no requirements for other plugins to be enabled. 
 
-Unless the ConductR is running at `127.0.0.1:9005`, and instead supposing that it is running at
-`192.168.59.103:9005` then you will typically issue the following command from the sbt console:
+The IP address of the ConductR host is automatically retrieved and used if:
+- ConductR is running on the same host inside a docker container. The ConductR address is set to `http://{docker-host-ip}:9005`.
+- ConductR is running on the same host. The ConductR address is set to `http://{hostname}:9005`.
+
+In other scenarios it is necessary yo set the address to the ConductR control server manually, e.g. if ConductR is running on `192.168.59.103:9005` you will issue the following command from the sbt console:
 
 ```
 controlServer 192.168.59.103:9005
