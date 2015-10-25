@@ -75,9 +75,9 @@ object ConductRPlugin extends AutoPlugin {
   }
 
   private object Parsers {
-    lazy val subtask: Def.Initialize[State => Parser[Option[ConductSubtask]]] = {
+    lazy val subtask: Def.Initialize[State => Parser[ConductSubtask]] = {
       val init = Def.value { (bundle: Option[File], bundleConfig: Option[File]) =>
-        (OptSpace ~> (
+        (Space ~> (
           helpSubtask |
           loadSubtask(bundle, bundleConfig) |
           runSubtask |
@@ -85,7 +85,8 @@ object ConductRPlugin extends AutoPlugin {
           unloadSubtask |
           infoSubtask |
           eventsSubtask |
-          logsSubtask)) ?
+          logsSubtask
+        )) ?? HelpSubtask
       }
       (Keys.resolvedScoped, init) { (ctx, parser) =>
         s: State =>
@@ -95,7 +96,9 @@ object ConductRPlugin extends AutoPlugin {
       }
     }
     def helpSubtask: Parser[HelpSubtask.type] =
-      token("help") | token("-h") | token("--help") | token("usage") | token("--usage") map { case _ => HelpSubtask }
+      token("help")
+        .map { case _ => HelpSubtask }
+        .!!!("usage: conduct help")
     def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[LoadSubtask] =
       (token("load") ~> Space ~> bundle(availableBundle) ~ bundleConfiguration(availableBundleConfiguration).?)
         .map { case (b, config) => LoadSubtask(b, config) }
@@ -158,17 +161,16 @@ object ConductRPlugin extends AutoPlugin {
       val state = Keys.state.value
       val loadTimeout = ConductRKeys.conductrLoadTimeout.value
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
-      val subtaskOpt: Option[ConductSubtask] = Parsers.subtask.parsed
-      subtaskOpt match {
-        case Some(HelpSubtask)                    => conductUsage
-        case Some(LoadSubtask(bundle, config))    => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
-        case Some(RunSubtask(bundleId, scale))    => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
-        case Some(StopSubtask(bundleId))          => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
-        case Some(UnloadSubtask(bundleId))        => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
-        case Some(InfoSubtask)                    => ConductR.info(apiVersion, state)
-        case Some(EventsSubtask(bundleId, lines)) => ConductR.events(apiVersion, bundleId, lines, state)
-        case Some(LogsSubtask(bundleId, lines))   => ConductR.logs(apiVersion, bundleId, lines, state)
-        case None                                 => conductUsage
+
+      Parsers.subtask.parsed match {
+        case HelpSubtask                    => conductUsage
+        case LoadSubtask(bundle, config)    => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
+        case RunSubtask(bundleId, scale)    => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
+        case StopSubtask(bundleId)          => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
+        case UnloadSubtask(bundleId)        => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
+        case InfoSubtask                    => ConductR.info(apiVersion, state)
+        case EventsSubtask(bundleId, lines) => ConductR.events(apiVersion, bundleId, lines, state)
+        case LogsSubtask(bundleId, lines)   => ConductR.logs(apiVersion, bundleId, lines, state)
       }
     }
 
