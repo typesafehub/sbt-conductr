@@ -105,9 +105,9 @@ object ConductRPlugin extends AutoPlugin {
         .!!!("usage: conduct load BUNDLE")
     def runSubtask: Parser[RunSubtask] =
       // FIXME: Should default to last loadBundle result
-      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.?)
-        .map { case (b, scale) => RunSubtask(b, scale) }
-        .!!!("usage: conduct run BUNDLE_ID [--scale SCALE]")
+      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.? ~ affinity.?)
+        .map { case ((b, scale), affinity) => RunSubtask(b, scale, affinity) }
+        .!!!("usage: conduct run BUNDLE_ID [--scale SCALE] [--affinity BUNDLE_ID]")
     def stopSubtask: Parser[StopSubtask] =
       // FIXME: Should default to last bundle started
       (token("stop") ~> Space ~> bundleId(List("fixme")))
@@ -142,13 +142,15 @@ object ConductRPlugin extends AutoPlugin {
 
     def scale: Parser[Int] = Space ~> "--scale" ~> positiveNumber
 
+    def affinity: Parser[String] = Space ~> "--affinity" ~> Space ~> bundleId(List("fixme"))
+
     def lines: Parser[Int] = Space ~> "--lines" ~> positiveNumber
   }
 
   private sealed trait ConductSubtask
   private case object HelpSubtask extends ConductSubtask
   private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductSubtask
-  private case class RunSubtask(bundleId: String, scale: Option[Int]) extends ConductSubtask
+  private case class RunSubtask(bundleId: String, scale: Option[Int], affinity: Option[String]) extends ConductSubtask
   private case class StopSubtask(bundleId: String) extends ConductSubtask
   private case class UnloadSubtask(bundleId: String) extends ConductSubtask
   private case object InfoSubtask extends ConductSubtask
@@ -163,14 +165,14 @@ object ConductRPlugin extends AutoPlugin {
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
 
       Parsers.subtask.parsed match {
-        case HelpSubtask                    => conductUsage
-        case LoadSubtask(bundle, config)    => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
-        case RunSubtask(bundleId, scale)    => ConductR.runBundle(apiVersion, bundleId, scale, requestTimeout, state)
-        case StopSubtask(bundleId)          => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
-        case UnloadSubtask(bundleId)        => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
-        case InfoSubtask                    => ConductR.info(apiVersion, state)
-        case EventsSubtask(bundleId, lines) => ConductR.events(apiVersion, bundleId, lines, state)
-        case LogsSubtask(bundleId, lines)   => ConductR.logs(apiVersion, bundleId, lines, state)
+        case HelpSubtask                           => conductUsage
+        case LoadSubtask(bundle, config)           => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
+        case RunSubtask(bundleId, scale, affinity) => ConductR.runBundle(apiVersion, bundleId, scale, affinity, requestTimeout, state)
+        case StopSubtask(bundleId)                 => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
+        case UnloadSubtask(bundleId)               => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
+        case InfoSubtask                           => ConductR.info(apiVersion, state)
+        case EventsSubtask(bundleId, lines)        => ConductR.events(apiVersion, bundleId, lines, state)
+        case LogsSubtask(bundleId, lines)          => ConductR.logs(apiVersion, bundleId, lines, state)
       }
     }
 
