@@ -99,11 +99,11 @@ private[conductr] object ConductR {
       errors => sys.error(errors.mkString(f"%n")))
   }
 
-  def runBundle(apiVersion: String, bundleId: String, scale: Option[Int],
+  def runBundle(apiVersion: String, bundleId: String, scale: Option[Int], affinity: Option[String],
     requestTimeout: Timeout, state: State): String =
     withConductRController(state) { conductr =>
       state.log.info(s"Running bundle $bundleId ...")
-      val response = conductr.ask(RunBundle(toApiVersion(apiVersion), bundleId, scale.getOrElse(1)))(requestTimeout).mapTo[String]
+      val response = conductr.ask(RunBundle(toApiVersion(apiVersion), bundleId, scale.getOrElse(1), affinity))(requestTimeout).mapTo[String]
       Await.ready(response, requestTimeout.duration)
       response.value.get match {
         case Success(s) =>

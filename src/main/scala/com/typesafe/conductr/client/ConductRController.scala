@@ -4,6 +4,7 @@
 
 package com.typesafe.conductr.client
 
+import akka.actor.Status.Failure
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Cancellable, Props }
 import akka.cluster.UniqueAddress
 import akka.contrib.stream.InputStreamPublisher
@@ -75,7 +76,7 @@ object ConductRController {
    * @param bundleId The bundle/config combination to start
    * @param scale The number of instances to scale up or down to.
    */
-  case class RunBundle(apiVersion: ApiVersion.Value, bundleId: String, scale: Int)
+  case class RunBundle(apiVersion: ApiVersion.Value, bundleId: String, scale: Int, affinity: Option[String])
 
   /**
    * Stop a bundle/config combination. Returns a request id for tracking purposes.
@@ -276,8 +277,13 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   }
 
   private def runBundle(runBundle: RunBundle): Unit = {
-    val uri = s"${apiVersionPath(runBundle.apiVersion)}/bundles/${runBundle.bundleId}?scale=${runBundle.scale}"
-    httpRequest[String](PUT, uri).pipeTo(sender())
+    if (runBundle.apiVersion == ApiVersion.V10 && runBundle.affinity.isDefined)
+      sender() ! Failure(new IllegalArgumentException("Affinity feature is only available for v1.1 onwards of ConductR"))
+    else {
+      val affinityParam = runBundle.affinity.fold("")("&affinity=" + _)
+      val uri = s"${apiVersionPath(runBundle.apiVersion)}/bundles/${runBundle.bundleId}?scale=${runBundle.scale}$affinityParam"
+      httpRequest[String](PUT, uri).pipeTo(sender())
+    }
   }
 
   private def stopBundle(stopBundle: StopBundle): Unit = {

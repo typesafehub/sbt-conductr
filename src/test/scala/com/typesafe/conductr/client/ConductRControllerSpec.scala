@@ -4,6 +4,7 @@
 
 package com.typesafe.conductr.client
 
+import akka.actor.Status.Failure
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
@@ -12,7 +13,7 @@ import akka.testkit.{ TestActorRef, TestProbe }
 import org.scalatest.{ BeforeAndAfterAll, Matchers, PrivateMethodTester, WordSpec }
 
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration._
 
 class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterAll with PrivateMethodTester {
 
@@ -43,8 +44,23 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
 
     "send a start bundle request and reply with some id" in withController { controller =>
       val testProbe = TestProbe()
-      testProbe.send(controller, ConductRController.RunBundle(ApiVersion.V10, "hello", 2))
+      testProbe.send(controller, ConductRController.RunBundle(ApiVersion.V10, "hello", 2, None))
       testProbe expectMsg "hello back"
+    }
+
+    "send a start bundle request with affinity option and reply with some id" in withController { controller =>
+      val testProbe = TestProbe()
+      testProbe.send(controller, ConductRController.RunBundle(ApiVersion.V11, "hello", 2, Some("other-bundle")))
+      testProbe expectMsg "hello with affinity"
+    }
+
+    "reject start a bundle given v1.0 of the API and affinity option supplied" in withController { controller =>
+      val testProbe = TestProbe()
+      testProbe.send(controller, ConductRController.RunBundle(ApiVersion.V10, "hello", 2, Some("other-bundle")))
+      testProbe.expectMsgPF() {
+        case Failure(e) if e.getMessage == "Affinity feature is only available for v1.1 onwards of ConductR" =>
+          e
+      }
     }
 
     "send a stop bundle request and reply with some id" in withController { controller =>
@@ -81,6 +97,8 @@ class ConductRControllerSpec extends WordSpec with Matchers with BeforeAndAfterA
           Future.successful(HttpResponse(entity = "hello again"))
         else if (request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=2"))
           Future.successful(HttpResponse(entity = "hello back"))
+        else if (request.method == HttpMethods.PUT && request.uri == Uri("/v1.1/bundles/hello?scale=2&affinity=other-bundle"))
+          Future.successful(HttpResponse(entity = "hello with affinity"))
         else if (request.method == HttpMethods.PUT && request.uri == Uri("/bundles/hello?scale=0"))
           Future.successful(HttpResponse(entity = "hello gone"))
         else if (request.method == HttpMethods.DELETE && request.uri == Uri("/bundles/hello"))
