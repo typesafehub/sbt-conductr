@@ -54,6 +54,15 @@ object AnsiConsole {
        */
       def visibleLength: Int =
         s.replaceAll("""@\|[a-z_,]+ ([^\|]+)\|@""", "$1").length
+
+      def asInfo: String =
+        s"[info] $s"
+
+      def asWarn: String =
+        s"[${scala.Console.YELLOW}warn${scala.Console.RESET}] $s"
+
+      def asError: String =
+        s"[${scala.Console.RED}error${scala.Console.RESET}] $s"
     }
 
   }

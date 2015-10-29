@@ -27,7 +27,7 @@ private[conductr] object ConductR {
   import Import._
 
   final val DefaultConductrProtocol = "http"
-  final val DefaultConductrHost = ConductRPlugin.resolveDefaultHostIp
+  final val DefaultConductrHost = ConductRPlugin.resolveDefaultHostIp()
   final val DefaultConductrPort = 9005
 
   val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
@@ -219,7 +219,7 @@ private[conductr] object ConductR {
             loggingQueryUrl <- (ConductRKeys.conductrLoggingQueryUrl in Global).get(settings)
             connectTimeout <- (ConductRKeys.conductrConnectTimeout in Global).get(settings)
           } yield {
-            state.log.info(s"Control Protocol set for $conductrUrl. Use `controlServer` to set an alternate address.")
+            state.log.info(s"Control Protocol set for $conductrUrl. Use 'controlServer {ip-address}' to set an alternate address.")
             system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
           }
         conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
