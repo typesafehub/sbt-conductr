@@ -12,7 +12,7 @@ sbt-conductr is enabled by simply declaring its dependency:
 
 ```scala
 resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.1.1")
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.1.2")
 ```
 
 The plugin has no requirements for other plugins to be enabled. 
