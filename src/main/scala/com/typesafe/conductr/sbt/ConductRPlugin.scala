@@ -7,12 +7,10 @@ package com.typesafe.conductr.sbt
 import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
-
 import com.typesafe.sbt.packager.Keys._
 import scala.concurrent.duration.DurationInt
 import language.postfixOps
 import ConductR._
-
 import scala.util.Try
 
 /**
@@ -60,12 +58,27 @@ object ConductRPlugin extends AutoPlugin {
         .triggeredBy(dist in BundleConfiguration)
     )
 
-  def resolveDefaultHostIp: String =
-    Try("docker-machine ip default".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
-      Try("boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse).getOrElse {
-        "hostname".!!.trim
+  def resolveDefaultHostIp(): String = {
+    import com.typesafe.conductr.sbt.console.AnsiConsole.Implicits._
+    def withDockerMachine(): String =
+      "docker-machine ip default".!!.trim match {
+        case "" =>
+          println("Docker VM has not been started. Use 'docker-machine start default' in the terminal to start the VM and reload the sbt session.".asWarn)
+          ""
+        case ip => ip
       }
-    }
+    def withBoot2Docker(): String =
+      "boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse
+    def withHostname(): String =
+      "hostname".!!.trim
+    val WithLocalAddress: String =
+      "127.0.0.1"
+
+    Try(withDockerMachine())
+      .getOrElse(Try(withBoot2Docker())
+        .getOrElse(Try(withHostname())
+          .getOrElse(WithLocalAddress)))
+  }
 
   // Input parsing and action
 
