@@ -4,6 +4,9 @@
 
 package com.typesafe.conductr.sbt
 
+import akka.actor.{ ActorRef, ActorSystem }
+import akka.http.scaladsl.model.{ Uri => HttpUri }
+import com.typesafe.conductr.client.ConductRController
 import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
@@ -22,6 +25,9 @@ object ConductRPlugin extends AutoPlugin {
   import sbinary.DefaultProtocol.FileFormat
 
   val autoImport = Import
+
+  val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
+  val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   override def trigger = allRequirements
 
@@ -42,7 +48,7 @@ object ConductRPlugin extends AutoPlugin {
       ConductRKeys.conductrControlServerUrl := envUrl("CONDUCTR_IP", DefaultConductrHost, "CONDUCTR_PORT", DefaultConductrPort, DefaultConductrProtocol),
       ConductRKeys.conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol),
 
-      ConductRKeys.conductrApiVersion := "1.0"
+      ConductRKeys.conductrApiVersion := "1"
     )
 
   override def projectSettings: Seq[Setting[_]] =
@@ -172,20 +178,25 @@ object ConductRPlugin extends AutoPlugin {
 
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
-      val apiVersion = ConductRKeys.conductrApiVersion.value
+      implicit val apiVersion = toApiVersion(ConductRKeys.conductrApiVersion.value)
       val state = Keys.state.value
       val loadTimeout = ConductRKeys.conductrLoadTimeout.value
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
+      implicit val log = state.log
 
-      Parsers.subtask.parsed match {
-        case HelpSubtask                           => conductUsage
-        case LoadSubtask(bundle, config)           => ConductR.loadBundle(apiVersion, bundle, config, loadTimeout, state)
-        case RunSubtask(bundleId, scale, affinity) => ConductR.runBundle(apiVersion, bundleId, scale, affinity, requestTimeout, state)
-        case StopSubtask(bundleId)                 => ConductR.stopBundle(apiVersion, bundleId, requestTimeout, state)
-        case UnloadSubtask(bundleId)               => ConductR.unloadBundleTask(apiVersion, bundleId, requestTimeout, state)
-        case InfoSubtask                           => ConductR.info(apiVersion, state)
-        case EventsSubtask(bundleId, lines)        => ConductR.events(apiVersion, bundleId, lines, state)
-        case LogsSubtask(bundleId, lines)          => ConductR.logs(apiVersion, bundleId, lines, state)
+      withActorSystem(state) { implicit actorSystem =>
+        withConductRController(state) { implicit conductrController =>
+          Parsers.subtask.parsed match {
+            case HelpSubtask                           => conductUsage
+            case LoadSubtask(bundle, config)           => ConductR.loadBundle(bundle, config, loadTimeout)
+            case RunSubtask(bundleId, scale, affinity) => ConductR.runBundle(bundleId, scale, affinity, requestTimeout)
+            case StopSubtask(bundleId)                 => ConductR.stopBundle(bundleId, requestTimeout)
+            case UnloadSubtask(bundleId)               => ConductR.unloadBundleTask(bundleId, requestTimeout)
+            case InfoSubtask                           => ConductR.info()
+            case EventsSubtask(bundleId, lines)        => ConductR.events(bundleId, lines)
+            case LogsSubtask(bundleId, lines)          => ConductR.logs(bundleId, lines)
+          }
+        }
       }
     }
 
@@ -207,4 +218,64 @@ object ConductRPlugin extends AutoPlugin {
        """.stripMargin
     println(output)
   }
+
+  // Actor system management and API
+
+  private def loadActorSystem(state: State): State =
+    state.get(actorSystemAttrKey).fold {
+      state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
+      val system = withActorSystemClassloader(ActorSystem("sbt-conductr"))
+      state.put(actorSystemAttrKey, system)
+    }(_ => state)
+
+  private def unloadActorSystem(state: State): State =
+    state.get(actorSystemAttrKey).fold(state) { system =>
+      system.shutdown()
+      state.remove(actorSystemAttrKey)
+    }
+
+  private def loadConductRController(state: State): State =
+    state.get(conductrAttrKey).fold {
+      state.log.debug(s"Creating ConductRController actor and storing it under key [${conductrAttrKey.label}]")
+      val conductr = withActorSystem(state) { implicit system =>
+        val extracted = Project.extract(state)
+        val settings = extracted.structure.data
+        val conductr =
+          for {
+            conductrUrl <- (ConductRKeys.conductrControlServerUrl in Global).get(settings)
+            loggingQueryUrl <- (ConductRKeys.conductrLoggingQueryUrl in Global).get(settings)
+            connectTimeout <- (ConductRKeys.conductrConnectTimeout in Global).get(settings)
+          } yield {
+            state.log.info(s"Control Protocol set for $conductrUrl. Use 'controlServer {ip-address}' to set an alternate address.")
+            system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
+          }
+        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
+      }
+      state.put(conductrAttrKey, conductr)
+    }(as => state)
+
+  private def unloadConductRController(state: State): State =
+    state.get(conductrAttrKey).fold(state)(_ => state.remove(conductrAttrKey))
+
+  // We will get an exception if there is no known actor system - which is a good thing because
+  // there absolutely has to be at this point.
+  private def withActorSystem[T](state: State)(block: ActorSystem => T): T =
+    block(state.get(actorSystemAttrKey).get)
+
+  // We will get an exception if there is no actor representing the ConductR - which is a good thing because
+  // there needs to be and it is probably because the plugin has been mis-configured.
+  private def withConductRController[T](state: State)(block: ActorRef => T): T =
+    block(state.get(conductrAttrKey).get)
+
+  private def withActorSystemClassloader[A](action: => A): A = {
+    val newLoader = ActorSystem.getClass.getClassLoader
+    val thread = Thread.currentThread
+    val oldLoader = thread.getContextClassLoader
+    thread.setContextClassLoader(newLoader)
+    try
+      action
+    finally
+      thread.setContextClassLoader(oldLoader)
+  }
+
 }

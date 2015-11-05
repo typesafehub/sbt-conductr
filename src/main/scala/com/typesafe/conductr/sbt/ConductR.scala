@@ -13,7 +13,7 @@ import akka.http.scaladsl.model.{ Uri => HttpUri }
 import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.conductr.client.ConductRController
-import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle }
+import com.typesafe.conductr.client.ConductRController.{ LoadBundle, RunBundle, StopBundle, UnloadBundle, extractZipEntry }
 import com.typesafe.config.{ Config, ConfigFactory }
 import org.scalactic.{ Accumulation, Bad, One, Or }
 import play.api.libs.json.{ JsError, JsSuccess, Json }
@@ -30,16 +30,18 @@ private[conductr] object ConductR {
   final val DefaultConductrHost = ConductRPlugin.resolveDefaultHostIp()
   final val DefaultConductrPort = 9005
 
-  val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
-  val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
+  def loadBundle(bundle: URI, config: Option[URI], loadTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String =
+    if (apiVersion == ConductRController.ApiVersion.V1)
+      loadBundleV1(bundle, config, loadTimeout)
+    else
+      loadBundleV2(bundle, config, loadTimeout)
 
-  def loadBundle(apiVersion: String, bundle: URI, config: Option[URI], loadTimeout: Timeout, state: State): String = {
+  def loadBundleV1(bundle: URI, config: Option[URI], loadTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String = {
     def getSchedulingParams = {
       def parseBundleConfig(bundle: URI) =
         try {
-          val zipFile = new ZipFile(bundle.getPath)
-          val zipEntry = zipFile.entries.asScala.find(_.getName contains "bundle.conf")
-          val config = zipEntry.map(e => ConfigFactory.parseReader(new InputStreamReader(zipFile.getInputStream(e))))
+          val bundleConf = extractZipEntry("bundle.conf", new File(bundle.getPath), IO.createTemporaryDirectory)
+          val config = bundleConf.map(ConfigFactory.parseFile)
           Or.from(config, One(s"Zip file $bundle doesn't contain a bundle.conf file."))
         } catch {
           case _: IOException  => Bad(One(s"File $bundle doesn't exist."))
@@ -58,40 +60,38 @@ private[conductr] object ConductR {
           config.getLong("diskSpace"))
       }
       val baseBundleConf = parseBundleConfig(bundle)
-      val overlayBundleConf = Accumulation.convertOptionToCombinable(config.map(parseBundleConfig(_))).combined
+      val overlayBundleConf = Accumulation.convertOptionToCombinable(config.map(parseBundleConfig)).combined
       Accumulation.withGood(baseBundleConf, overlayBundleConf)(mergeSchedulingParams)
     }
     val doLoadBundle = (normalizedName: String, compatibilityVersion: String, systemVersion: String, system: String, roles: Set[String], nrOfCpus: Double, memory: Long, diskSpace: Long) => {
-      withConductRController(state) { conductr =>
-        state.log.info("Loading bundle to ConductR ...")
-        val request =
-          LoadBundle(
-            toApiVersion(apiVersion),
-            normalizedName,
-            compatibilityVersion,
-            system,
-            systemVersion,
-            nrOfCpus,
-            memory,
-            diskSpace,
-            roles,
-            HttpUri(bundle.toString),
-            config.map(u => HttpUri(u.toString))
-          )
-        val response = conductr.ask(request)(loadTimeout).mapTo[String]
-        Await.ready(response, loadTimeout.duration)
-        response.value.get match {
-          case Success(s) =>
-            (Json.parse(s) \ "bundleId").validate[String] match {
-              case JsSuccess(bundleId, _) =>
-                state.log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
-                bundleId
-              case e: JsError =>
-                sys.error(s"Unexpected response: $e")
-            }
-          case Failure(e) =>
-            sys.error(s"Problem loading the bundle: ${e.getMessage}")
-        }
+      log.info("Loading bundle to ConductR ...")
+      val request =
+        LoadBundle(
+          apiVersion,
+          normalizedName,
+          compatibilityVersion,
+          system,
+          systemVersion,
+          nrOfCpus,
+          memory,
+          diskSpace,
+          roles,
+          HttpUri(bundle.toString),
+          config.map(u => HttpUri(u.toString))
+        )
+      val response = conductrController.ask(request)(loadTimeout).mapTo[String]
+      Await.ready(response, loadTimeout.duration)
+      response.value.get match {
+        case Success(s) =>
+          (Json.parse(s) \ "bundleId").validate[String] match {
+            case JsSuccess(bundleId, _) =>
+              log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
+              bundleId
+            case e: JsError =>
+              sys.error(s"Unexpected response: $e")
+          }
+        case Failure(e) =>
+          sys.error(s"Problem loading the bundle: ${e.getMessage}")
       }
     }
     getSchedulingParams.fold(
@@ -99,76 +99,90 @@ private[conductr] object ConductR {
       errors => sys.error(errors.mkString(f"%n")))
   }
 
-  def runBundle(apiVersion: String, bundleId: String, scale: Option[Int], affinity: Option[String],
-    requestTimeout: Timeout, state: State): String =
-    withConductRController(state) { conductr =>
-      state.log.info(s"Running bundle $bundleId ...")
-      val response = conductr.ask(RunBundle(toApiVersion(apiVersion), bundleId, scale.getOrElse(1), affinity))(requestTimeout).mapTo[String]
-      Await.ready(response, requestTimeout.duration)
-      response.value.get match {
-        case Success(s) =>
-          (Json.parse(s) \ "requestId").validate[String] match {
-            case JsSuccess(requestId, _) =>
-              state.log.info(s"Request for running has been delivered with id: $requestId")
-              requestId
-            case e: JsError =>
-              sys.error(s"Unexpected response: $e")
-          }
-        case Failure(e) =>
-          sys.error(s"Problem running the bundle: ${e.getMessage}")
-      }
+  def loadBundleV2(bundle: URI, config: Option[URI], loadTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String = {
+    log.info("Loading bundle to ConductR ...")
+    val request = ConductRController.V2.LoadBundle(
+      HttpUri(bundle.toString),
+      config.map(u => HttpUri(u.toString))
+    )
+    val response = conductrController.ask(request)(loadTimeout).mapTo[String]
+    Await.ready(response, loadTimeout.duration)
+    response.value.get match {
+      case Success(s) =>
+        (Json.parse(s) \ "bundleId").validate[String] match {
+          case JsSuccess(bundleId, _) =>
+            log.info(s"Upload completed. Use 'conduct run $bundleId' to run.")
+            bundleId
+          case e: JsError =>
+            sys.error(s"Unexpected response: $e")
+        }
+      case Failure(e) =>
+        sys.error(s"Problem loading the bundle: ${e.getMessage}")
     }
+  }
 
-  def stopBundle(apiVersion: String, bundleId: String, requestTimeout: Timeout, state: State): String =
-    withConductRController(state) { conductr =>
-      state.log.info(s"Stopping all bundle $bundleId instances ...")
-      val response = conductr.ask(StopBundle(toApiVersion(apiVersion), bundleId))(requestTimeout).mapTo[String]
-      Await.ready(response, requestTimeout.duration)
-      response.value.get match {
-        case Success(s) =>
-          (Json.parse(s) \ "requestId").validate[String] match {
-            case JsSuccess(requestId, _) =>
-              state.log.info(s"Request for stopping has been delivered with id: $requestId")
-              requestId
-            case e: JsError =>
-              sys.error(s"Unexpected response: $e")
-          }
-        case Failure(e) =>
-          sys.error(s"Problem stopping the bundle: ${e.getMessage}")
-      }
+  def runBundle(bundleId: String, scale: Option[Int], affinity: Option[String], requestTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String = {
+    log.info(s"Running bundle $bundleId ...")
+    val response = conductrController.ask(RunBundle(apiVersion, bundleId, scale.getOrElse(1), affinity))(requestTimeout).mapTo[String]
+    Await.ready(response, requestTimeout.duration)
+    response.value.get match {
+      case Success(s) =>
+        (Json.parse(s) \ "requestId").validate[String] match {
+          case JsSuccess(requestId, _) =>
+            log.info(s"Request for running has been delivered with id: $requestId")
+            requestId
+          case e: JsError =>
+            sys.error(s"Unexpected response: $e")
+        }
+      case Failure(e) =>
+        sys.error(s"Problem running the bundle: ${e.getMessage}")
     }
+  }
 
-  def unloadBundleTask(apiVersion: String, bundleId: String, requestTimeout: Timeout, state: State): String =
-    withConductRController(state) { conductr =>
-      state.log.info(s"Unloading bundle $bundleId ...")
-      val response = conductr.ask(UnloadBundle(toApiVersion(apiVersion), bundleId))(requestTimeout).mapTo[String]
-      Await.ready(response, requestTimeout.duration)
-      response.value.get match {
-        case Success(s) =>
-          (Json.parse(s) \ "requestId").validate[String] match {
-            case JsSuccess(requestId, _) =>
-              state.log.info(s"Request for unloading has been delivered with id: $requestId")
-              requestId
-            case e: JsError =>
-              sys.error(s"Unexpected response: $e")
-          }
-        case Failure(e) =>
-          sys.error(s"Problem unloading the bundle: ${e.getMessage}")
-      }
+  def stopBundle(bundleId: String, requestTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String = {
+    log.info(s"Stopping all bundle $bundleId instances ...")
+    val response = conductrController.ask(StopBundle(apiVersion, bundleId))(requestTimeout).mapTo[String]
+    Await.ready(response, requestTimeout.duration)
+    response.value.get match {
+      case Success(s) =>
+        (Json.parse(s) \ "requestId").validate[String] match {
+          case JsSuccess(requestId, _) =>
+            log.info(s"Request for stopping has been delivered with id: $requestId")
+            requestId
+          case e: JsError =>
+            sys.error(s"Unexpected response: $e")
+        }
+      case Failure(e) =>
+        sys.error(s"Problem stopping the bundle: ${e.getMessage}")
     }
+  }
 
-  def info(apiVersion: String, state: State): Unit =
-    withActorSystem(state)(withConductRController(state)(console.Console.bundleInfo(toApiVersion(apiVersion), refresh = false)))
-
-  def events(apiVersion: String, bundleId: String, lines: Option[Int], state: State): Unit =
-    withActorSystem(state) {
-      withConductRController(state)(console.Console.bundleEvents(toApiVersion(apiVersion), bundleId, lines.getOrElse(10), refresh = false))
+  def unloadBundleTask(bundleId: String, requestTimeout: Timeout)(implicit apiVersion: ConductRController.ApiVersion.Value, log: Logger, conductrController: ActorRef): String = {
+    log.info(s"Unloading bundle $bundleId ...")
+    val response = conductrController.ask(UnloadBundle(apiVersion, bundleId))(requestTimeout).mapTo[String]
+    Await.ready(response, requestTimeout.duration)
+    response.value.get match {
+      case Success(s) =>
+        (Json.parse(s) \ "requestId").validate[String] match {
+          case JsSuccess(requestId, _) =>
+            log.info(s"Request for unloading has been delivered with id: $requestId")
+            requestId
+          case e: JsError =>
+            sys.error(s"Unexpected response: $e")
+        }
+      case Failure(e) =>
+        sys.error(s"Problem unloading the bundle: ${e.getMessage}")
     }
+  }
 
-  def logs(apiVersion: String, bundleId: String, lines: Option[Int], state: State): Unit =
-    withActorSystem(state) {
-      withConductRController(state)(console.Console.bundleLogs(toApiVersion(apiVersion), bundleId, lines.getOrElse(10), refresh = false))
-    }
+  def info()(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit =
+    console.Console.bundleInfo(refresh = false)
+
+  def events(bundleId: String, lines: Option[Int])(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit =
+    console.Console.bundleEvents(bundleId, lines.getOrElse(10), refresh = false)
+
+  def logs(bundleId: String, lines: Option[Int])(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit =
+    console.Console.bundleLogs(bundleId, lines.getOrElse(10), refresh = false)
 
   def envUrl(envIp: String, defaultIp: String, envPort: String, defaultPort: Int, defaultProto: String): URL = {
     val ip = sys.env.getOrElse(envIp, defaultIp)
@@ -192,66 +206,7 @@ private[conductr] object ConductR {
     }
   }
 
-  // Actor system management and API
-
-  def loadActorSystem(state: State): State =
-    state.get(actorSystemAttrKey).fold {
-      state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
-      val system = withActorSystemClassloader(ActorSystem("sbt-conductr"))
-      state.put(actorSystemAttrKey, system)
-    }(_ => state)
-
-  def unloadActorSystem(state: State): State =
-    state.get(actorSystemAttrKey).fold(state) { system =>
-      system.shutdown()
-      state.remove(actorSystemAttrKey)
-    }
-
-  def loadConductRController(state: State): State =
-    state.get(conductrAttrKey).fold {
-      state.log.debug(s"Creating ConductRController actor and storing it under key [${conductrAttrKey.label}]")
-      val conductr = withActorSystem(state) { implicit system =>
-        val extracted = Project.extract(state)
-        val settings = extracted.structure.data
-        val conductr =
-          for {
-            conductrUrl <- (ConductRKeys.conductrControlServerUrl in Global).get(settings)
-            loggingQueryUrl <- (ConductRKeys.conductrLoggingQueryUrl in Global).get(settings)
-            connectTimeout <- (ConductRKeys.conductrConnectTimeout in Global).get(settings)
-          } yield {
-            state.log.info(s"Control Protocol set for $conductrUrl. Use 'controlServer {ip-address}' to set an alternate address.")
-            system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
-          }
-        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
-      }
-      state.put(conductrAttrKey, conductr)
-    }(as => state)
-
-  def unloadConductRController(state: State): State =
-    state.get(conductrAttrKey).fold(state)(_ => state.remove(conductrAttrKey))
-
-  // We will get an exception if there is no known actor system - which is a good thing because
-  // there absolutely has to be at this point.
-  def withActorSystem[T](state: State)(block: ActorSystem => T): T =
-    block(state.get(actorSystemAttrKey).get)
-
-  // We will get an exception if there is no actor representing the ConductR - which is a good thing because
-  // there needs to be and it is probably because the plugin has been mis-configured.
-  def withConductRController[T](state: State)(block: ActorRef => T): T =
-    block(state.get(conductrAttrKey).get)
-
-  def withActorSystemClassloader[A](action: => A): A = {
-    val newLoader = ActorSystem.getClass.getClassLoader
-    val thread = Thread.currentThread
-    val oldLoader = thread.getContextClassLoader
-    thread.setContextClassLoader(newLoader)
-    try
-      action
-    finally
-      thread.setContextClassLoader(oldLoader)
-  }
-
-  private def toApiVersion(apiVersion: String): ConductRController.ApiVersion.Value =
+  def toApiVersion(apiVersion: String): ConductRController.ApiVersion.Value =
     try
       ConductRController.ApiVersion.withName(apiVersion)
     catch {
