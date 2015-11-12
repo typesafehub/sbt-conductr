@@ -115,7 +115,7 @@ In addition the following settings are available:
 
 Property           | Description
 -------------------|------------
-conductrApiVersion | The api version to use when communicating with ConductR. Defaults to 1.0 which is required by ConductR 1.0.
+conductrApiVersion | The api version to use when communicating with ConductR. Defaults to 1 which is required by ConductR 1.0.
 
 
 &copy; Typesafe Inc., 2014-2015

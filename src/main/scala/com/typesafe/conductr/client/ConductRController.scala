@@ -4,6 +4,8 @@
 
 package com.typesafe.conductr.client
 
+import java.io.File
+
 import akka.actor.Status.Failure
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Cancellable, Props }
 import akka.cluster.UniqueAddress
@@ -21,6 +23,7 @@ import akka.stream.scaladsl.{ Flow, ImplicitMaterializer, Sink, Source }
 import akka.util.{ ByteString, Timeout }
 import java.net.{ URI, URL }
 import play.api.libs.json.{ Reads, Json }
+import sbt.IO
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
@@ -31,8 +34,8 @@ object ConductRController {
    * Supported ConductR Control Protocol versions.
    */
   object ApiVersion extends Enumeration {
-    val V10 = Value("1.0")
-    val V11 = Value("1.1")
+    val V1 = Value("1")
+    val V2 = Value("2")
   }
 
   /**
@@ -115,6 +118,21 @@ object ConductRController {
   case class GetBundleLogs(apiVersion: ApiVersion.Value, bundleId: String, lines: Int)
 
   /**
+   * Contains messages specific to Control Protocol V2 which is not backward compatible with V1
+   */
+  object V2 {
+
+    /**
+     * Load bundle using Control Protocol V2
+     * @param bundle The address of the bundle.
+     * @param config An optional configuration that will override any configuration found within the bundle.
+     */
+    case class LoadBundle(
+      bundle: Uri,
+      config: Option[Uri])
+  }
+
+  /**
    * A flow of data for the screen. Needs to be materialized after attaching sink.
    */
   case class DataSource[A](source: Source[A, Cancellable])
@@ -192,6 +210,18 @@ object ConductRController {
         )
       )
     )
+
+  private def extractZipEntry(entryName: String, zipFileUri: Uri, destDir: File): Option[Uri] = {
+    val zipFile = new File(absolute(zipFileUri).path.toString())
+    val extractedFile = extractZipEntry(entryName, zipFile, destDir)
+    extractedFile.map(f => Uri(f.getAbsolutePath))
+  }
+
+  private[conductr] def extractZipEntry(entryName: String, zipFile: File, destDir: File): Option[File] = {
+    import sbt.NameFilter._
+    IO.unzip(zipFile, destDir, { fileName: String => fileName.contains(entryName) }).headOption
+  }
+
 }
 
 /**
@@ -209,13 +239,14 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
     case request: GetBundleEvents     => getBundleEvents(request)
     case request: GetBundleLogs       => getBundleLogs(request)
     case request: LoadBundle          => loadBundle(request)
+    case request: V2.LoadBundle       => loadBundle(request)
     case request: RunBundle           => runBundle(request)
     case request: StopBundle          => stopBundle(request)
     case request: UnloadBundle        => unloadBundle(request)
   }
 
   private def apiVersionPath(version: ApiVersion.Value): String =
-    if (version == ApiVersion.V10) "" else "/v" + version
+    if (version == ApiVersion.V1) "" else "/v" + version
 
   protected def request(request: HttpRequest, connection: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]]): Future[HttpResponse] =
     Source.single(request).via(connection).runWith(Sink.head)
@@ -236,7 +267,7 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
   }
 
   private def loadBundle(loadBundle: LoadBundle): Unit = {
-    val uri = s"${apiVersionPath(loadBundle.apiVersion)}/bundles"
+    val uri = s"${apiVersionPath(ApiVersion.V1)}/bundles"
     val bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
     val configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
     val pendingResponse = for {
@@ -251,33 +282,40 @@ class ConductRController(conductr: Uri, loggingQuery: Uri, connectTimeout: Timeo
     loadBundle: LoadBundle,
     bundleFileBodyPart: FormData.BodyPart,
     configFileBodyPart: Option[FormData.BodyPart]): Source[FormData.BodyPart, Unit] = {
-    val schedulingRequirements = loadBundle.apiVersion match {
-      case ApiVersion.V10 =>
-        List(
-          FormData.BodyPart.Strict("system", loadBundle.system),
-          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
-          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
-          FormData.BodyPart.Strict("bundleName", loadBundle.name)
-        )
-      case ApiVersion.V11 =>
-        List(
-          FormData.BodyPart.Strict("system", loadBundle.system),
-          FormData.BodyPart.Strict("systemVersion", loadBundle.systemVersion),
-          FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
-          FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
-          FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
-          FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
-          FormData.BodyPart.Strict("bundleName", loadBundle.name),
-          FormData.BodyPart.Strict("compatibilityVersion", loadBundle.compatibilityVersion)
-        )
-    }
+    val schedulingRequirements = List(
+      FormData.BodyPart.Strict("system", loadBundle.system),
+      FormData.BodyPart.Strict("nrOfCpus", loadBundle.nrOfCpus.toString),
+      FormData.BodyPart.Strict("memory", loadBundle.memory.toString),
+      FormData.BodyPart.Strict("diskSpace", loadBundle.diskSpace.toString),
+      FormData.BodyPart.Strict("roles", loadBundle.roles.mkString(" ")),
+      FormData.BodyPart.Strict("bundleName", loadBundle.name)
+    )
     Source((schedulingRequirements :+ bundleFileBodyPart) ++ configFileBodyPart)
   }
 
+  private def loadBundle(loadBundle: V2.LoadBundle): Unit = {
+    val uri = s"${apiVersionPath(ApiVersion.V2)}/bundles"
+    val tmpDir = IO.createTemporaryDirectory
+
+    val bundleConf = extractZipEntry("bundle.conf", loadBundle.bundle, tmpDir).get
+    val bundleConfBodyPart = fileBodyPart("bundleConf", filename(bundleConf), publisher(bundleConf))
+    val bundleConfOverlay = loadBundle.config.flatMap(extractZipEntry("bundle.conf", _, tmpDir))
+    val bundleConfOverlayBodyPart = bundleConfOverlay.map(overlay => fileBodyPart("bundleConfOverlay", filename(overlay), publisher(overlay)))
+    val bundleFileBodyPart = fileBodyPart("bundle", filename(loadBundle.bundle), publisher(loadBundle.bundle))
+    val configFileBodyPart = loadBundle.config.map(config => fileBodyPart("configuration", filename(config), publisher(config)))
+
+    val bodyParts = List(Some(bundleConfBodyPart), bundleConfOverlayBodyPart, Some(bundleFileBodyPart), configFileBodyPart).flatten
+
+    val pendingResponse = for {
+      entity <- Marshal(FormData(Source(bodyParts))).to[RequestEntity]
+      response <- httpRequest[String](POST, uri, entity = Some(entity))
+    } yield response
+
+    pendingResponse.pipeTo(sender())
+  }
+
   private def runBundle(runBundle: RunBundle): Unit = {
-    if (runBundle.apiVersion == ApiVersion.V10 && runBundle.affinity.isDefined)
+    if (runBundle.apiVersion == ApiVersion.V1 && runBundle.affinity.isDefined)
       sender() ! Failure(new IllegalArgumentException("Affinity feature is only available for v1.1 onwards of ConductR"))
     else {
       val affinityParam = runBundle.affinity.fold("")("&affinity=" + _)
