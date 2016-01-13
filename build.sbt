@@ -4,23 +4,22 @@ lazy val sbtConductR = project.in(file("."))
 
 name := "sbt-conductr"
 
+crossScalaVersions := List(scalaVersion.value, "2.11.7")
+
 libraryDependencies ++= List(
-  Library.akkaContribExtra,
-  Library.akkaHttp,
+  Library.conductrClientLib,
   Library.jansi,
   Library.jline,
   Library.jodaTime,
-  Library.playJson,
   Library.scalactic,
-  Library.akkaTestkit % "test",
-  Library.scalaTest   % "test"
+  Library.scalaTest   % "test",
+  Library.mockito     % "test"
 )
 addSbtPlugin(Library.sbtBundle)
 
 resolvers ++= List(
-  Resolver.akkaContribExtra,
-  Resolver.patriknw,
-  Resolver.typesafeReleases
+  Resolver.typesafeReleases,
+  Resolver.typesafeBintrayReleases
 )
 
 sbtPlugin := true

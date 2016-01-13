@@ -6,9 +6,9 @@ package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ Actor, Props, Status }
-import akka.stream.scaladsl.{ ImplicitMaterializer, Sink }
-import com.typesafe.conductr.client.ConductRController
+import akka.stream.scaladsl.ImplicitMaterializer
 import jline.TerminalFactory
+import scala.collection.Iterable
 import scala.concurrent.duration.DurationInt
 
 object Screen {
@@ -43,16 +43,13 @@ class Screen[A <: Iterable[B], B](refresh: Boolean, layout: A => Screen.Layout) 
   private var data: A = _
 
   def receive: Receive = {
-    case ConductRController.DataSource(source) =>
-      if (refresh)
-        source.runForeach(self ! Data(_))
-      else
-        source.runWith(Sink.head).foreach(self ! Data(_))
+    case data: Iterable[_] =>
+      self ! Data(data)
 
     case CheckSize =>
       checkSize()
 
-    case Status.Failure(_) =>
+    case Status.Failure(f) =>
       context.stop(self)
 
     case d: Data[A] =>

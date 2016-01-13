@@ -2,33 +2,29 @@ import sbt._
 import sbt.Resolver.bintrayRepo
 
 object Version {
-  val akka             = "2.3.11"
-  val akkaContribExtra = "1.18.0"
-  val akkaHttp         = "1.0"
-  val jansi            = "1.11"
-  val jline            = "2.12"
-  val jodaTime         = "2.8.2"
-  val play             = "2.3.10"
-  val sbtBundle        = "1.2.1"
-  val scalaTest        = "2.2.4"
-  val scalactic        = "2.2.4"
+  val conductrClientLib = "1.1.0"
+  val jansi             = "1.11"
+  val jline             = "2.12"
+  val jodaTime          = "2.8.2"
+  val sbtBundle         = "1.2.1"
+  val scala             = "2.10.4"
+  val scalaTest         = "2.2.4"
+  val scalactic         = "2.2.4"
+  val mockito           = "1.10.19"
 }
 
 object Library {
-  val akkaContribExtra = "com.typesafe.akka"    %% "akka-contrib-extra"     % Version.akkaContribExtra
-  val akkaHttp         = "com.typesafe.akka"    %% "akka-http-experimental" % Version.akkaHttp
-  val akkaTestkit      = "com.typesafe.akka"    %% "akka-testkit"           % Version.akka
-  val jansi            = "org.fusesource.jansi" %  "jansi"                  % Version.jansi
-  val jline            = "jline"                %  "jline"                  % Version.jline
-  val jodaTime         = "joda-time"            %  "joda-time"              % Version.jodaTime
-  val playJson         = "com.typesafe.play"    %% "play-json"              % Version.play
-  val sbtBundle        = "com.typesafe.sbt"     %  "sbt-bundle"             % Version.sbtBundle
-  val scalaTest        = "org.scalatest"        %% "scalatest"              % Version.scalaTest
-  val scalactic        = "org.scalactic"        %% "scalactic"              % Version.scalactic
+  val conductrClientLib = "com.typesafe.conductr" %% "akka23-conductr-client-lib" % Version.conductrClientLib
+  val jansi             = "org.fusesource.jansi"  %  "jansi"                      % Version.jansi
+  val jline             = "jline"                 %  "jline"                      % Version.jline
+  val jodaTime          = "joda-time"             %  "joda-time"                  % Version.jodaTime
+  val sbtBundle         = "com.typesafe.sbt"      %  "sbt-bundle"                 % Version.sbtBundle
+  val scalaTest         = "org.scalatest"         %% "scalatest"                  % Version.scalaTest
+  val scalactic         = "org.scalactic"         %% "scalactic"                  % Version.scalactic
+  val mockito           = "org.mockito"           %  "mockito-core"               % Version.mockito
 }
 
 object Resolver {
-  val akkaContribExtra = bintrayRepo("typesafe", "maven-releases")
-  val patriknw         = bintrayRepo("patriknw", "maven")
-  val typesafeReleases = "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases"
+  val typesafeReleases        = "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases"
+  val typesafeBintrayReleases = bintrayRepo("typesafe", "maven-releases")
 }

@@ -4,16 +4,16 @@
 
 package com.typesafe.conductr.sbt
 
-import akka.actor.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.{ Uri => HttpUri }
-import com.typesafe.conductr.client.ConductRController
+import akka.actor.{ ActorSystem }
+import com.typesafe.conductr.akka.ConnectionContext
+import com.typesafe.conductr.clientlib.akka.ControlClient
 import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 import com.typesafe.sbt.packager.Keys._
 import scala.concurrent.duration.DurationInt
 import language.postfixOps
-import ConductR._
+import ConductRClient._
 import scala.util.Try
 
 /**
@@ -26,15 +26,14 @@ object ConductRPlugin extends AutoPlugin {
 
   val autoImport = Import
 
-  val conductrAttrKey = AttributeKey[ActorRef]("sbt-conductr")
   val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
 
   override def trigger = allRequirements
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      Keys.onLoad := Keys.onLoad.value.andThen(loadActorSystem).andThen(loadConductRController),
-      Keys.onUnload := (unloadConductRController _).andThen(unloadActorSystem).andThen(Keys.onUnload.value),
+      Keys.onLoad := Keys.onLoad.value.andThen(loadActorSystem),
+      Keys.onUnload := (unloadActorSystem _).andThen(Keys.onUnload.value),
 
       Keys.aggregate in ConductRKeys.conduct := false,
 
@@ -178,24 +177,24 @@ object ConductRPlugin extends AutoPlugin {
 
   private def conductTask: Def.Initialize[InputTask[Unit]] =
     Def.inputTask {
-      implicit val apiVersion = toApiVersion(ConductRKeys.conductrApiVersion.value)
       val state = Keys.state.value
       val loadTimeout = ConductRKeys.conductrLoadTimeout.value
       val requestTimeout = ConductRKeys.conductrRequestTimeout.value
-      implicit val log = state.log
 
       withActorSystem(state) { implicit actorSystem =>
-        withConductRController(state) { implicit conductrController =>
-          Parsers.subtask.parsed match {
-            case HelpSubtask                           => conductUsage
-            case LoadSubtask(bundle, config)           => ConductR.loadBundle(bundle, config, loadTimeout)
-            case RunSubtask(bundleId, scale, affinity) => ConductR.runBundle(bundleId, scale, affinity, requestTimeout)
-            case StopSubtask(bundleId)                 => ConductR.stopBundle(bundleId, requestTimeout)
-            case UnloadSubtask(bundleId)               => ConductR.unloadBundleTask(bundleId, requestTimeout)
-            case InfoSubtask                           => ConductR.info()
-            case EventsSubtask(bundleId, lines)        => ConductR.events(bundleId, lines)
-            case LogsSubtask(bundleId, lines)          => ConductR.logs(bundleId, lines)
-          }
+        val conductrUrl = new java.net.URL(ConductRKeys.conductrControlServerUrl.value.toString)
+        implicit val cc = ConnectionContext()
+        implicit val log = state.log
+        val conductrClient = initConductrClient(conductrUrl)
+        Parsers.subtask.parsed match {
+          case HelpSubtask                           => conductUsage
+          case LoadSubtask(bundle, config)           => conductrClient.loadBundle(bundle, config, loadTimeout)
+          case RunSubtask(bundleId, scale, affinity) => conductrClient.runBundle(bundleId, scale, affinity, requestTimeout)
+          case StopSubtask(bundleId)                 => conductrClient.stopBundle(bundleId, requestTimeout)
+          case UnloadSubtask(bundleId)               => conductrClient.unloadBundle(bundleId, requestTimeout)
+          case InfoSubtask                           => conductrClient.info(requestTimeout)
+          case EventsSubtask(bundleId, lines)        => conductrClient.events(bundleId, lines, requestTimeout)
+          case LogsSubtask(bundleId, lines)          => conductrClient.logs(bundleId, lines, requestTimeout)
         }
       }
     }
@@ -234,38 +233,16 @@ object ConductRPlugin extends AutoPlugin {
       state.remove(actorSystemAttrKey)
     }
 
-  private def loadConductRController(state: State): State =
-    state.get(conductrAttrKey).fold {
-      state.log.debug(s"Creating ConductRController actor and storing it under key [${conductrAttrKey.label}]")
-      val conductr = withActorSystem(state) { implicit system =>
-        val extracted = Project.extract(state)
-        val settings = extracted.structure.data
-        val conductr =
-          for {
-            conductrUrl <- (ConductRKeys.conductrControlServerUrl in Global).get(settings)
-            loggingQueryUrl <- (ConductRKeys.conductrLoggingQueryUrl in Global).get(settings)
-            connectTimeout <- (ConductRKeys.conductrConnectTimeout in Global).get(settings)
-          } yield {
-            state.log.info(s"Control Protocol set for $conductrUrl. Use 'controlServer {ip-address}' to set an alternate address.")
-            system.actorOf(ConductRController.props(HttpUri(conductrUrl.toString), HttpUri(loggingQueryUrl.toString), connectTimeout))
-          }
-        conductr.getOrElse(sys.error("Cannot establish the ConductRController actor: Check that you have conductrControlServerUrl and conductrConnectTimeout settings!"))
-      }
-      state.put(conductrAttrKey, conductr)
-    }(as => state)
-
-  private def unloadConductRController(state: State): State =
-    state.get(conductrAttrKey).fold(state)(_ => state.remove(conductrAttrKey))
+  private def initConductrClient(conductrUrl: URL)(implicit system: ActorSystem, cc: ConnectionContext, log: Logger): ConductRClient = {
+    log.debug(s"Instantiating ConductR client")
+    val controlClient = ControlClient(conductrUrl)
+    new ConductRClient(controlClient)
+  }
 
   // We will get an exception if there is no known actor system - which is a good thing because
   // there absolutely has to be at this point.
   private def withActorSystem[T](state: State)(block: ActorSystem => T): T =
     block(state.get(actorSystemAttrKey).get)
-
-  // We will get an exception if there is no actor representing the ConductR - which is a good thing because
-  // there needs to be and it is probably because the plugin has been mis-configured.
-  private def withConductRController[T](state: State)(block: ActorRef => T): T =
-    block(state.get(conductrAttrKey).get)
 
   private def withActorSystemClassloader[A](action: => A): A = {
     val newLoader = ActorSystem.getClass.getClassLoader
@@ -277,5 +254,4 @@ object ConductRPlugin extends AutoPlugin {
     finally
       thread.setContextClassLoader(oldLoader)
   }
-
 }
