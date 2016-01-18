@@ -10,9 +10,18 @@ also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#
 
 sbt-conductr is enabled by simply declaring its dependency:
 
+**ConductR 1.0**
+
 ```scala
 resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.2.1")
+```
+
+**ConductR 1.1+**
+
+```scala
+resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.3.0")
 ```
 
 The plugin has no requirements for other plugins to be enabled. 
@@ -110,12 +119,6 @@ conduct stop           | Stops all executions of a bundle given a bundle id
 conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 conduct logs           | Retrieves log messages of a given bundle
 conduct events         | Retrieves events of a given bundle
-
-In addition the following settings are available:
-
-Property           | Description
--------------------|------------
-conductrApiVersion | The api version to use when communicating with ConductR. Defaults to 1 which is required by ConductR 1.0.
 
 
 &copy; Typesafe Inc., 2014-2015
