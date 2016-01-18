@@ -234,6 +234,6 @@ object Column {
 
   private def getWrappingWidth(minWidth: Int, margin: Int): Int = {
     val width = TerminalFactory.get().getWidth - margin
-    if(width >= 0) width else minWidth
+    if (width >= 0) width else minWidth
   }
 }
