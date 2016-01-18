@@ -6,23 +6,23 @@ package com.typesafe.conductr.sbt
 package console
 
 import akka.actor.{ ActorRef, ActorSystem }
-import akka.pattern.{ ask, gracefulStop, pipe }
-import com.typesafe.conductr.client.ConductRController
+import akka.pattern.{ gracefulStop }
+import com.typesafe.conductr.clientlib.scala.models._
 import jline.console.ConsoleReader
 import org.fusesource.jansi.Ansi
 import scala.concurrent.{ Await, blocking }
-import scala.util.Failure
+import scala.util.{ Failure }
 import com.typesafe.conductr.sbt.console.Column._
 
 object Console {
 
   import scala.concurrent.duration._
-  val timeout = 5.seconds
+  val timeout = 1.second
 
-  def bundleInfo(refresh: Boolean)(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit = {
+  def bundleInfo(bundles: Seq[Bundle], refresh: Boolean)(implicit system: ActorSystem): Unit = {
     import system.dispatcher
 
-    val screen = system.actorOf(Screen.props(refresh, (bundles: Seq[ConductRController.BundleInfo]) => {
+    val screen = system.actorOf(Screen.props(refresh, (bundles: Seq[Bundle]) => {
       val columns = Vector(
         Id(bundles),
         Name(bundles),
@@ -34,18 +34,15 @@ object Console {
       Screen.Layout(columns, notes.toVector)
     }), "screen")
 
-    conductrController
-      .ask(ConductRController.GetBundleInfoStream(apiVersion))(timeout)
-      .mapTo[ConductRController.DataSource[Seq[ConductRController.BundleInfo]]]
-      .pipeTo(screen)
+    screen ! bundles
 
     cleanUp(system, screen, refresh)
   }
 
-  def bundleEvents(bundleId: String, lines: Int, refresh: Boolean)(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit = {
+  def bundleEvents(events: Seq[BundleEvent], refresh: Boolean)(implicit system: ActorSystem): Unit = {
     import system.dispatcher
 
-    val screen = system.actorOf(Screen.props(refresh, (events: Seq[ConductRController.Event]) => {
+    val screen = system.actorOf(Screen.props(refresh, (events: Seq[BundleEvent]) => {
       val columns = Vector(
         EventTime(events),
         Event(events),
@@ -53,18 +50,16 @@ object Console {
       )
       Screen.Layout(columns, Vector.empty)
     }), "screen")
-    conductrController
-      .ask(ConductRController.GetBundleEvents(apiVersion, bundleId, lines))(timeout)
-      .mapTo[ConductRController.DataSource[Seq[ConductRController.Event]]]
-      .pipeTo(screen)
+
+    screen ! events
 
     cleanUp(system, screen, refresh)
   }
 
-  def bundleLogs(bundleId: String, lines: Int, refresh: Boolean)(implicit system: ActorSystem, conductrController: ActorRef, apiVersion: ConductRController.ApiVersion.Value): Unit = {
+  def bundleLogs(logs: Seq[BundleLog], refresh: Boolean)(implicit system: ActorSystem): Unit = {
     import system.dispatcher
 
-    val screen = system.actorOf(Screen.props(refresh, (logs: Seq[ConductRController.Log]) => {
+    val screen = system.actorOf(Screen.props(refresh, (logs: Seq[BundleLog]) => {
       val columns = Vector(
         LogTime(logs),
         Host(logs),
@@ -72,10 +67,8 @@ object Console {
       )
       Screen.Layout(columns, Vector.empty)
     }), "screen")
-    conductrController
-      .ask(ConductRController.GetBundleLogs(apiVersion, bundleId, lines))(timeout)
-      .mapTo[ConductRController.DataSource[Seq[ConductRController.Log]]]
-      .pipeTo(screen)
+
+    screen ! logs
 
     cleanUp(system, screen, refresh)
   }

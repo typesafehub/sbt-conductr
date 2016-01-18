@@ -5,9 +5,9 @@
 package com.typesafe.conductr.sbt
 package console
 
-import com.typesafe.conductr.client.ConductRController
+import com.typesafe.conductr.clientlib.scala.models.{ BundleEvent, BundleLog, Bundle }
 import jline.TerminalFactory
-import org.joda.time.DateTime
+import org.joda.time._
 
 object Column {
 
@@ -16,6 +16,7 @@ object Column {
 
   private final val Space = " "
   private final val NewLine = "\n"
+  private final val DateTimeFormat = "HH:mm:ss"
 
   /**
    * A fixed width column with no additional functionality.
@@ -94,7 +95,12 @@ object Column {
 
     override protected def justify(s: String): String = {
       val formattedText =
-        if (s.visibleLength > width) s.grouped(width).mkString(Space * marginLeft) else s
+        if (s.visibleLength > width) s
+          .trim
+          .replace(NewLine, (Space * marginLeft))
+          .grouped(width)
+          .mkString(Space * marginLeft) + NewLine
+        else s
       super.justify(formattedText)
     }
 
@@ -116,7 +122,7 @@ object Column {
   /**
    * Displays bundle id, bundle digest and config digest.
    */
-  case class Id(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
+  case class Id(bundles: Seq[Bundle]) extends RegularColumn {
     override val title = "ID"
     override val width = 27
 
@@ -130,7 +136,7 @@ object Column {
   /**
    * Displays bundle name.
    */
-  case class Name(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn {
+  case class Name(bundles: Seq[Bundle]) extends RegularColumn {
     override val title = "NAME"
     override val width = 30
 
@@ -140,7 +146,7 @@ object Column {
   /**
    * Displays the number of hosts where bundle is replicated.
    */
-  case class Replicated(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Replicated(bundles: Seq[Bundle]) extends RegularColumn with RightJustified {
     override val title = "#REP"
     override val width = 7
 
@@ -153,7 +159,7 @@ object Column {
   /**
    * Displays the number of hosts where bundle is starting.
    */
-  case class Starting(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Starting(bundles: Seq[Bundle]) extends RegularColumn with RightJustified {
     override val title = "#STR"
     override val width = 7
 
@@ -166,7 +172,7 @@ object Column {
   /**
    * Displays the number of hosts where bundle is running.
    */
-  case class Running(bundles: Seq[ConductRController.BundleInfo]) extends RegularColumn with RightJustified {
+  case class Running(bundles: Seq[Bundle]) extends RegularColumn with RightJustified {
     override val title = "#RUN"
     override val width = 7
 
@@ -182,47 +188,52 @@ object Column {
     override val data = Seq.fill(height)(Seq.empty)
   }
 
-  case class EventTime(events: Seq[ConductRController.Event]) extends RegularColumn {
+  case class EventTime(events: Seq[BundleEvent]) extends RegularColumn {
     override val title = "TIME"
     override val width = 11
 
-    override val data = events.map { event => List(DateTime.parse(event.timestamp).toString("hh:mm:ss")) }
+    override val data = events.map { event => List(new DateTime(event.timestamp).toString(DateTimeFormat)) }
   }
 
-  case class Event(events: Seq[ConductRController.Event]) extends RegularColumn {
+  case class Event(events: Seq[BundleEvent]) extends RegularColumn {
     override val title = "EVENT"
     override val width = 50
 
     override val data = events.map { event => List(event.event) }
   }
 
-  case class Description(events: Seq[ConductRController.Event]) extends WrappingColumn {
+  case class Description(events: Seq[BundleEvent]) extends WrappingColumn {
     override val title = "DESC"
     override val marginLeft = 61
-    override val width = TerminalFactory.get().getWidth - marginLeft
+    override val width = getWrappingWidth(title.size, marginLeft)
 
     override val data = events.map { event => List(event.description) }
   }
 
-  case class LogTime(logs: Seq[ConductRController.Log]) extends RegularColumn {
+  case class LogTime(logs: Seq[BundleLog]) extends RegularColumn {
     override val title = "TIME"
     override val width = 11
 
-    override val data = logs.map { event => List(DateTime.parse(event.timestamp).toString("hh:mm:ss")) }
+    override val data = logs.map { event => List(new DateTime(event.timestamp).toString(DateTimeFormat)) }
   }
 
-  case class Host(logs: Seq[ConductRController.Log]) extends RegularColumn {
+  case class Host(logs: Seq[BundleLog]) extends RegularColumn {
     override val title = "HOST"
     override val width = 15
 
     override val data = logs.map { event => List(event.host) }
   }
 
-  case class Log(logs: Seq[ConductRController.Log]) extends WrappingColumn {
+  case class Log(logs: Seq[BundleLog]) extends WrappingColumn {
     override val title = "LOG"
     override val marginLeft = 26
-    override val width = TerminalFactory.get().getWidth - marginLeft
+    override val width = getWrappingWidth(title.size, marginLeft)
 
     override val data = logs.map { event => List(event.message.trim) }
+  }
+
+  private def getWrappingWidth(minWidth: Int, margin: Int): Int = {
+    val width = TerminalFactory.get().getWidth - margin
+    if(width >= 0) width else minWidth
   }
 }
