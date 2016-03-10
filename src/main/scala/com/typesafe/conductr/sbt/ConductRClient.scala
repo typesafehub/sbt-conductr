@@ -49,7 +49,6 @@ private[conductr] class ConductRClient(controlClient: ControlClient)(implicit sy
 
   def loadBundle(bundle: URI, config: Option[URI], loadTimeout: Timeout): String = {
     log.info("Loading bundle to ConductR ...")
-    println(s"bundle uri: $bundle")
     val response = controlClient.loadBundle(bundle, config)
     Await.ready(response, loadTimeout.duration)
     response.value.get match {
