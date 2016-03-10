@@ -1,23 +1,18 @@
 /*
- * Copyright © 2014 Typesafe, Inc. All rights reserved.
+ * Copyright © 2016 Lightbend, Inc. All rights reserved.
  */
 
 package com.typesafe.conductr.sbt
 
-import akka.actor.{ ActorSystem }
-import com.typesafe.conductr.akka.ConnectionContext
-import com.typesafe.conductr.clientlib.akka.ControlClient
 import sbt._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
 import com.typesafe.sbt.packager.Keys._
-import scala.concurrent.duration.DurationInt
 import language.postfixOps
-import ConductRClient._
-import scala.util.Try
+import java.io.IOException
 
 /**
- * An sbt plugin that interact's with Typesafe ConductR's controller and potentially other components.
+ * An sbt plugin that interact's with ConductR's controller and potentially other components.
  */
 object ConductRPlugin extends AutoPlugin {
   import com.typesafe.sbt.bundle.SbtBundle.autoImport._
@@ -26,33 +21,21 @@ object ConductRPlugin extends AutoPlugin {
 
   val autoImport = Import
 
-  val actorSystemAttrKey = AttributeKey[ActorSystem]("sbt-conductr-actor-system")
-
   override def trigger = allRequirements
+
+  private final val LatestConductrDocVersion = "1.1.x"
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
-      Keys.onLoad := Keys.onLoad.value.andThen(loadActorSystem),
-      Keys.onUnload := (unloadActorSystem _).andThen(Keys.onUnload.value),
-
       Keys.aggregate in ConductRKeys.conduct := false,
 
       dist in Bundle := file(""),
-      dist in BundleConfiguration := file(""),
-
-      ConductRKeys.conductrConnectTimeout := 30.seconds,
-      ConductRKeys.conductrLoadTimeout := 10.minutes,
-      ConductRKeys.conductrRequestTimeout := 30.seconds,
-
-      ConductRKeys.conductrControlServerUrl := envUrl("CONDUCTR_IP", DefaultConductrHost, "CONDUCTR_PORT", DefaultConductrPort, DefaultConductrProtocol),
-      ConductRKeys.conductrLoggingQueryUrl := envUrl("LOGGING_QUERY_IP", DefaultConductrHost, "LOGGING_QUERY_PORT", DefaultConductrPort, DefaultConductrProtocol),
-
-      ConductRKeys.conductrApiVersion := "1"
+      dist in BundleConfiguration := file("")
     )
 
   override def projectSettings: Seq[Setting[_]] =
     super.projectSettings ++ List(
-      Keys.commands ++= Seq(controlServer),
+      Keys.commands ++= Seq.empty,
       ConductRKeys.conduct := conductTask.value.evaluated,
 
       ConductRKeys.conductrDiscoveredDist <<=
@@ -63,48 +46,22 @@ object ConductRPlugin extends AutoPlugin {
         .triggeredBy(dist in BundleConfiguration)
     )
 
-  def resolveDefaultHostIp(): String = {
-    import com.typesafe.conductr.sbt.console.AnsiConsole.Implicits._
-    def withDockerMachine(): String =
-      "docker-machine ip default".!!.trim match {
-        case "" =>
-          println("Docker VM has not been started. Use 'docker-machine start default' in the terminal to start the VM and reload the sbt session.".asWarn)
-          ""
-        case ip => ip
-      }
-    def withBoot2Docker(): String =
-      "boot2docker ip".!!.trim.reverse.takeWhile(_ != ' ').reverse
-    def withHostname(): String =
-      "hostname".!!.trim
-    val WithLocalAddress: String =
-      "127.0.0.1"
-
-    Try(withDockerMachine())
-      .getOrElse(Try(withBoot2Docker())
-        .getOrElse(Try(withHostname())
-          .getOrElse(WithLocalAddress)))
-  }
-
-  // Input parsing and action
-
-  private def controlServer: Command = Command.single("controlServer") { (prevState, url) =>
-    val extracted = Project.extract(prevState)
-    extracted.append(Seq(ConductRKeys.conductrControlServerUrl in Global := prepareConductrUrl(url)), prevState)
-  }
-
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[ConductSubtask]] = {
       val init = Def.value { (bundle: Option[File], bundleConfig: Option[File]) =>
         (Space ~> (
           helpSubtask |
+          subHelpSubtask |
+          versionSubtask |
           loadSubtask(bundle, bundleConfig) |
           runSubtask |
           stopSubtask |
           unloadSubtask |
           infoSubtask |
+          servicesSubtask |
           eventsSubtask |
           logsSubtask
-        )) ?? HelpSubtask
+        )) ?? ConductHelp
       }
       (Keys.resolvedScoped, init) { (ctx, parser) =>
         s: State =>
@@ -113,145 +70,149 @@ object ConductRPlugin extends AutoPlugin {
           parser(bundle, bundleConfig)
       }
     }
-    def helpSubtask: Parser[HelpSubtask.type] =
-      token("help")
-        .map { case _ => HelpSubtask }
-        .!!!("usage: conduct help")
-    def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[LoadSubtask] =
-      (token("load") ~> Space ~> bundle(availableBundle) ~ bundleConfiguration(availableBundleConfiguration).?)
-        .map { case (b, config) => LoadSubtask(b, config) }
-        .!!!("usage: conduct load BUNDLE")
-    def runSubtask: Parser[RunSubtask] =
+
+    // Conduct help command (conduct --help)
+    def helpSubtask: Parser[ConductHelp.type] =
+      token("--help")
+        .map { case _ => ConductHelp }
+        .!!! { "Usage: conduct --help" }
+
+    // This parser is triggering the help of the conduct sub command if no option for this command is specified
+    // Example: `conduct load` will execute `conduct load --help`
+    def subHelpSubtask: Parser[ConductSubtaskHelp] =
+      (token("load") | token("run") | token("stop") | token("unload") | token("events") | token("logs"))
+        .map(ConductSubtaskHelp(_))
+
+    // Sub command parsers
+    def versionSubtask: Parser[ConductSubtaskSuccess] =
+      (token("version") ~> commonOpts.?)
+        .map { case opts => ConductSubtaskSuccess("version", optionalArgs(opts)) }
+        .!!!("Usage: conduct version")
+
+    def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[ConductSubtaskSuccess] =
+      (token("load") ~> commonOpts.? ~ (Space ~> bundle(availableBundle)) ~ bundleConfiguration(availableBundleConfiguration).?)
+        .map { case ((opts, bundle), config) => ConductSubtaskSuccess("load", optionalArgs(opts) ++ Seq(bundle.toString) ++ optionalArgs(config)) }
+        .!!! { "Usage: conduct load --help" }
+
+    def runSubtask: Parser[ConductSubtaskSuccess] =
       // FIXME: Should default to last loadBundle result
-      (token("run") ~> Space ~> bundleId(List("fixme")) ~ scale.? ~ affinity.?)
-        .map { case ((b, scale), affinity) => RunSubtask(b, scale, affinity) }
-        .!!!("usage: conduct run BUNDLE_ID [--scale SCALE] [--affinity BUNDLE_ID]")
-    def stopSubtask: Parser[StopSubtask] =
+      (token("run") ~> commonOpts.? ~ scale.? ~ affinity.? ~ (Space ~> bundleId(List("fixme"))))
+        //.map { case ((b, scale), affinity) => RunSubtask(b, scale, affinity) }
+        .map { case (((opts, scale), affinity), bundle) => ConductSubtaskSuccess("run", optionalArgs(opts) ++ optionalArgs(scale) ++ optionalArgs(affinity) ++ Seq(bundle)) }
+        .!!!("Usage: conduct run --help")
+
+    def stopSubtask: Parser[ConductSubtaskSuccess] =
       // FIXME: Should default to last bundle started
-      (token("stop") ~> Space ~> bundleId(List("fixme")))
-        .map { case b => StopSubtask(b) }
-        .!!!("usage: conduct stop BUNDLE_ID")
-    def unloadSubtask: Parser[UnloadSubtask] =
+      (token("stop") ~> commonOpts.? ~ (Space ~> bundleId(List("fixme"))))
+        .map { case (opts, bundleId) => ConductSubtaskSuccess("stop", optionalArgs(opts) ++ Seq(bundleId)) }
+        .!!!("Usage: conduct stop --help")
+
+    def unloadSubtask: Parser[ConductSubtaskSuccess] =
       // FIXME: Should default to last bundle loaded
-      (token("unload") ~> Space ~> bundleId(List("fixme")))
-        .map { case b => UnloadSubtask(b) }
-        .!!!("usage: conduct unload BUNDLE")
-    def infoSubtask: Parser[InfoSubtask.type] =
-      token("info")
-        .map { case _ => InfoSubtask }
-        .!!!("usage: conduct info")
-    def eventsSubtask: Parser[EventsSubtask] =
-      (token("events") ~> Space ~> bundleId(List("fixme")) ~ lines.?)
-        .map { case (b, lines) => EventsSubtask(b, lines) }
-        .!!!("usage: conduct events BUNDLE_ID [--lines LINES]")
-    def logsSubtask: Parser[ConductSubtask] =
-      (token("logs") ~> Space ~> bundleId(List("fixme")) ~ lines.?)
-        .map { case (b, lines) => LogsSubtask(b, lines) }
-        .!!!("usage: conduct logs BUNDLE_ID [--lines LINES]")
+      (token("unload") ~> commonOpts.? ~ (Space ~> bundleId(List("fixme"))))
+        .map { case (opts, bundleId) => ConductSubtaskSuccess("unload", optionalArgs(opts) ++ Seq(bundleId)) }
+        .!!!("Usage: conduct unload --help")
 
+    def infoSubtask: Parser[ConductSubtaskSuccess] =
+      token("info" ~> commonOpts.?)
+        .map { case opts => ConductSubtaskSuccess("info", optionalArgs(opts)) }
+        .!!!("Usage: conduct info")
+
+    def servicesSubtask: Parser[ConductSubtaskSuccess] =
+      token("services" ~> commonOpts.?)
+        .map { case opts => ConductSubtaskSuccess("services", optionalArgs(opts)) }
+        .!!!("Usage: conduct services")
+
+    def eventsSubtask: Parser[ConductSubtaskSuccess] =
+      (token("events") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(List("fixme"))))
+        .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("events", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
+        .!!!("Usage: conduct events --help")
+
+    def logsSubtask: Parser[ConductSubtaskSuccess] =
+      (token("logs") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(List("fixme"))))
+        .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("logs", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
+        .!!!("Usage: conduct logs --help")
+
+    // Utility parser
+    def basicString: Parser[String] =
+      Space ~> StringBasic
+    def positiveNumber: Parser[Int] =
+      Space ~> NatBasic
+    def bundleId(x: Seq[String]): Parser[String] =
+      StringBasic examples (x: _*)
+
+    // Common options
+    def commonOpts: Parser[String] =
+      hideAutoCompletion((help | quiet | ip | port | verbose | longsIds | apiVersion).*.map { case opts => opts.mkString(" ") })
+    def help: Parser[String] = Space ~> "--help"
+    def quiet: Parser[String] = Space ~> "-q"
+    def verbose: Parser[String] = Space ~> "--verbose"
+    def longsIds: Parser[String] = Space ~> "--long-ids"
+    def apiVersion: Parser[String] = (Space ~> "--api-version" ~ positiveNumber).map(asString)
+    def ip: Parser[String] = (Space ~> "--ip" ~ basicString).map(asString)
+    def port: Parser[String] = (Space ~> "--port" ~ positiveNumber).map(asString)
+    def settingsDir: Parser[String] = (Space ~> "--settings-dir" ~ basicString).map(asString)
+    def customSettingsFile: Parser[String] = (Space ~> "--custom-settings-file" ~ basicString).map(asString)
+    def customPluginsDirs: Parser[String] = (Space ~> "--custom-plugins-dir" ~ basicString).map(asString)
+    def resolveCacheDir: Parser[String] = (Space ~> "--resolve-cache-dir" ~ basicString).map(asString)
+
+    // Command specific options
     def bundle(bundle: Option[File]): Parser[URI] =
-      token(Uri(bundle.fold[Set[URI]](Set.empty)(f => Set(f.toURI))))
+      token(basicUri examples (bundle.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath))))
+    def bundleConfiguration(bundleConf: Option[File]): Parser[URI] =
+      Space ~> bundle(bundleConf)
+    def scale: Parser[String] =
+      hideAutoCompletion(Space ~> "--scale" ~ positiveNumber).map(asString)
+    def affinity: Parser[String] =
+      hideAutoCompletion(Space ~> "--affinity" ~ (Space ~> bundleId(List("fixme")))).map(asString)
+    def lines: Parser[String] =
+      hideAutoCompletion(Space ~> "--lines" ~ positiveNumber).map(asString)
 
-    def bundleConfiguration(bundleConf: Option[File]): Parser[URI] = Space ~> bundle(bundleConf)
+    // Hide auto completion in sbt session for the given parser
+    def hideAutoCompletion[T](parser: Parser[T]): Parser[T] =
+      token(parser, hide = _ => true)
 
-    def bundleId(x: Seq[String]): Parser[String] = StringBasic examples (x: _*)
-
-    def positiveNumber: Parser[Int] = Space ~> NatBasic
-
-    def scale: Parser[Int] = Space ~> "--scale" ~> positiveNumber
-
-    def affinity: Parser[String] = Space ~> "--affinity" ~> Space ~> bundleId(List("fixme"))
-
-    def lines: Parser[Int] = Space ~> "--lines" ~> positiveNumber
+    // Convert Tuple[A,B] to String by using a whitespace separator
+    private def asString[A, B](pair: (A, B)): String =
+      s"${pair._1} ${pair._2}"
   }
 
   private sealed trait ConductSubtask
-  private case object HelpSubtask extends ConductSubtask
-  private case class LoadSubtask(bundle: URI, config: Option[URI]) extends ConductSubtask
-  private case class RunSubtask(bundleId: String, scale: Option[Int], affinity: Option[String]) extends ConductSubtask
-  private case class StopSubtask(bundleId: String) extends ConductSubtask
-  private case class UnloadSubtask(bundleId: String) extends ConductSubtask
-  private case object InfoSubtask extends ConductSubtask
-  private case class EventsSubtask(bundleId: String, lines: Option[Int]) extends ConductSubtask
-  private case class LogsSubtask(bundleId: String, lines: Option[Int]) extends ConductSubtask
+  private case class ConductSubtaskSuccess(command: String, args: Seq[String]) extends ConductSubtask
+  private case object ConductHelp extends ConductSubtask
+  private case class ConductSubtaskHelp(command: String) extends ConductSubtask
 
-  private def conductTask: Def.Initialize[InputTask[Unit]] =
-    Def.inputTask {
-      val state = Keys.state.value
-      val loadTimeout = ConductRKeys.conductrLoadTimeout.value
-      val requestTimeout = ConductRKeys.conductrRequestTimeout.value
+  private def conductTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
+    verifyCliInstallation()
 
-      withActorSystem(state) { implicit actorSystem =>
-        val conductrUrl = new java.net.URL(ConductRKeys.conductrControlServerUrl.value.toString)
-        implicit val cc = ConnectionContext()
-        implicit val log = state.log
-        val conductrClient = initConductrClient(conductrUrl)
-        Parsers.subtask.parsed match {
-          case HelpSubtask                           => conductUsage
-          case LoadSubtask(bundle, config)           => conductrClient.loadBundle(bundle, config, loadTimeout)
-          case RunSubtask(bundleId, scale, affinity) => conductrClient.runBundle(bundleId, scale, affinity, requestTimeout)
-          case StopSubtask(bundleId)                 => conductrClient.stopBundle(bundleId, requestTimeout)
-          case UnloadSubtask(bundleId)               => conductrClient.unloadBundle(bundleId, requestTimeout)
-          case InfoSubtask                           => conductrClient.info(requestTimeout)
-          case EventsSubtask(bundleId, lines)        => conductrClient.events(bundleId, lines, requestTimeout)
-          case LogsSubtask(bundleId, lines)          => conductrClient.logs(bundleId, lines, requestTimeout)
-        }
-      }
+    Parsers.subtask.parsed match {
+      case ConductHelp                          => conductHelp()
+      case ConductSubtaskHelp(command)          => conductSubHelp(command)
+      case ConductSubtaskSuccess(command, args) => conduct(command, args)
+    }
+  }
+
+  private def verifyCliInstallation(): Unit =
+    try {
+      s"conduct".!!
+    } catch {
+      case ioe: IOException =>
+        sys.error(s"The conductr-cli has not been installed. Follow the instructions on http://conductr.lightbend.com/docs/$LatestConductrDocVersion/CLI to install the CLI.")
     }
 
-  private def conductUsage = {
-    val output =
-      s"""
-         |usage: conduct {help, info, services, load, run, stop, unload, events, logs}
-         |
-         |subcommands:
-         |  help                print usage information of conduct command
-         |  info                print bundle information
-         |  services            print service information
-         |  load                load a bundle
-         |  run                 run a bundle
-         |  stop                stop a bundle
-         |  unload              unload a bundle
-         |  events              show bundle events
-         |  logs                show bundle logs
-       """.stripMargin
-    println(output)
-  }
+  private def conductHelp(): Unit =
+    s"conduct --help".!
 
-  // Actor system management and API
+  private def conductSubHelp(command: String): Unit =
+    s"conduct $command --help".!
 
-  private def loadActorSystem(state: State): State =
-    state.get(actorSystemAttrKey).fold {
-      state.log.debug(s"Creating actor system and storing it under key [${actorSystemAttrKey.label}]")
-      val system = withActorSystemClassloader(ActorSystem("sbt-conductr"))
-      state.put(actorSystemAttrKey, system)
-    }(_ => state)
+  private def conduct(command: String, args: Seq[String]): Unit =
+    Process(Seq("conduct", command) ++ args).!
 
-  private def unloadActorSystem(state: State): State =
-    state.get(actorSystemAttrKey).fold(state) { system =>
-      system.shutdown()
-      state.remove(actorSystemAttrKey)
-    }
-
-  private def initConductrClient(conductrUrl: URL)(implicit system: ActorSystem, cc: ConnectionContext, log: Logger): ConductRClient = {
-    log.debug(s"Instantiating ConductR client")
-    val controlClient = ControlClient(conductrUrl)
-    new ConductRClient(controlClient)
-  }
-
-  // We will get an exception if there is no known actor system - which is a good thing because
-  // there absolutely has to be at this point.
-  private def withActorSystem[T](state: State)(block: ActorSystem => T): T =
-    block(state.get(actorSystemAttrKey).get)
-
-  private def withActorSystemClassloader[A](action: => A): A = {
-    val newLoader = ActorSystem.getClass.getClassLoader
-    val thread = Thread.currentThread
-    val oldLoader = thread.getContextClassLoader
-    thread.setContextClassLoader(newLoader)
-    try
-      action
-    finally
-      thread.setContextClassLoader(oldLoader)
-  }
+  // Converts optional arguments to a `Seq[String]`, meaning the `args` parameter can have 1 to n words
+  // Each word is converted to a new element in the `Seq`
+  // Example: Some("--help --verbose --scale 5") results in Seq("--help", "--verbose", "--scale", 5)
+  // The returned format is ideal to use in `scala.sys.Process()`
+  private def optionalArgs[T](args: Option[T]): Seq[String] =
+    args.fold(Seq.empty[String])(_.toString.split(" "))
 }
