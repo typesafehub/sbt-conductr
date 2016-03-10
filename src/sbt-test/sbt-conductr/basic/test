@@ -1,6 +1,1 @@
-# Test the controlServer command
-> controlServer 192.168.77.20:9005
-> testControlServer 192.168.77.20:9005
--> testControlServer 192.168.77.21:9005
-
-
+# TODO: Add tests
