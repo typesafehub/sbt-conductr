@@ -47,26 +47,30 @@ object ConductRPlugin extends AutoPlugin {
 
   private object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[ConductSubtask]] = {
-      val init = Def.value { (bundle: Option[File], bundleConfig: Option[File]) =>
+      val init = Def.value { (bundle: Option[File], bundleConfig: Option[File], bundleNames: Set[String]) =>
         (Space ~> (
           helpSubtask |
           subHelpSubtask |
           versionSubtask |
           loadSubtask(bundle, bundleConfig) |
-          runSubtask |
-          stopSubtask |
-          unloadSubtask |
+          runSubtask(bundleNames) |
+          stopSubtask(bundleNames) |
+          unloadSubtask(bundleNames) |
           infoSubtask |
           servicesSubtask |
-          eventsSubtask |
-          logsSubtask
+          eventsSubtask(bundleNames) |
+          logsSubtask(bundleNames)
         )) ?? ConductHelp
       }
       (Keys.resolvedScoped, init) { (ctx, parser) =>
         s: State =>
           val bundle = loadFromContext(ConductRKeys.conductrDiscoveredDist, ctx, s)
           val bundleConfig = loadFromContext(ConductRKeys.conductrDiscoveredConfigDist, ctx, s)
-          parser(bundle, bundleConfig)
+          val bundleNames: Set[String] =
+            withProcessHandling {
+              (Process("conduct info") #| Process(Seq("awk", "{print $2}")) #| Process(Seq("awk", "{if(NR>1)print}"))).lines(NoProcessLogging).toSet
+            }(Set.empty)
+          parser(bundle, bundleConfig, bundleNames)
       }
     }
 
@@ -80,7 +84,7 @@ object ConductRPlugin extends AutoPlugin {
     // Example: `conduct load` will execute `conduct load --help`
     def subHelpSubtask: Parser[ConductSubtaskHelp] =
       (token("load") | token("run") | token("stop") | token("unload") | token("events") | token("logs"))
-        .map(ConductSubtaskHelp(_))
+        .map(ConductSubtaskHelp)
 
     // Sub command parsers
     def versionSubtask: Parser[ConductSubtaskSuccess] =
@@ -93,22 +97,18 @@ object ConductRPlugin extends AutoPlugin {
         .map { case ((opts, bundle), config) => ConductSubtaskSuccess("load", optionalArgs(opts) ++ Seq(bundle.toString) ++ optionalArgs(config)) }
         .!!! { "Usage: conduct load --help" }
 
-    def runSubtask: Parser[ConductSubtaskSuccess] =
-      // FIXME: Should default to last loadBundle result
-      (token("run") ~> commonOpts.? ~ scale.? ~ affinity.? ~ (Space ~> bundleId(List("fixme"))))
-        //.map { case ((b, scale), affinity) => RunSubtask(b, scale, affinity) }
+    def runSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+      (token("run") ~> commonOpts.? ~ scale.? ~ affinity(bundleNames).? ~ (Space ~> bundleId(bundleNames)))
         .map { case (((opts, scale), affinity), bundle) => ConductSubtaskSuccess("run", optionalArgs(opts) ++ optionalArgs(scale) ++ optionalArgs(affinity) ++ Seq(bundle)) }
         .!!!("Usage: conduct run --help")
 
-    def stopSubtask: Parser[ConductSubtaskSuccess] =
-      // FIXME: Should default to last bundle started
-      (token("stop") ~> commonOpts.? ~ (Space ~> bundleId(List("fixme"))))
+    def stopSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+      (token("stop") ~> commonOpts.? ~ (Space ~> bundleId(bundleNames)))
         .map { case (opts, bundleId) => ConductSubtaskSuccess("stop", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct stop --help")
 
-    def unloadSubtask: Parser[ConductSubtaskSuccess] =
-      // FIXME: Should default to last bundle loaded
-      (token("unload") ~> commonOpts.? ~ (Space ~> bundleId(List("fixme"))))
+    def unloadSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+      (token("unload") ~> commonOpts.? ~ (Space ~> bundleId(bundleNames)))
         .map { case (opts, bundleId) => ConductSubtaskSuccess("unload", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct unload --help")
 
@@ -122,13 +122,13 @@ object ConductRPlugin extends AutoPlugin {
         .map { case opts => ConductSubtaskSuccess("services", optionalArgs(opts)) }
         .!!!("Usage: conduct services")
 
-    def eventsSubtask: Parser[ConductSubtaskSuccess] =
-      (token("events") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(List("fixme"))))
+    def eventsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+      (token("events") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(bundleNames)))
         .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("events", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
         .!!!("Usage: conduct events --help")
 
-    def logsSubtask: Parser[ConductSubtaskSuccess] =
-      (token("logs") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(List("fixme"))))
+    def logsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+      (token("logs") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(bundleNames)))
         .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("logs", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
         .!!!("Usage: conduct logs --help")
 
@@ -137,8 +137,9 @@ object ConductRPlugin extends AutoPlugin {
       Space ~> StringBasic
     def positiveNumber: Parser[Int] =
       Space ~> NatBasic
-    def bundleId(x: Seq[String]): Parser[String] =
-      StringBasic examples (x: _*)
+    def bundleId(bundleNames: Set[String]): Parser[String] = {
+      StringBasic examples bundleNames
+    }
 
     // Common options
     def commonOpts: Parser[String] =
@@ -157,13 +158,13 @@ object ConductRPlugin extends AutoPlugin {
 
     // Command specific options
     def bundle(bundle: Option[File]): Parser[URI] =
-      token(basicUri examples (bundle.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath))))
+      token(basicUri examples bundle.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath)))
     def bundleConfiguration(bundleConf: Option[File]): Parser[URI] =
       Space ~> bundle(bundleConf)
     def scale: Parser[String] =
       hideAutoCompletion(Space ~> "--scale" ~ positiveNumber).map(asString)
-    def affinity: Parser[String] =
-      hideAutoCompletion(Space ~> "--affinity" ~ (Space ~> bundleId(List("fixme")))).map(asString)
+    def affinity(bundleNames: Set[String]): Parser[String] =
+      hideAutoCompletion(Space ~> "--affinity" ~ (Space ~> bundleId(bundleNames))).map(asString)
     def lines: Parser[String] =
       hideAutoCompletion(Space ~> "--lines" ~ positiveNumber).map(asString)
 
@@ -192,12 +193,9 @@ object ConductRPlugin extends AutoPlugin {
   }
 
   private def verifyCliInstallation(): Unit =
-    try {
-      s"conduct".!!
-    } catch {
-      case ioe: IOException =>
-        sys.error(s"The conductr-cli has not been installed. Follow the instructions on http://conductr.lightbend.com/docs/$LatestConductrDocVersion/CLI to install the CLI.")
-    }
+    withProcessHandling {
+      s"conduct".!(NoProcessLogging)
+    }(sys.error(s"The conductr-cli has not been installed. Follow the instructions on http://conductr.lightbend.com/docs/$LatestConductrDocVersion/CLI to install the CLI."))
 
   private def conductHelp(): Unit =
     s"conduct --help".!
@@ -214,4 +212,17 @@ object ConductRPlugin extends AutoPlugin {
   // The returned format is ideal to use in `scala.sys.Process()`
   private def optionalArgs[T](args: Option[T]): Seq[String] =
     args.fold(Seq.empty[String])(_.toString.split(" "))
+
+  private def withProcessHandling[T](block: => T)(exceptionHandler: => T): T =
+    try {
+      block
+    } catch {
+      case ioe: IOException => exceptionHandler
+    }
+
+  private object NoProcessLogging extends ProcessLogger {
+    override def info(s: => String): Unit = ()
+    override def error(s: => String): Unit = ()
+    override def buffer[T](f: => T): T = f
+  }
 }
