@@ -35,7 +35,6 @@ object ConductRPlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] =
     super.projectSettings ++ List(
-      Keys.commands ++= Seq.empty,
       ConductRKeys.conduct := conductTask.value.evaluated,
 
       ConductRKeys.conductrDiscoveredDist <<=
