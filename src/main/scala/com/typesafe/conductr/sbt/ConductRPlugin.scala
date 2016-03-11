@@ -45,7 +45,7 @@ object ConductRPlugin extends AutoPlugin {
         .triggeredBy(dist in BundleConfiguration)
     )
 
-  private object Parsers {
+  private[sbt] object Parsers {
     lazy val subtask: Def.Initialize[State => Parser[ConductSubtask]] = {
       val init = Def.value { (bundle: Option[File], bundleConfig: Option[File], bundleNames: Set[String]) =>
         (Space ~> (
@@ -143,7 +143,19 @@ object ConductRPlugin extends AutoPlugin {
 
     // Common options
     def commonOpts: Parser[String] =
-      hideAutoCompletion((help | quiet | ip | port | verbose | longsIds | apiVersion).*.map { case opts => opts.mkString(" ") })
+      hideAutoCompletion((
+        help |
+        quiet |
+        verbose |
+        longsIds |
+        apiVersion |
+        ip |
+        port |
+        settingsDir |
+        customSettingsFile |
+        customPluginsDirs |
+        resolveCacheDir
+      ).*.map { case opts => opts.mkString(" ") })
     def help: Parser[String] = Space ~> "--help"
     def quiet: Parser[String] = Space ~> "-q"
     def verbose: Parser[String] = Space ~> "--verbose"
@@ -177,10 +189,10 @@ object ConductRPlugin extends AutoPlugin {
       s"${pair._1} ${pair._2}"
   }
 
-  private sealed trait ConductSubtask
-  private case class ConductSubtaskSuccess(command: String, args: Seq[String]) extends ConductSubtask
-  private case object ConductHelp extends ConductSubtask
-  private case class ConductSubtaskHelp(command: String) extends ConductSubtask
+  private[sbt] sealed trait ConductSubtask
+  private[sbt] case class ConductSubtaskSuccess(command: String, args: Seq[String]) extends ConductSubtask
+  private[sbt] case object ConductHelp extends ConductSubtask
+  private[sbt] case class ConductSubtaskHelp(command: String) extends ConductSubtask
 
   private def conductTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
     verifyCliInstallation()
