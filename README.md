@@ -2,9 +2,14 @@
 
 [![Build Status](https://api.travis-ci.org/sbt/sbt-conductr.png?branch=master)](https://travis-ci.org/sbt/sbt-conductr)
 
-sbt-conductr is an sbt plugin provides commands that communicate with ConductR from within an sbt session. It can
-also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#conductr-bundle-plugin)
- to deploy your application or service to ConductR without leaving the comforts of sbt.
+sbt-conductr is a sbt plugin that provides commands to communicate with ConductR within a sbt session. It can
+also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#conductr-bundle-plugin) 
+to deploy your application or service to ConductR without leaving the comforts of sbt.
+
+## Prerequisite
+
+sbt-conductr uses the [conductr-cli](https://github.com/typesafehub/conductr-cli) to communicate with ConductR.
+Follow the instructions on [http://conductr.lightbend.com/docs/1.1.x/CLI](http://conductr.lightbend.com/docs/1.1.x/CLI) to install the CLI.
 
 ## Usage
 
@@ -15,26 +20,25 @@ resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/release
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.4.0")
 ```
 
-The plugin has no requirements for other plugins to be enabled. 
+The plugin has no requirements for other plugins to be enabled.
 
-The IP address of the ConductR host is automatically retrieved and used if:
-- ConductR is running on the same host inside a docker container. The ConductR address is set to `http://{docker-host-ip}:9005`.
-- ConductR is running on the same host. The ConductR address is set to `http://{hostname}:9005`.
-
-In other scenarios it is necessary yo set the address to the ConductR control server manually, e.g. if ConductR is running on `192.168.59.103:9005` you will issue the following command from the sbt console:
-
-```
-controlServer 192.168.59.103:9005
-```
-
-This then sets the sbt session up to subsequently communicate with the ConductR at 192.168.59.103 on port 9005. 
-You may type commands such as:
+To communicate with the ConductR cluster use the `conduct` command, e.g.
 
 ```
 conduct info
 ```
 
-...which will obtain information on the ConductR cluster.
+This will obtain information on the ConductR cluster.
+
+The IP address of the ConductR host is automatically retrieved and used if:
+- ConductR is running on the same host inside a docker container. The ConductR address is set to `http://{docker-host-ip}:9005`.
+- ConductR is running on the same host. The ConductR address is set to `http://{hostname}:9005`.
+
+In other scenarios it is necessary to set the address to the ConductR server manually. You can do this by using the `--ip` and `--port` options of the `conduct command, e.g.
+
+```
+conduct info --ip 192.168.59.103 --port 9999
+```
 
 If you have [sbt-bundle](https://github.com/sbt/sbt-bundle#conductr-bundle-plugin) enabled e.g.:
 
@@ -112,4 +116,4 @@ conduct logs           | Retrieves log messages of a given bundle
 conduct events         | Retrieves events of a given bundle
 
 
-&copy; Typesafe Inc., 2014-2015
+&copy; Lightbend Inc., 2014-2016
