@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014-2015 Typesafe, Inc. All rights reserved.
+ * Copyright © 2014-2016 Lightbend, Inc. All rights reserved.
  */
 
 package com.typesafe.conductr.sbt
