@@ -1,0 +1,39 @@
+# run sandbox
+$ exec sandbox run 1.1.2
+$ sleep 5000
+
+# conduct info
+> conduct info
+
+# conduct services
+> conduct services
+
+# conduct load
+> conduct load -q reactive-maps-backend-region
+> conduct load -q reactive-maps-backend-summary
+> verifyConductLoad
+
+# conduct run
+> conduct run reactive-maps-backend-region
+> conduct run --api-version 2 --scale 1 --affinity reactive-maps-backend-region reactive-maps-backend-summary
+> verifyConductRun
+
+# conduct logs
+> conduct logs reactive-maps-backend-region
+
+# conduct events
+# > conduct events reactive-maps-backend-summary
+
+# conduct stop
+> conduct stop reactive-maps-backend-summary
+> conduct stop reactive-maps-backend-region
+> verifyConductStop
+
+# conduct unload
+> conduct unload reactive-maps-backend-region
+> conduct unload reactive-maps-backend-summary
+$ sleep 5000
+> verifyConductUnload
+
+# stop sandbox
+$ exec sandbox stop

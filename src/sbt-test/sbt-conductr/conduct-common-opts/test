@@ -1,0 +1,9 @@
+# conduct help
+> conduct
+> conduct --help
+
+# conduct version
+> conduct version
+
+# common opts
+> conduct info -q --verbose --long-ids --api-version 2 --ip 1.1.1.1 --port 9999 --settings-dir /some/path --custom-settings-file /some/path --custom-plugins-dir /some/path --resolve-cache-dir /some/path

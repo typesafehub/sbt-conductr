@@ -6,15 +6,6 @@ name := "sbt-conductr"
 
 crossScalaVersions := List(scalaVersion.value, "2.11.7")
 
-libraryDependencies ++= List(
-  Library.conductrClientLib,
-  Library.jansi,
-  Library.jline,
-  Library.jodaTime,
-  Library.scalactic,
-  Library.scalaTest   % "test",
-  Library.mockito     % "test"
-)
 addSbtPlugin(Library.sbtBundle)
 
 resolvers ++= List(
