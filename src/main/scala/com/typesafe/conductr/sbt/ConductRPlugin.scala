@@ -76,7 +76,7 @@ object ConductRPlugin extends AutoPlugin {
 
     // Conduct help command (conduct --help)
     def helpSubtask: Parser[ConductHelp.type] =
-      token("--help")
+      (hideAutoCompletion("-h") | token("--help"))
         .map { case _ => ConductHelp }
         .!!! { "Usage: conduct --help" }
 
@@ -93,100 +93,130 @@ object ConductRPlugin extends AutoPlugin {
         .!!!("Usage: conduct version")
 
     def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[ConductSubtaskSuccess] =
-      (token("load") ~> commonOpts.? ~ (Space ~> bundle(availableBundle)) ~ bundleConfiguration(availableBundleConfiguration).?)
-        .map { case ((opts, bundle), config) => ConductSubtaskSuccess("load", optionalArgs(opts) ++ Seq(bundle.toString) ++ optionalArgs(config)) }
+      token("load") ~> withOpts(loadOpts)(bundle(availableBundle) ~ bundle(availableBundleConfiguration).?)
+        .mapOpts { case (opts, (bundle, config)) => ConductSubtaskSuccess("load", optionalArgs(opts) ++ Seq(bundle.toString) ++ optionalArgs(config)) }
         .!!! { "Usage: conduct load --help" }
+    def loadOpts = hideAutoCompletion(commonOpts | resolveCacheDir | waitTimeout | noWait).*.map(seqToString).?
 
     def runSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-      (token("run") ~> commonOpts.? ~ scale.? ~ affinity(bundleNames).? ~ (Space ~> bundleId(bundleNames)))
-        .map { case (((opts, scale), affinity), bundle) => ConductSubtaskSuccess("run", optionalArgs(opts) ++ optionalArgs(scale) ++ optionalArgs(affinity) ++ Seq(bundle)) }
+      token("run") ~> withOpts(runOpts(bundleNames))(bundleId(bundleNames))
+        .mapOpts { case (opts, bundle) => ConductSubtaskSuccess("run", optionalArgs(opts) ++ Seq(bundle)) }
         .!!!("Usage: conduct run --help")
+    def runOpts(bundleNames: Set[String]) = hideAutoCompletion(commonOpts | waitTimeout | noWait | scale | affinity(bundleNames)).*.map(seqToString).?
 
     def stopSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-      (token("stop") ~> commonOpts.? ~ (Space ~> bundleId(bundleNames)))
-        .map { case (opts, bundleId) => ConductSubtaskSuccess("stop", optionalArgs(opts) ++ Seq(bundleId)) }
+      token("stop") ~> withOpts(stopOpts)(bundleId(bundleNames))
+        .mapOpts { case (opts, bundleId) => ConductSubtaskSuccess("stop", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct stop --help")
+    def stopOpts = (waitTimeout | noWait).examples("--no-wait", "--wait-timeout").*.map(seqToString).?
 
     def unloadSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-      (token("unload") ~> commonOpts.? ~ (Space ~> bundleId(bundleNames)))
-        .map { case (opts, bundleId) => ConductSubtaskSuccess("unload", optionalArgs(opts) ++ Seq(bundleId)) }
+      token("unload") ~> withOpts(unloadOpts)(bundleId(bundleNames))
+        .mapOpts { case (opts, bundleId) => ConductSubtaskSuccess("unload", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct unload --help")
+    def unloadOpts = hideAutoCompletion(commonOpts | waitTimeout | noWait).*.map(seqToString).?
 
     def infoSubtask: Parser[ConductSubtaskSuccess] =
-      token("info" ~> commonOpts.?)
+      token("info" ~> infoOpts)
         .map { case opts => ConductSubtaskSuccess("info", optionalArgs(opts)) }
         .!!!("Usage: conduct info")
+    def infoOpts = hideAutoCompletion(commonOpts).*.map(seqToString).?
 
     def servicesSubtask: Parser[ConductSubtaskSuccess] =
-      token("services" ~> commonOpts.?)
+      token("services" ~> servicesOpts)
         .map { case opts => ConductSubtaskSuccess("services", optionalArgs(opts)) }
         .!!!("Usage: conduct services")
+    def servicesOpts = hideAutoCompletion(commonOpts).*.map(seqToString).?
 
     def eventsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-      (token("events") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(bundleNames)))
-        .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("events", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
+      (token("events") ~> withOpts(eventsOpts)(bundleId(bundleNames)))
+        .mapOpts { case (opts, bundleId) => ConductSubtaskSuccess("events", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct events --help")
+    def eventsOpts = hideAutoCompletion(commonOpts | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
 
     def logsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-      (token("logs") ~> commonOpts.? ~ lines.? ~ (Space ~> bundleId(bundleNames)))
-        .map { case ((opts, lines), bundleId) => ConductSubtaskSuccess("logs", optionalArgs(opts) ++ optionalArgs(lines) ++ Seq(bundleId)) }
+      token("logs") ~> withOpts(logsOpts)(bundleId(bundleNames))
+        .mapOpts { case (opts, bundleId) => ConductSubtaskSuccess("logs", optionalArgs(opts) ++ Seq(bundleId)) }
         .!!!("Usage: conduct logs --help")
+    def logsOpts = hideAutoCompletion(commonOpts | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
 
-    // Utility parser
-    def basicString: Parser[String] =
-      Space ~> StringBasic
-    def positiveNumber: Parser[Int] =
-      Space ~> NatBasic
-    def bundleId(bundleNames: Set[String]): Parser[String] = {
-      StringBasic examples bundleNames
-    }
+    // Command specific options
+    def bundle(file: Option[File]): Parser[URI] =
+      Space ~> (basicUri examples file.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath)))
+    def bundleId(bundleNames: Set[String]): Parser[String] =
+      Space ~> (StringBasic examples bundleNames)
+    def scale: Parser[String] =
+      (Space ~> token("--scale" ~ positiveNumber)).map(pairToString)
+    def affinity(bundleNames: Set[String]): Parser[String] =
+      (Space ~> token("--affinity" ~ bundleId(bundleNames))).map(pairToString)
+    def lines: Parser[String] =
+      (Space ~> (token("-n" ~ positiveNumber) | token("--lines" ~ positiveNumber))).map(pairToString)
+    def date: Parser[String] =
+      Space ~> token("--date")
+    def utc: Parser[String] =
+      Space ~> token("--utc")
+    def resolveCacheDir: Parser[String] =
+      (Space ~> token("--resolve-cache-dir" ~ basicString)).map(pairToString)
+    def waitTimeout: Parser[String] =
+      (Space ~> token("--wait-timeout" ~ positiveNumber)).map(pairToString)
+    def noWait: Parser[String] =
+      Space ~> token("--no-wait")
 
-    // Common options
+    // Common optional options
     def commonOpts: Parser[String] =
-      hideAutoCompletion((
+      (
         help |
         quiet |
         verbose |
         longsIds |
+        localConnection |
         apiVersion |
         ip |
         port |
         settingsDir |
         customSettingsFile |
-        customPluginsDirs |
-        resolveCacheDir
-      ).*.map { case opts => opts.mkString(" ") })
-    def help: Parser[String] = Space ~> "--help"
-    def quiet: Parser[String] = Space ~> "-q"
-    def verbose: Parser[String] = Space ~> "--verbose"
-    def longsIds: Parser[String] = Space ~> "--long-ids"
-    def apiVersion: Parser[String] = (Space ~> "--api-version" ~ positiveNumber).map(asString)
-    def ip: Parser[String] = (Space ~> "--ip" ~ basicString).map(asString)
-    def port: Parser[String] = (Space ~> "--port" ~ positiveNumber).map(asString)
-    def settingsDir: Parser[String] = (Space ~> "--settings-dir" ~ basicString).map(asString)
-    def customSettingsFile: Parser[String] = (Space ~> "--custom-settings-file" ~ basicString).map(asString)
-    def customPluginsDirs: Parser[String] = (Space ~> "--custom-plugins-dir" ~ basicString).map(asString)
-    def resolveCacheDir: Parser[String] = (Space ~> "--resolve-cache-dir" ~ basicString).map(asString)
+        customPluginsDirs
+      )
+    def help: Parser[String] = Space ~> (token("--help") | token("-h"))
+    def quiet: Parser[String] = Space ~> token("-q")
+    def verbose: Parser[String] = Space ~> (token("-v") | token("--verbose"))
+    def longsIds: Parser[String] = Space ~> token("--long-ids")
+    def localConnection: Parser[String] = Space ~> token("--local-connection")
+    def apiVersion: Parser[String] = (Space ~> token("--api-version" ~ positiveNumber)).map(pairToString)
+    def ip: Parser[String] = (Space ~> (token("-i" ~ basicString) | token("--ip" ~ basicString))).map(pairToString)
+    def port: Parser[String] = (Space ~> (token("-p" ~ positiveNumber) | token("--port" ~ positiveNumber))).map(pairToString)
+    def settingsDir: Parser[String] = (Space ~> token("--settings-dir" ~ basicString)).map(pairToString)
+    def customSettingsFile: Parser[String] = (Space ~> token("--custom-settings-file" ~ basicString)).map(pairToString)
+    def customPluginsDirs: Parser[String] = (Space ~> token("--custom-plugins-dir" ~ basicString)).map(pairToString)
 
-    // Command specific options
-    def bundle(bundle: Option[File]): Parser[URI] =
-      token(basicUri examples bundle.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath)))
-    def bundleConfiguration(bundleConf: Option[File]): Parser[URI] =
-      Space ~> bundle(bundleConf)
-    def scale: Parser[String] =
-      hideAutoCompletion(Space ~> "--scale" ~ positiveNumber).map(asString)
-    def affinity(bundleNames: Set[String]): Parser[String] =
-      hideAutoCompletion(Space ~> "--affinity" ~ (Space ~> bundleId(bundleNames))).map(asString)
-    def lines: Parser[String] =
-      hideAutoCompletion(Space ~> "--lines" ~ positiveNumber).map(asString)
+    // Option helpers
+    def withOpts[T](optionalOpts: Parser[Option[String]])(positionalOpts: Parser[T]): Parser[Either[(Option[String], T), (T, Option[String])]] =
+      ((optionalOpts ~ positionalOpts) || (positionalOpts ~ optionalOpts))
+    implicit class ParserOps[T](parser: Parser[Either[(Option[String], T), (T, Option[String])]]) {
+      def mapOpts(f: (Option[String], T) => ConductSubtaskSuccess): Parser[ConductSubtaskSuccess] =
+        parser map {
+          case Left((optionalOpts, positionalOpts))  => f(optionalOpts, positionalOpts)
+          case Right((positionalOpts, optionalOpts)) => f(optionalOpts, positionalOpts)
+        }
+    }
+
+    // Utility parsers
+    def basicString: Parser[String] =
+      Space ~> StringBasic
+    def positiveNumber: Parser[Int] =
+      Space ~> NatBasic
 
     // Hide auto completion in sbt session for the given parser
     def hideAutoCompletion[T](parser: Parser[T]): Parser[T] =
       token(parser, hide = _ => true)
 
     // Convert Tuple[A,B] to String by using a whitespace separator
-    private def asString[A, B](pair: (A, B)): String =
+    private def pairToString[A, B](pair: (A, B)): String =
       s"${pair._1} ${pair._2}"
+
+    // Convert Seq[String] to String by using a whitespace separator
+    private def seqToString(seq: Seq[String]): String =
+      seq.mkString(" ")
   }
 
   private[sbt] sealed trait ConductSubtask

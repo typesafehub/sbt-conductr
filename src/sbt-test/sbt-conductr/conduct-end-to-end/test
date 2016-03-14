@@ -10,16 +10,16 @@ $ sleep 5000
 
 # conduct load
 > conduct load -q reactive-maps-backend-region
-> conduct load -q reactive-maps-backend-summary
+> conduct load reactive-maps-backend-summary -q
 > verifyConductLoad
 
 # conduct run
 > conduct run reactive-maps-backend-region
-> conduct run --api-version 2 --scale 1 --affinity reactive-maps-backend-region reactive-maps-backend-summary
+> conduct run --api-version 2  --scale 1 --affinity reactive-maps-backend-region reactive-maps-backend-summary
 > verifyConductRun
 
 # conduct logs
-> conduct logs reactive-maps-backend-region
+> conduct logs reactive-maps-backend-region -n 100
 
 # conduct events
 # > conduct events reactive-maps-backend-summary
