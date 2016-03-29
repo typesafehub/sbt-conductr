@@ -2,7 +2,7 @@ import sbt._
 import sbt.Resolver.bintrayRepo
 
 object Version {
-  val sbtBundle         = "1.3.1"
+  val sbtBundle         = "1.3.2"
   val scala             = "2.10.4"
 }
 
