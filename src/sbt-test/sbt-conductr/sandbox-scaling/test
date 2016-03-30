@@ -1,0 +1,15 @@
+> sandbox run 1.1.2
+
+> checkContainers1
+
+> sandbox run 1.1.2 --nr-of-containers 3
+
+> checkContainers3
+
+> sandbox run 1.1.2 --nr-of-containers 2
+
+> checkContainers2
+
+> sandbox stop
+
+> checkConductRIsStopped

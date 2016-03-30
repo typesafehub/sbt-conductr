@@ -2,14 +2,18 @@
 
 [![Build Status](https://api.travis-ci.org/sbt/sbt-conductr.png?branch=master)](https://travis-ci.org/sbt/sbt-conductr)
 
-sbt-conductr is a sbt plugin that provides commands to communicate with ConductR within a sbt session. It can
+sbt-conductr is a sbt plugin that provides commands to manage a ConductR cluster within a sbt session. It can
 also be used in conjunction with [sbt-bundle](https://github.com/sbt/sbt-bundle#conductr-bundle-plugin) 
 to deploy your application or service to ConductR without leaving the comforts of sbt.
 
 ## Prerequisite
 
-sbt-conductr uses the [conductr-cli](https://github.com/typesafehub/conductr-cli) to communicate with ConductR.
-Follow the instructions on [http://conductr.lightbend.com/docs/1.1.x/CLI](http://conductr.lightbend.com/docs/1.1.x/CLI) to install the CLI.
+* [Docker](https://www.docker.com/)
+* [conductr-cli](http://conductr.lightbend.com/docs/1.1.x/CLI)
+
+Docker is required to run the ConductR cluster as if it were running on a number of machines in your network. You won't need to understand much about Docker for ConductR other than installing it as described in its "Get Started" section. If you are on Windows or Mac then you will become familiar with `docker-machine` which is a utility that controls a virtual machine for the purposes of running Docker.
+
+The conductr-cli is used to mange the ConductR cluster.
 
 ## Usage
 
@@ -22,7 +26,15 @@ addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.5.2")
 
 The plugin has no requirements for other plugins to be enabled.
 
-To communicate with the ConductR cluster use the `conduct` command, e.g.
+To manage the ConductR cluster use the `sandbox` or `conduct` command, e.g.
+
+```console
+sandbox run <CONDUCTR_VERSION> --nr-of-containers 3
+```
+
+This will start a three-node cluster on your local machine.
+
+To check the status of your bundles use:
 
 ```
 conduct info
@@ -106,6 +118,9 @@ The following `sbt-conductr` commands are available:
 
 Property               | Description
 -----------------------|------------
+sandbox help           | Get usage information of the sandbox command
+sandbox run            | Start a local ConductR cluster
+sandbox stop           | Stop the local ConductR cluster
 conduct help           | Get usage information of the conduct command
 conduct info           | Gain information on the cluster
 conduct load           | Loads a bundle and an optional configuration to the ConductR

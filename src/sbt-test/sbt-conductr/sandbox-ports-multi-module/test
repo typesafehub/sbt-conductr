@@ -1,0 +1,7 @@
+> sandbox run 1.1.2 --port 1111 --port 2222
+
+> checkDockerContainers
+
+> sandbox stop
+
+> checkConductRIsStopped

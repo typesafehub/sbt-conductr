@@ -5,7 +5,7 @@ lazy val root = project
   .in(file("."))
   .enablePlugins(JavaAppPackaging, ConductRPlugin)
 
-name := "conduct-common-opts"
+name := "conduct-common-args"
 version := "1.0.0"
 scalaVersion := "2.10.4"
 
