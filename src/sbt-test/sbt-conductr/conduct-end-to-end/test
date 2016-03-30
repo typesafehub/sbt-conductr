@@ -1,5 +1,5 @@
 # run sandbox
-$ exec sandbox run 1.1.2
+> sandbox run 1.1.2
 $ sleep 5000
 
 # conduct info
@@ -36,4 +36,4 @@ $ sleep 5000
 > verifyConductUnload
 
 # stop sandbox
-$ exec sandbox stop
+> sandbox stop

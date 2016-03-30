@@ -1,0 +1,9 @@
+> sandbox run 1.1.2 --feature visualization --feature logging
+
+> checkPorts
+
+> checkEnvs
+
+> sandbox stop
+
+> checkConductRIsStopped
