@@ -103,10 +103,10 @@ Make sure that your logging infrastructure is up an running. Otherwise the comma
 [error] Total time: 5 s, completed Sep 28, 2015 11:40:47 AM
 ```
 
-With [sbt-conductr-sandbox](https://github.com/typesafehub/sbt-conductr-sandbox) you can start the default logging infrastructure during ConductR cluster startup easily:
+With the `sandbox` command you can start the default logging infrastructure during ConductR cluster startup easily:
 
 ```bash
-sandbox run --withFeatures logging
+sandbox run --feature logging
 conduct logs my-bundle
 ```
 
