@@ -268,6 +268,8 @@ The following `sbt-conductr` commands are available:
 
 Property               | Description
 -----------------------|------------
+bundle:dist            | Produce a ConductR bundle for all projects that have the native packager enabled
+configuration:dist     | Produce a bundle configuration for all projects that have the native packager enabled
 sandbox help           | Get usage information of the sandbox command
 sandbox run            | Start a local ConductR cluster
 sandbox stop           | Stop the local ConductR cluster
