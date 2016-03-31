@@ -268,6 +268,7 @@ object ConductRPlugin extends AutoPlugin {
             unloadSubtask(bundleNames) |
             infoSubtask |
             servicesSubtask |
+            aclsSubtask |
             eventsSubtask(bundleNames) |
             logsSubtask(bundleNames)
           )) ?? ConductHelp
@@ -293,7 +294,7 @@ object ConductRPlugin extends AutoPlugin {
       // This parser is triggering the help of the conduct sub command if no argument for this command is specified
       // Example: `conduct load` will execute `conduct load --help`
       def subHelpSubtask: Parser[ConductSubtaskHelp] =
-        (token("load") | token("run") | token("stop") | token("unload") | token("events") | token("logs"))
+        (token("load") | token("run") | token("stop") | token("unload") | token("events") | token("logs") | token("acls"))
           .map(ConductSubtaskHelp)
 
       // Sub command parsers
@@ -338,6 +339,12 @@ object ConductRPlugin extends AutoPlugin {
           .!!!("Usage: conduct services")
       def servicesArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
 
+      def aclsSubtask: Parser[ConductSubtaskSuccess] =
+        token("acls") ~> withArgs(aclArgs)(protocolFamily)
+          .mapArgs { case (opts, protocolFamily) => ConductSubtaskSuccess("acls", optionalArgs(opts) ++ Seq(protocolFamily)) }
+          .!!!("Usage: conduct acls --help")
+      def aclArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
+
       def eventsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         (token("events") ~> withArgs(eventsArgs)(bundleId(bundleNames)))
           .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("events", optionalArgs(args) ++ Seq(bundleId)) }
@@ -371,6 +378,12 @@ object ConductRPlugin extends AutoPlugin {
         (Space ~> token("--wait-timeout" ~ positiveNumber)).map(pairToString)
       def noWait: Parser[String] =
         Space ~> token("--no-wait")
+      def protocolFamily: Parser[String] =
+        Space ~> (httpProtocolFamily | tcpProtocolFamily)
+      def httpProtocolFamily: Parser[String] =
+        token("http")
+      def tcpProtocolFamily: Parser[String] =
+        token("tcp")
 
       // Common optional options
       def commonArgs: Parser[String] =

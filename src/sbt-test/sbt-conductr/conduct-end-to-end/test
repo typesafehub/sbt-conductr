@@ -8,6 +8,12 @@ $ sleep 5000
 # conduct services
 > conduct services
 
+# conduct acls http
+> conduct acls http
+
+# conduct acls tcp
+> conduct acls tcp
+
 # conduct load
 > conduct load -q reactive-maps-backend-region
 > conduct load reactive-maps-backend-summary -q
