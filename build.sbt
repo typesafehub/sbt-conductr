@@ -8,11 +8,6 @@ crossScalaVersions := List(scalaVersion.value, "2.11.7")
 
 addSbtPlugin(Library.sbtBundle)
 
-resolvers ++= List(
-  Resolver.typesafeReleases,
-  Resolver.typesafeBintrayReleases
-)
-
 sbtPlugin := true
 
 licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
