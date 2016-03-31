@@ -72,13 +72,7 @@ In other scenarios it is necessary to set the address to the ConductR server man
 conduct info --ip 192.168.59.103 --port 9999
 ```
 
-If you have [sbt-bundle](https://github.com/sbt/sbt-bundle#conductr-bundle-plugin) enabled e.g.:
-
-```scala
-lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
-```
-
-You can then produce a bundle by typing:
+Produce a bundle by typing:
 
 ```console
 bundle:dist
@@ -125,7 +119,7 @@ conduct load /my-project/target/bundle/my-bundle <HIT THE TAB KEY TO USE THE LAT
 
 ### Advanced bundles and configuration
 
-sbt-bundle is capable of producing many bundles and bundle configurations for a given sbt module.
+sbt-conductr is capable of producing many bundles and bundle configurations for a given sbt module.
 
 #### Adding Java options
 
