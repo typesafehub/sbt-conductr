@@ -2,7 +2,7 @@
  * Copyright © 2016 Lightbend, Inc. All rights reserved.
  */
 
-package com.typesafe.conductr.sbt
+package com.lightbend.conductr.sbt
 
 import sbt._
 import sbt.Keys._

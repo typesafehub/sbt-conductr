@@ -17,7 +17,7 @@ object Build extends AutoPlugin {
     releaseSettings ++
     List(
       // Core settings
-      organization := "com.typesafe.conductr",
+      organization := "com.lightbend.conductr",
       crossScalaVersions := List(scalaVersion.value),
       scalacOptions ++= List(
         "-unchecked",
