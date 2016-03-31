@@ -20,7 +20,6 @@ The conductr-cli is used to mange the ConductR cluster.
 sbt-conductr is enabled by simply declaring its dependency:
 
 ```scala
-resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.5.2")
 ```
 
