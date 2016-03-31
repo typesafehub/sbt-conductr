@@ -1,2 +1,2 @@
 addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % sys.props("project.version"))
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4"
+libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6"

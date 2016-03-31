@@ -6,7 +6,7 @@ package com.lightbend.conductr.sbt
 
 import sbt._
 
-object Import {
+object ConductRImport {
 
   object ConductRKeys {
 

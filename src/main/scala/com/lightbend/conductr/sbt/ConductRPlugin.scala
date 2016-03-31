@@ -17,11 +17,11 @@ import java.io.IOException
  * An sbt plugin that interact's with ConductR's controller and potentially other components.
  */
 object ConductRPlugin extends AutoPlugin {
-  import com.typesafe.sbt.bundle.SbtBundle.autoImport._
-  import Import._
+  import BundlePlugin.autoImport._
+  import ConductRImport._
   import sbinary.DefaultProtocol.FileFormat
 
-  val autoImport = Import
+  val autoImport = ConductRImport
   import ConductRKeys._
 
   override def trigger = allRequirements
@@ -273,15 +273,14 @@ object ConductRPlugin extends AutoPlugin {
             logsSubtask(bundleNames)
           )) ?? ConductHelp
         }
-        (Keys.resolvedScoped, init) { (ctx, parser) =>
-          s: State =>
-            val bundle = loadFromContext(discoveredDist, ctx, s)
-            val bundleConfig = loadFromContext(discoveredConfigDist, ctx, s)
-            val bundleNames: Set[String] =
-              withProcessHandling {
-                (Process("conduct info") #| Process(Seq("awk", "{print $2}")) #| Process(Seq("awk", "{if(NR>1)print}"))).lines(NoProcessLogging).toSet
-              }(Set.empty)
-            parser(bundle, bundleConfig, bundleNames)
+        (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
+          val bundle = loadFromContext(discoveredDist, ctx, s)
+          val bundleConfig = loadFromContext(discoveredConfigDist, ctx, s)
+          val bundleNames: Set[String] =
+            withProcessHandling {
+              (Process("conduct info") #| Process(Seq("awk", "{print $2}")) #| Process(Seq("awk", "{if(NR>1)print}"))).lines(NoProcessLogging).toSet
+            }(Set.empty)
+          parser(bundle, bundleConfig, bundleNames)
         }
       }
 
@@ -523,7 +522,8 @@ object ConductRPlugin extends AutoPlugin {
     logLevel: Option[String] = None,
     nrOfContainers: Option[Int] = None,
     ports: Set[Int] = Set.empty,
-    features: Set[String] = Set.empty)
+    features: Set[String] = Set.empty
+  )
 
   private object NoProcessLogging extends ProcessLogger {
     override def info(s: => String): Unit = ()
