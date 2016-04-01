@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![Build Status](https://api.travis-ci.org/sbt/sbt-conductr.png?branch=master)](https://travis-ci.org/sbt/sbt-conductr)
+[![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is a sbt plugin that provides commands in sbt to:
  
