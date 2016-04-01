@@ -307,9 +307,12 @@ object BundlePlugin extends AutoPlugin {
     }
 
   private def formatAcl(acl: RequestAcl): String =
-    s"""          {
-        |${acl.protocolFamilyRequestMappings.map(formatRequestMappings).mkString(",\n")}
-        |          }""".stripMargin
+    if (acl.protocolFamilyRequestMappings.isEmpty)
+      ""
+    else
+      s"""          {
+          |${acl.protocolFamilyRequestMappings.map(formatRequestMappings).mkString(",\n")}
+          |          }""".stripMargin
 
   private def formatAcls(acls: Set[RequestAcl]): String =
     s"""        acls          = [
