@@ -32,6 +32,7 @@ object LagomBundlePlugin extends AutoPlugin {
 
   override def projectSettings =
     bundleSettings(Bundle) ++ Seq(
+      BundleKeys.bundleConfVersion := BundleConfVersions.V_1_2_0,
       BundleKeys.nrOfCpus := 1.0,
       BundleKeys.memory := 128.MiB,
       BundleKeys.diskSpace := 200.MB,
@@ -169,7 +170,7 @@ object LagomBundlePlugin extends AutoPlugin {
         // Lookup Lagom services
         val servicesAsString = ServiceDetector.services(classLoader)
         // Convert services string to `Map[String, Endpoint]`
-        toConductrEndpoints(servicesAsString, (endpointsPort in config).value)
+        toConductrEndpoints(servicesAsString)
       }
     }
   }
@@ -190,12 +191,24 @@ object LagomBundlePlugin extends AutoPlugin {
   /**
    * Convert services string to `Map[String, Endpoint]` by using the Play json library
    */
-  private def toConductrEndpoints(services: String, servicePort: Int): Map[String, Endpoint] = {
+  private def toConductrEndpoints(services: String): Map[String, Endpoint] = {
     def toEndpoint(serviceNameAndPath: (String, Seq[String])): (String, Endpoint) =
       serviceNameAndPath match {
         case (serviceName, pathBegins) =>
-          val uris = pathBegins.map(p => URI(s"http://:$servicePort$p")).to[ListSet] // ListSet makes it easier to test
-          serviceName -> Endpoint("http", services = uris + URI(s"http://:$servicePort/$serviceName"))
+          val endpoint = if (pathBegins.nonEmpty) {
+            val pathBeginAcls = pathBegins
+              .distinct
+              .map {
+                case emptyPath @ "" =>
+                  Http.Request(None, Right("^/".r), None)
+                case pathBegin =>
+                  Http.Request(None, Right(s"^$pathBegin".r), None)
+              }
+            Endpoint("http", 0, serviceName, RequestAcl(Http(pathBeginAcls: _*)))
+          } else
+            Endpoint("http", 0, serviceName)
+
+          serviceName -> endpoint
       }
     def mergeEndpoint(endpoints: Map[String, Endpoint], endpointEntry: (String, Endpoint)): Map[String, Endpoint] =
       endpointEntry match {
@@ -209,7 +222,13 @@ object LagomBundlePlugin extends AutoPlugin {
                   case (None, Some(newServices))               => Some(newServices)
                   case (None, None)                            => None
                 }
-                prevEndpoint.copy(services = mergedServices)
+                val mergedRequestAcl = (prevEndpoint.acls, endpoint.acls) match {
+                  case (Some(prevAcls), Some(newAcls)) => Some(prevAcls ++ newAcls)
+                  case (Some(prevAcls), None)          => Some(prevAcls)
+                  case (None, Some(newAcls))           => Some(newAcls)
+                  case (None, None)                    => None
+                }
+                prevEndpoint.copy(services = mergedServices, acls = mergedRequestAcl)
               }
           endpoints + (serviceName -> mergedEndpoint)
       }
@@ -222,7 +241,7 @@ object LagomBundlePlugin extends AutoPlugin {
         .map(_.as[String])
         .collect {
           case pathBeginExtractor(pathBegin) =>
-            (if (pathBegin.endsWith("/")) pathBegin.dropRight(1) else pathBegin) + "?preservePath"
+            if (pathBegin.endsWith("/")) pathBegin.dropRight(1) else pathBegin
         }
       pathlessServiceName -> pathBegins
     }
