@@ -167,7 +167,7 @@ of what the backend-region target looks like:
 ```scala
 
 lazy val BackendRegion = config("backend-region").extend(Bundle)
-SbtBundle.bundleSettings(BackendRegion)
+BundlePlugin.bundleSettings(BackendRegion)
 inConfig(BackendRegion)(Seq(
   normalizedName := "reactive-maps-backend-region",
   BundleKeys.configurationName := (normalizedName in BackendRegion).value,
@@ -189,7 +189,7 @@ configuration that overrides the bundle name and the roles:
 
 ```scala
 lazy val Backend = config("backend").extend(BundleConfiguration)
-SbtBundle.configurationSettings(Backend)
+BundlePlugin.configurationSettings(Backend)
 inConfig(Backend)(Seq(
   normalizedName := "reactive-maps-backend",
   roles := Set("big-backend-server")

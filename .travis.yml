@@ -1,7 +1,7 @@
 # Need Ubuntu trusty to install pip3
 dist: trusty
 
-jdk: oraclejdk7
+jdk: oraclejdk8
 python: 3.5
 language: scala
 

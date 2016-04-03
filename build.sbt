@@ -24,11 +24,13 @@ unmanagedSourceDirectories in Compile := List((scalaSource in Compile).value)
 unmanagedSourceDirectories in Test := List((scalaSource in Test).value)
 
 // Plugin dependencies
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.0.6")
+addSbtPlugin(Library.nativePackager)
+addSbtPlugin(Library.sbtLagom)
 
 // Library dependencies
 libraryDependencies ++= List(
-  "org.scalatest" %% "scalatest" % "2.2.6" % "test"
+  Library.playJson,
+  Library.scalaTest
 )
 
 // Scalariform settings
@@ -37,7 +39,7 @@ ScalariformKeys.preferences := ScalariformKeys.preferences.value
   .setPreference(AlignSingleLineCaseStatements, true)
   .setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, 100)
   .setPreference(DoubleIndentClassDeclaration, true)
-  .setPreference(PreserveDanglingCloseParenthesis, true)
+  .setPreference(DanglingCloseParenthesis, Force)
 
 // Release + Bintray settings
 licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
