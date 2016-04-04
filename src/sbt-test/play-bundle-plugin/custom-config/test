@@ -1,0 +1,5 @@
+> bundle:dist
+> checkBundleDist
+
+> configuration:dist
+> checkConfigDist

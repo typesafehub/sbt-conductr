@@ -13,8 +13,6 @@ BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("web-server")
 
-val checkBundleConf = taskKey[Unit]("check-main-css-contents")
-
 BundleKeys.configurationName := "backend"
 
 val checkConfigDist = taskKey[Unit]("check-config-dist-contents")

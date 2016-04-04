@@ -3,16 +3,13 @@ package com.lightbend.conductr.sbt
 import sbt._
 import sbt.Keys._
 import java.io.InputStream
-import java.lang.reflect.InvocationTargetException
 import java.util.jar.{ JarEntry, JarFile }
 import com.typesafe.sbt.SbtNativePackager
-import com.lightbend.lagom.sbt.{ LagomImport, LagomJava }
+
 import scala.collection.JavaConverters._
 import play.api.libs.json._
-import sbt.Resolver.bintrayRepo
-import scala.collection.immutable.ListSet
-import scala.reflect.ClassTag
-import scala.util.{ Failure, Success, Try }
+
+import scala.util.{ Failure, Success }
 
 object LagomBundlePlugin extends AutoPlugin {
 
@@ -20,11 +17,19 @@ object LagomBundlePlugin extends AutoPlugin {
   import LagomBundleKeys._
   import SbtNativePackager.autoImport._
   import BundlePlugin.autoImport._
-  import ByteConversions._
 
   val autoImport = LagomBundleImport
 
-  override def requires = LagomJava && BundlePlugin
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomJava$") match {
+        case Failure(_)         => NoOpPlugin
+        case Success(lagomJava) => BundlePlugin
+      }
+    }
+
   override def trigger = allRequirements
 
   // Configuration to add api tools library dependencies
@@ -33,19 +38,19 @@ object LagomBundlePlugin extends AutoPlugin {
   override def projectSettings =
     bundleSettings(Bundle) ++ Seq(
       BundleKeys.bundleConfVersion := BundleConfVersions.V_1_2_0,
-      BundleKeys.nrOfCpus := 1.0,
-      BundleKeys.memory := 128.MiB,
-      BundleKeys.diskSpace := 200.MB,
+      BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
+      BundleKeys.memory := PlayBundleKeyDefaults.memory,
+      BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       endpointsPort := 9000,
       ivyConfigurations += apiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
       conductrBundleLibVersion := "1.4.2",
       libraryDependencies ++= Seq(
         LagomImport.component("api-tools") % apiToolsConfig,
-        "com.typesafe.conductr" % s"lagom10-conductr-bundle-lib_${scalaBinaryVersion.value}" % conductrBundleLibVersion.value
+        Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value)
       ),
-      resolvers += bintrayRepo("typesafe", "maven-releases"),
-      play.sbt.PlaySettings.manageClasspath(apiToolsConfig)
+      resolvers += Resolver.typesafeBintrayReleases,
+      manageClasspath(apiToolsConfig)
     )
 
   override def buildSettings =
@@ -69,11 +74,17 @@ object LagomBundlePlugin extends AutoPlugin {
           )).toSeq.flatten
           // The application secret is not used by the Lagom project so the value doesn't really matter.
           // Therefore it is save to automatically generate one here. It is necessary though to set the key in prod mode.
-          val applicationSecret = s"-Dplay.crypto.secret=${BundlePlugin.hash(s"${name.value}-$version")}"
+          val applicationSecret = s"-Dplay.crypto.secret=${hash(s"${name.value}")}"
           bindings :+ applicationSecret
         }
       )
     )
+
+  /** Ask SBT to manage the classpath for the given configuration. */
+  private def manageClasspath(config: Configuration) =
+    managedClasspath in config <<= (classpathTypes in config, update) map { (ct, report) =>
+      Classpaths.managedJars(config, ct, report)
+    }
 
   /**
    * Bundle configuration for cassandra.
@@ -274,37 +285,59 @@ private object ServiceDetector {
    */
   def services(classLoader: ClassLoader): String =
     withContextClassloader(classLoader) { loader =>
-      getSingletonObject[ServiceDetector](loader, "com.lightbend.lagom.internal.api.tools.ServiceDetector$") match {
+      Reflection.getSingletonObject[ServiceDetector](loader, "com.lightbend.lagom.internal.api.tools.ServiceDetector$") match {
         case Failure(t)               => fail(s"Endpoints can not be resolved from Lagom project. Error: ${t.getMessage}")
         case Success(serviceDetector) => serviceDetector.services(loader)
       }
     }
+}
 
-  /**
-   * Uses the given class loader for the given code block
-   */
-  private def withContextClassloader[T](loader: ClassLoader)(body: ClassLoader => T): T = {
-    val current = Thread.currentThread().getContextClassLoader
-    try {
-      Thread.currentThread().setContextClassLoader(loader)
-      body(loader)
-    } finally Thread.currentThread().setContextClassLoader(current)
+/**
+ * Mirrors the LagomVersion class of `com.lightbend.lagom.sbt.LagomImport`
+ * By declaring the public methods from Lagom it is possible to "safely"
+ * call the class via reflection.
+ */
+private object LagomImport {
+
+  import scala.language.reflectiveCalls
+
+  val classLoader = this.getClass.getClassLoader
+
+  // The method signature equals the signature of `com.lightbend.lagom.sbt.LagomImport`
+  type LagomImport = {
+    def component(id: String): ModuleID
   }
 
-  /**
-   * Resolves the singleton object instance via reflection.
-   * The given `className` must end with "$", e.g. "com.lightbend.lagom.internal.api.tools.ServiceDetector$"
-   */
-  private def getSingletonObject[T: ClassTag](classLoader: ClassLoader, className: String): Try[T] =
-    Try {
-      val clazz = classLoader.loadClass(className)
-      val t = implicitly[ClassTag[T]].runtimeClass
-      clazz.getField("MODULE$").get(null) match {
-        case null                  => throw new NullPointerException
-        case c if !t.isInstance(c) => throw new ClassCastException(s"${clazz.getName} is not a subtype of $t")
-        case c: T                  => c
+  def component(id: String): ModuleID =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[LagomImport](loader, "com.lightbend.lagom.sbt.LagomImport$") match {
+        case Failure(t)           => sys.error(s"The LagomImport class can not be resolved. Error: ${t.getMessage}")
+        case Success(lagomImport) => lagomImport.component(id)
       }
-    } recover {
-      case i: InvocationTargetException if i.getTargetException ne null => throw i.getTargetException
+    }
+}
+
+/**
+ * Mirrors the LagomVersion class of `com.lightbend.lagom.core.LagomVersion`
+ * By declaring the public methods from Lagom it is possible to "safely"
+ * call the class via reflection.
+ */
+private object LagomVersion {
+
+  import scala.language.reflectiveCalls
+
+  val classLoader = this.getClass.getClassLoader
+
+  // The method signature equals the signature of `com.lightbend.lagom.core.LagomVersion`
+  type LagomVersion = {
+    def current: String
+  }
+
+  val current: String =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[LagomVersion](loader, "com.lightbend.lagom.core.LagomVersion$") match {
+        case Failure(t)            => sys.error(s"The LagomVersion class can not be resolved. Error: ${t.getMessage}")
+        case Success(lagomVersion) => lagomVersion.current
+      }
     }
 }
