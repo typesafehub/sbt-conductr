@@ -31,12 +31,34 @@ checkBundleConf := {
                                   |  "debitservice" = {
                                   |    bind-protocol = "http"
                                   |    bind-port     = 0
-                                  |    services      = ["http://:9000/debitservice", "http://:9000?preservePath"]
+                                  |    service-name  = "debitservice"
+                                  |    acls          = [
+                                  |      {
+                                  |        http = {
+                                  |          requests = [
+                                  |            {
+                                  |              path-beg = "/"
+                                  |            }
+                                  |          ]
+                                  |        }
+                                  |      }
+                                  |    ]
                                   |  },
                                   |  "creditservice" = {
                                   |    bind-protocol = "http"
                                   |    bind-port     = 0
-                                  |    services      = ["http://:9000/creditservice", "http://:9000?preservePath"]
+                                  |    service-name  = "creditservice"
+                                  |    acls          = [
+                                  |      {
+                                  |        http = {
+                                  |          requests = [
+                                  |            {
+                                  |              path-beg = "/"
+                                  |            }
+                                  |          ]
+                                  |        }
+                                  |      }
+                                  |    ]
                                   |  },
                                   |  "akka-remote" = {
                                   |    bind-protocol = "tcp"
@@ -51,7 +73,18 @@ checkBundleConf := {
                                  |  "socialservice" = {
                                  |    bind-protocol = "http"
                                  |    bind-port     = 0
-                                 |    services      = ["http://:9000/socialservice", "http://:9000?preservePath"]
+                                 |    service-name  = "socialservice"
+                                 |    acls          = [
+                                 |      {
+                                 |        http = {
+                                 |          requests = [
+                                 |            {
+                                 |              path-beg = "/"
+                                 |            }
+                                 |          ]
+                                 |        }
+                                 |      }
+                                 |    ]
                                  |  },
                                  |  "akka-remote" = {
                                  |    bind-protocol = "tcp"

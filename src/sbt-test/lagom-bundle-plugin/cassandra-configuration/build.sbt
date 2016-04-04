@@ -27,7 +27,16 @@ checkCassandraConf := {
                                      |    "cas_native" = {
                                      |      bind-protocol = "tcp"
                                      |      bind-port     = 0
-                                     |      services      = ["tcp://:9042/cas_native"]
+                                     |      service-name  = "cas_native"
+                                     |      // The services must be declared to empty the cas_native endpoint declaration within the cassandra bundle itself
+                                     |      services      = []
+                                     |      acls          = [
+                                     |        {
+                                     |          tcp = {
+                                     |            requests = [ 9042 ]
+                                     |          }
+                                     |        }
+                                     |      ]
                                      |    },
                                      |    "cas_rpc" = {
                                      |      bind-protocol = "tcp"
