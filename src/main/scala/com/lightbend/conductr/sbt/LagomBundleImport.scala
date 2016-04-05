@@ -9,11 +9,7 @@ object LagomBundleImport {
   val CassandraConfiguration = config("cassandra-configuration") extend Universal
 
   object LagomBundleKeys {
-
-    val conductrBundleLibVersion = SettingKey[String](
-      "lagom-bundle-conductr-bundle-lib-version",
-      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.2"
-    )
+    val conductrBundleLibVersion = BaseKeys.conductrBundleLibVersion
 
     @deprecated("This setting is no longer used as endpoint port is not of Bundle Endpoint declaration using HTTP request ACL", since = "2.0.0")
     val endpointsPort = SettingKey[Int](

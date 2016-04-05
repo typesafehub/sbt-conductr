@@ -10,7 +10,6 @@ import com.typesafe.sbt.SbtNativePackager
 import com.typesafe.sbt.packager.universal.Archives
 import SbtNativePackager.Universal
 import java.io.{ FileInputStream, BufferedInputStream }
-import java.nio.charset.Charset
 import java.security.MessageDigest
 import scala.util.matching.Regex
 import scala.annotation.tailrec
@@ -22,9 +21,6 @@ object BundlePlugin extends AutoPlugin {
   import SbtNativePackager.autoImport._
 
   val autoImport = BundleImport
-
-  private final val Sha256 = "SHA-256"
-  private final val Utf8 = Charset.forName("utf-8")
 
   override def requires = SbtNativePackager
 
@@ -179,17 +175,6 @@ object BundlePlugin extends AutoPlugin {
     )
   }
 
-  @tailrec
-  private[sbt] def recursiveListFiles(currentDirs: Array[File], filter: FileFilter, files: Array[File] = Array.empty): Array[File] =
-    if (currentDirs.isEmpty)
-      files
-    else
-      recursiveListFiles(currentDirs.flatMap(_.listFiles(DirectoryFilter)), filter, files ++ currentDirs.flatMap(_.listFiles(filter)))
-
-  private[sbt] object NonDirectoryFilter extends FileFilter {
-    def accept(file: File) = !file.isDirectory
-  }
-
   // By default use the BundleKeys.endpoints settings key as endpoints
   // Override this method to change behaviour how to collect the endpoints
   private def collectEndpoints(config: Configuration): Def.Initialize[Task[Map[String, Endpoint]]] = Def.task {
@@ -210,15 +195,6 @@ object BundlePlugin extends AutoPlugin {
     logMessage(hashArchive)
     hashArchive
   }
-
-  /**
-   * Create a hash based on a UTF-8 string
-   */
-  def hash(content: String): String =
-    hash(content.getBytes(Utf8))
-
-  private def hash(bytes: Array[Byte]): String =
-    Hash.toHex(bytes)
 
   private def digestFile(f: File): Array[Byte] = {
     val digest = MessageDigest.getInstance(Sha256)

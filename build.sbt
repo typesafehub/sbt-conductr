@@ -12,7 +12,7 @@ organization := "com.lightbend.conductr"
 
 // Scala settings
 scalaVersion := Version.scala
-crossScalaVersions := List(scalaVersion.value, "2.0.18")
+crossScalaVersions := List(scalaVersion.value, "2.11.8")
 scalacOptions ++= List(
   "-unchecked",
   "-deprecation",
@@ -25,7 +25,6 @@ unmanagedSourceDirectories in Test := List((scalaSource in Test).value)
 
 // Plugin dependencies
 addSbtPlugin(Library.nativePackager)
-addSbtPlugin(Library.sbtLagom)
 
 // Library dependencies
 libraryDependencies ++= List(
