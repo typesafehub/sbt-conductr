@@ -41,7 +41,6 @@ object LagomBundlePlugin extends AutoPlugin {
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
       BundleKeys.memory := PlayBundleKeyDefaults.memory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
-      endpointsPort := 9000,
       ivyConfigurations += apiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
       conductrBundleLibVersion := "1.4.2",
