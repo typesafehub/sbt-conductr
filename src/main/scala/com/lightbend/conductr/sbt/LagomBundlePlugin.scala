@@ -11,6 +11,42 @@ import play.api.libs.json._
 
 import scala.util.{ Failure, Success }
 
+/**
+ * Bundle support for a Play service inside Lagom
+ */
+object LagomPlayBundlePlugin extends AutoPlugin {
+
+  import PlayBundleImport._
+  import BundlePlugin.autoImport._
+
+  val autoImport = LagomBundleImport
+
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomPlay$") match {
+        case Failure(_)         => NoOpPlugin
+        case Success(lagomPlay) => BundlePlugin && lagomPlay
+      }
+    }
+
+  override def trigger = allRequirements
+
+  override def projectSettings =
+    Seq(
+      BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
+      BundleKeys.memory := PlayBundleKeyDefaults.memory,
+      BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
+      conductrBundleLibVersion := Version.conductrBundleLib,
+      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value),
+      resolvers += Resolver.typesafeBintrayReleases
+    )
+}
+
+/**
+ * Bundle support for a Lagom service
+ */
 object LagomBundlePlugin extends AutoPlugin {
 
   import LagomBundleImport._
@@ -26,7 +62,7 @@ object LagomBundlePlugin extends AutoPlugin {
     withContextClassloader(classLoader) { loader =>
       Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomJava$") match {
         case Failure(_)         => NoOpPlugin
-        case Success(lagomJava) => BundlePlugin
+        case Success(lagomJava) => BundlePlugin && lagomJava
       }
     }
 
@@ -43,7 +79,7 @@ object LagomBundlePlugin extends AutoPlugin {
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       ivyConfigurations += apiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
-      conductrBundleLibVersion := "1.4.2",
+      conductrBundleLibVersion := Version.conductrBundleLib,
       libraryDependencies ++= Seq(
         LagomImport.component("api-tools") % apiToolsConfig,
         Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value)
