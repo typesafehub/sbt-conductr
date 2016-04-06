@@ -1,11 +1,18 @@
 import ByteConversions._
 
-scalaVersion in ThisBuild := "2.11.7"
+scalaVersion in ThisBuild := "2.11.8"
 version in ThisBuild := "0.1.0-SNAPSHOT"
 
-lazy val simpleApi = (project in file("simple-api"))
+lazy val `lagom-service-api` = (project in file("lagom-service-api"))
   .settings(libraryDependencies += lagomJavadslApi)
 
-lazy val simpleImpl = (project in file("simple-impl"))
+lazy val `lagom-service-impl` = (project in file("lagom-service-impl"))
   .enablePlugins(LagomJava)
-  .dependsOn(simpleApi)
+  .dependsOn(`lagom-service-api`)
+
+lazy val `play-service` = (project in file("play-service"))
+    .enablePlugins(PlayJava, LagomPlay)
+    .settings(
+      BundleKeys.memory := 64.MiB,
+      routesGenerator := InjectedRoutesGenerator
+    )

@@ -16,8 +16,12 @@ object PlayBundlePlugin extends AutoPlugin {
 
   override def requires =
     withContextClassloader(classLoader) { loader =>
-      val isPlayProject = (Reflection.getSingletonObject[Plugins.Basic](classLoader, "play.sbt.Play$") orElse Reflection.getSingletonObject[Plugins.Basic](classLoader, "play.Play$")).isSuccess
-      if (isPlayProject) BundlePlugin else NoOpPlugin
+      def play23OrBelow = Reflection.getSingletonObject[Plugins.Basic](classLoader, "play.Play$")
+      def play24OrAbove = Reflection.getSingletonObject[Plugins.Basic](classLoader, "play.sbt.Play$")
+      play24OrAbove orElse play23OrBelow match {
+        case Failure(_)    => NoOpPlugin
+        case Success(play) => BundlePlugin && play
+      }
     }
 
   override def trigger = allRequirements
