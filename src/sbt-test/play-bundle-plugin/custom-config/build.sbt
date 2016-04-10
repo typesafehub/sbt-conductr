@@ -14,14 +14,12 @@ val checkBundleDist = taskKey[Unit]("check-bundle-dist-contents")
 checkBundleDist := {
   val bundleContentsConf = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
   val expectedContentsConf =
-    """start-command    = ["custom-config/bin/custom-config", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
+    """start-command    = ["custom-config/bin/custom-config", "-J-Xms67108864", "-J-Xmx67108864", "-Dhttp.address=$CUSTOM_CONFIG_BIND_IP", "-Dhttp.port=$CUSTOM_CONFIG_BIND_PORT"]""".stripMargin
   bundleContentsConf should include(expectedContentsConf)
 }
 
 val checkConfigDist = taskKey[Unit]("check-config-dist-contents")
 checkConfigDist := {
-
-
   val runtimeConf = IO.read((target in BundleConfiguration).value  / "stage" / "configuration" / "runtime-config.sh")
   val expectedRuntimeConf = """export APPLICATION_SECRET="thisismyapplicationsecret-pleasedonttellanyone"""".stripMargin
   runtimeConf should include(expectedRuntimeConf)

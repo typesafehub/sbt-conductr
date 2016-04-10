@@ -2,7 +2,7 @@ import ByteConversions._
 import com.lightbend.conductr.sbt.BundlePlugin._
 import org.scalatest.Matchers._
 
-name := "simple-test"
+name := "overlays"
 
 version := "0.1.0-SNAPSHOT"
 
@@ -33,25 +33,25 @@ val checkBundleConf = taskKey[Unit]("")
 
 checkBundleConf := {
   val contents = IO.read((target in Backend).value / "backend" / "tmp" / "bundle.conf")
-  val expectedContents = """|version              = "1.1.0"
-                            |name                 = "simple-test"
+  val expectedContents = """|version              = "1"
+                            |name                 = "overlays"
                             |compatibilityVersion = "0"
-                            |system               = "simple-test"
+                            |system               = "overlays"
                             |systemVersion        = "0"
                             |nrOfCpus             = 2.0
                             |memory               = 67108864
                             |diskSpace            = 10000000
                             |roles                = ["web"]
                             |components = {
-                            |  simple-test = {
-                            |    description      = "simple-test"
+                            |  overlays = {
+                            |    description      = "overlays"
                             |    file-system-type = "universal"
-                            |    start-command    = ["simple-test/bin/simple-test", "-J-Xms67108864", "-J-Xmx67108864"]
+                            |    start-command    = ["overlays/bin/overlays", "-J-Xms67108864", "-J-Xmx67108864"]
                             |    endpoints = {
-                            |      "web" = {
+                            |      "overlays" = {
                             |        bind-protocol = "http"
                             |        bind-port     = 0
-                            |        services      = ["http://:9000"]
+                            |        services      = []
                             |      }
                             |    }
                             |  }
@@ -66,7 +66,7 @@ checkBundleConfigConf := {
   val expectedContents =
     """nrOfCpus             = 12.0
       |components = {
-      |  simple-test = {
+      |  overlays = {
       |  }
       |}""".stripMargin
   contents should include(expectedContents)

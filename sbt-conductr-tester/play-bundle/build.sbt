@@ -1,9 +1,8 @@
-import ByteConversions._
+name := "play-bundle-tester"
+version := "1.0.0"
+scalaVersion := "2.11.8"
 
 lazy val root = project
   .in(file("."))
   .enablePlugins(PlayScala)
-
-name := "play-bundle-tester"
-version := "1.0.0"
-scalaVersion := "2.11.6"
+  .settings(routesGenerator := InjectedRoutesGenerator)

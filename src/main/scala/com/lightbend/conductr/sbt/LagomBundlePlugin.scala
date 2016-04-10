@@ -4,11 +4,13 @@ import sbt._
 import sbt.Keys._
 import java.io.InputStream
 import java.util.jar.{ JarEntry, JarFile }
+
 import com.typesafe.sbt.SbtNativePackager
 
 import scala.collection.JavaConverters._
 import play.api.libs.json._
 
+import scala.collection.immutable.ListSet
 import scala.util.{ Failure, Success }
 
 /**
@@ -16,7 +18,7 @@ import scala.util.{ Failure, Success }
  */
 object LagomPlayBundlePlugin extends AutoPlugin {
 
-  import PlayBundleImport._
+  import LagomBundleImport._
   import BundlePlugin.autoImport._
 
   val autoImport = LagomBundleImport
@@ -38,8 +40,9 @@ object LagomPlayBundlePlugin extends AutoPlugin {
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
       BundleKeys.memory := PlayBundleKeyDefaults.memory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
-      conductrBundleLibVersion := Version.conductrBundleLib,
-      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value),
+      BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
+      LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
+      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value),
       resolvers += Resolver.typesafeBintrayReleases
     )
 }
@@ -50,7 +53,6 @@ object LagomPlayBundlePlugin extends AutoPlugin {
 object LagomBundlePlugin extends AutoPlugin {
 
   import LagomBundleImport._
-  import LagomBundleKeys._
   import SbtNativePackager.autoImport._
   import BundlePlugin.autoImport._
 
@@ -73,16 +75,16 @@ object LagomBundlePlugin extends AutoPlugin {
 
   override def projectSettings =
     bundleSettings(Bundle) ++ Seq(
-      BundleKeys.bundleConfVersion := BundleConfVersions.V_1_2_0,
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
       BundleKeys.memory := PlayBundleKeyDefaults.memory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       ivyConfigurations += apiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
-      conductrBundleLibVersion := Version.conductrBundleLib,
+      LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
+      LagomBundleKeys.endpointsPort := 9000,
       libraryDependencies ++= Seq(
         LagomImport.component("api-tools") % apiToolsConfig,
-        Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value)
+        Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
       ),
       resolvers += Resolver.typesafeBintrayReleases,
       manageClasspath(apiToolsConfig)
@@ -100,7 +102,7 @@ object LagomBundlePlugin extends AutoPlugin {
         BundleKeys.overrideEndpoints := Some(collectEndpoints(config).value + ("akka-remote" -> Endpoint("tcp"))),
         BundleKeys.startCommand ++= {
           val bindings = (for {
-            endpoints <- BundleKeys.overrideEndpoints.value
+            endpoints <- (BundleKeys.overrideEndpoints in config).value
             (serviceName, _) <- endpoints.filterNot(_._1 == "akka-remote").headOption
             formattedServiceName = envName(serviceName)
           } yield Seq(
@@ -131,11 +133,11 @@ object LagomBundlePlugin extends AutoPlugin {
   private def cassandraConfigurationSettings(config: Configuration): Seq[Setting[_]] =
     inConfig(config)(
       Seq(
-        BundleKeys.configurationName := "cassandra-configuraton",
+        BundleKeys.configurationName := "cassandra-configuration",
         target := (baseDirectory in LocalRootProject).value / "target" / "bundle-configuration",
         NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
-        NativePackagerKeys.stage := cassandraStageConfiguration(config).value,
-        NativePackagerKeys.dist := BundlePlugin.createConfiguration(config, "Cassandra bundle configuration has been created").value
+        NativePackagerKeys.stage := stageCassandraConfiguration(config, ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+        NativePackagerKeys.dist := createCassandraConfiguration(config).value
       ) ++ dontAggregate(NativePackagerKeys.stage, NativePackagerKeys.dist)
     )
 
@@ -149,9 +151,11 @@ object LagomBundlePlugin extends AutoPlugin {
    * Copies the default cassandra configuration from `sbt-conductr/src/main/resources/bundle-configuration/cassandra` to
    * the project's target root directory
    */
-  private def cassandraStageConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
+  private def stageCassandraConfiguration(config: Configuration, filter: ScopeFilter): Def.Initialize[Task[File]] = Def.task {
     val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
-    val resourcePath = "bundle-configuration/cassandra"
+    // Use acls if in any of the projects 'enableAcls' is set to 'true'
+    val enableAcls = (BundleKeys.enableAcls in Bundle).?.map(_.getOrElse(false)).all(filter).value.exists(_ == true)
+    val resourcePath = if (enableAcls) "bundle-configuration/cassandra-acls" else "bundle-configuration/cassandra-services"
     val jarFile = new File(this.getClass.getProtectionDomain.getCodeSource.getLocation.getPath)
     if (jarFile.isFile) {
       val jar = new JarFile(jarFile)
@@ -167,6 +171,22 @@ object LagomBundlePlugin extends AutoPlugin {
     }
 
     configurationTarget
+  }
+
+  /**
+   * Create a cassandra configuration bundle.
+   */
+  private def createCassandraConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
+    val bundleTarget = (target in config).value
+    val configurationTarget = (NativePackagerKeys.stage in config).value
+    val configChildren = recursiveListFiles(Array(configurationTarget), NonDirectoryFilter)
+    val bundleMappings: Seq[(File, String)] = configChildren.flatMap(_.pair(relativeTo(configurationTarget)))
+    BundlePlugin.shazar(
+      bundleTarget,
+      (BundleKeys.configurationName in config).value,
+      bundleMappings,
+      f => streams.value.log.info(s"Cassandra bundle configuration has been created: $f")
+    )
   }
 
   /**
@@ -202,7 +222,7 @@ object LagomBundlePlugin extends AutoPlugin {
   private def collectEndpoints(config: Configuration): Def.Initialize[Task[Map[String, Endpoint]]] = Def.taskDyn {
     Def.task {
       val manualEndpoints = (BundleKeys.endpoints in config).value
-      if (manualEndpoints != DefaultEndpoints)
+      if (manualEndpoints != BundlePlugin.getDefaultEndpoints(config).value)
         manualEndpoints
       else {
         val classpath = toClasspathUrls(
@@ -216,7 +236,7 @@ object LagomBundlePlugin extends AutoPlugin {
         // Lookup Lagom services
         val servicesAsString = ServiceDetector.services(classLoader)
         // Convert services string to `Map[String, Endpoint]`
-        toConductrEndpoints(servicesAsString)
+        toConductrEndpoints(servicesAsString, (BundleKeys.enableAcls in config).value, (LagomBundleKeys.endpointsPort in config).value)
       }
     }
   }
@@ -237,25 +257,36 @@ object LagomBundlePlugin extends AutoPlugin {
   /**
    * Convert services string to `Map[String, Endpoint]` by using the Play json library
    */
-  private def toConductrEndpoints(services: String): Map[String, Endpoint] = {
-    def toEndpoint(serviceNameAndPath: (String, Seq[String])): (String, Endpoint) =
-      serviceNameAndPath match {
-        case (serviceName, pathBegins) =>
-          val endpoint = if (pathBegins.nonEmpty) {
-            val pathBeginAcls = pathBegins
-              .distinct
-              .map {
-                case emptyPath @ "" =>
-                  Http.Request(None, Right("^/".r), None)
-                case pathBegin =>
-                  Http.Request(None, Right(s"^$pathBegin".r), None)
-              }
-            Endpoint("http", 0, serviceName, RequestAcl(Http(pathBeginAcls: _*)))
-          } else
-            Endpoint("http", 0, serviceName)
+  private def toConductrEndpoints(services: String, asAcls: Boolean, endpointsPort: Int): Map[String, Endpoint] = {
+    def toEndpoint(serviceNameAndPath: (String, Seq[String])): (String, Endpoint) = {
+      def asAclEndpoint =
+        serviceNameAndPath match {
+          case (serviceName, pathBegins) =>
+            val endpoint = if (pathBegins.nonEmpty) {
+              val pathBeginAcls = pathBegins
+                .distinct
+                .map {
+                  case emptyPath @ "" =>
+                    Http.Request(None, Right("^/".r), None)
+                  case pathBegin =>
+                    Http.Request(None, Right(s"^$pathBegin".r), None)
+                }
+              Endpoint("http", 0, serviceName, RequestAcl(Http(pathBeginAcls: _*)))
+            } else
+              Endpoint("http", 0, serviceName)
 
-          serviceName -> endpoint
-      }
+            serviceName -> endpoint
+        }
+      def asServiceEndpoint =
+        serviceNameAndPath match {
+          case (serviceName, pathBegins) =>
+            val uris = pathBegins.map(p => URI(s"http://:$endpointsPort$p")).to[ListSet] // ListSet makes it easier to test
+            serviceName -> Endpoint("http", services = uris + URI(s"http://:$endpointsPort/$serviceName"))
+        }
+
+      if (asAcls) asAclEndpoint else asServiceEndpoint
+    }
+
     def mergeEndpoint(endpoints: Map[String, Endpoint], endpointEntry: (String, Endpoint)): Map[String, Endpoint] =
       endpointEntry match {
         case (serviceName, endpoint) =>
@@ -287,7 +318,8 @@ object LagomBundlePlugin extends AutoPlugin {
         .map(_.as[String])
         .collect {
           case pathBeginExtractor(pathBegin) =>
-            if (pathBegin.endsWith("/")) pathBegin.dropRight(1) else pathBegin
+            val path = if (pathBegin.endsWith("/")) pathBegin.dropRight(1) else pathBegin
+            if (asAcls) path else path + "?preservePath"
         }
       pathlessServiceName -> pathBegins
     }
@@ -295,9 +327,6 @@ object LagomBundlePlugin extends AutoPlugin {
       .map(toEndpoint)
       .foldLeft(Map.empty[String, Endpoint])(mergeEndpoint)
   }
-
-  private def envName(name: String) =
-    name.replaceAll("\\W", "_").toUpperCase
 }
 
 /**

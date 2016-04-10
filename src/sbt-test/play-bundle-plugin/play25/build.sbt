@@ -8,11 +8,13 @@ name := "play25"
 version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.8"
 
+BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+
 val checkBundleDist = taskKey[Unit]("check-bundle-dist-contents")
 checkBundleDist := {
   val bundleContentsConf = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
   val expectedContentsConf =
-    """version              = "1.1.0"
+    """version              = "1"
       |name                 = "play25"
       |compatibilityVersion = "0"
       |system               = "play25"
@@ -25,12 +27,23 @@ checkBundleDist := {
       |  play25 = {
       |    description      = "play25"
       |    file-system-type = "universal"
-      |    start-command    = ["play25/bin/play25", "-J-Xms134217728", "-J-Xmx134217728"]
+      |    start-command    = ["play25/bin/play25", "-J-Xms134217728", "-J-Xmx134217728", "-Dhttp.address=$PLAY25_BIND_IP", "-Dhttp.port=$PLAY25_BIND_PORT"]
       |    endpoints = {
-      |      "web" = {
+      |      "play25" = {
       |        bind-protocol = "http"
       |        bind-port     = 0
-      |        services      = ["http://:9000"]
+      |        service-name  = "play25"
+      |        acls          = [
+      |          {
+      |            http = {
+      |              requests = [
+      |                {
+      |                  path-beg = "/"
+      |                }
+      |              ]
+      |            }
+      |          }
+      |        ]
       |      }
       |    }
       |  }

@@ -11,12 +11,14 @@ lazy val `lagom-service-impl` = (project in file("lagom-service-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(`lagom-service-api`)
   .settings(
+    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2,
     BundleKeys.memory := 256.MiB
   )
 
 lazy val `play-service` = (project in file("play-service"))
   .enablePlugins(PlayJava, LagomPlay)
   .settings(
+    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2,
     routesGenerator := InjectedRoutesGenerator,
     BundleKeys.memory := 64.MiB
   )
@@ -53,8 +55,8 @@ checkBundleConf := {
        |  },
        |  "akka-remote" = {
        |    bind-protocol = "tcp"
-       |    bind-port = 0
-       |    services= []
+       |    bind-port     = 0
+       |    services      = []
        |  }
        |}""".stripMargin.indent
 
@@ -65,13 +67,24 @@ checkBundleConf := {
   val playContent = IO.read((target in `play-service` in Bundle).value / "bundle" / "tmp" / "bundle.conf").indent
   val expectedPlayMemory = "memory = 67108864"
   val expectedPlayStartCommand =
-    """start-command= ["play-service/bin/play-service", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
+    """start-command= ["play-service/bin/play-service", "-J-Xms67108864", "-J-Xmx67108864", "-Dhttp.address=$PLAY_SERVICE_BIND_IP", "-Dhttp.port=$PLAY_SERVICE_BIND_PORT"]""".stripMargin
   val expectedPlayEndpoints =
     """|endpoints = {
-       |  "web" = {
+       |  "play-service" = {
        |    bind-protocol = "http"
        |    bind-port     = 0
-       |    services      = ["http://:9000"]
+       |    service-name  = "play-service"
+       |    acls          = [
+       |      {
+       |        http = {
+       |          requests = [
+       |            {
+       |              path-beg = "/"
+       |            }
+       |          ]
+       |        }
+       |      }
+       |    ]
        |  }
        |}""".stripMargin.indent
 
