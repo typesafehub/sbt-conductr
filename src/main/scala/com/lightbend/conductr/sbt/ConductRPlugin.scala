@@ -50,15 +50,15 @@ object ConductRPlugin extends AutoPlugin {
       isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
 
       sandbox := sandboxTask.value.evaluated,
-      sandboxRunTaskInternal := sandboxRun(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+      sandboxRunTaskInternal := sandboxRunTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
       conduct := conductTask.value.evaluated,
 
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist).triggeredBy(dist in Bundle),
       discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration)
     )
 
-  private final val LatestConductRVersion = "1.1.2"
-  private final val LatestConductrDocVersion = LatestConductRVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
+  private final val LatestConductrVersion = "1.1.2"
+  private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
   private final val SandboxRunArgsAttrKey = AttributeKey[SandboxRunArgs]("conductr-sandbox-run-args")
@@ -70,9 +70,9 @@ object ConductRPlugin extends AutoPlugin {
     Parsers.Sandbox.subtask.parsed match {
       case SandboxHelp                 => sandboxHelp()
       case SandboxSubtaskHelp(command) => sandboxSubHelp(command)
-      case SandboxRunSubtask(args) =>
-        Project.extract(state.value).runTask(sandboxRunTaskInternal, state.value.put(SandboxRunArgsAttrKey, args))
-      case SandboxNonArgSubtask(command) => sandboxSubtask(command)
+      case SandboxInitSubtask          => sandboxInit()
+      case SandboxRunSubtask(args)     => Project.extract(state.value).runTask(sandboxRunTaskInternal, state.value.put(SandboxRunArgsAttrKey, args))
+      case SandboxStopSubtask          => sandboxStop()
     }
   }
 
@@ -97,12 +97,8 @@ object ConductRPlugin extends AutoPlugin {
   private def sandboxSubHelp(command: String): Unit =
     s"sandbox $command --help".!
 
-  private def sandboxRun(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
-    import Parsers.Sandbox.Flags
-    import Parsers.ArgumentConverters._
-    import ProcessConverters._
-
-    val projectImageVersion = if (hasRpLicense.value) Some(LatestConductRVersion) else None
+  private def sandboxRunTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
+    val projectImageVersion = if (hasRpLicense.value) Some(LatestConductrVersion) else None
     val bundlePorts =
       (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value
         .flatten
@@ -117,30 +113,59 @@ object ConductRPlugin extends AutoPlugin {
         }
 
     val args = state.value.get(SandboxRunArgsAttrKey).get
-    val conductrImageVersionArg = (args.imageVersion orElse projectImageVersion).toSeq
-    val conductrImageArg = args.image.withFlag(Flags.image)
-    val nrOfContainersArg = args.nrOfContainers.withFlag(Flags.nrOfContainers)
-    val featuresArg = args.features.withFlag(Flags.feature)
-    val portsArg = (args.ports ++ bundlePorts).withFlag(Flags.port)
-    val logLevelArg = args.logLevel.withFlag(Flags.logLevel)
-    val conductrRolesArg = args.conductrRoles.map(_.asConsoleNArg).withFlag(Flags.conductrRole)
-    val envsArg = args.envs.map(_.asConsolePairArg).withFlag(Flags.env)
-
-    val command =
-      Seq("sandbox", "run") ++
-        conductrImageVersionArg ++
-        conductrImageArg ++
-        nrOfContainersArg ++
-        featuresArg ++
-        portsArg ++
-        logLevelArg ++
-        conductrRolesArg ++
-        envsArg
-    Process(command).!
+    sandboxRun(
+      conductrImageVersion = args.imageVersion orElse projectImageVersion,
+      conductrImage = args.image,
+      nrOfContainers = args.nrOfContainers,
+      features = args.features,
+      ports = args.ports ++ bundlePorts,
+      logLevel = args.logLevel,
+      conductrRoles = args.conductrRoles,
+      envs = args.envs
+    )
   }
 
-  private def sandboxSubtask(command: String): Unit =
-    Process(Seq("sandbox", command)).!
+  /**
+   * Executes the `sandbox run` command of the conductr-cli.
+   */
+  def sandboxRun(
+    conductrImageVersion: Option[String] = Some(LatestConductrVersion),
+    conductrImage: Option[String] = None,
+    nrOfContainers: Option[Int] = None,
+    features: Set[String] = Set.empty,
+    ports: Set[Int] = Set.empty,
+    logLevel: Option[String] = None,
+    conductrRoles: Seq[Set[String]] = Seq.empty,
+    envs: Map[String, String] = Map.empty
+  ): Unit = {
+    import Parsers.Sandbox.Flags
+    import Parsers.ArgumentConverters._
+    import ProcessConverters._
+
+    Process(
+      Seq("sandbox", "run") ++
+        conductrImageVersion.toSeq ++
+        conductrImage.withFlag(Flags.image) ++
+        nrOfContainers.withFlag(Flags.nrOfContainers) ++
+        features.withFlag(Flags.feature) ++
+        ports.withFlag(Flags.port) ++
+        logLevel.withFlag(Flags.logLevel) ++
+        conductrRoles.map(_.asConsoleNArg).withFlag(Flags.conductrRole) ++
+        envs.map(_.asConsolePairArg).withFlag(Flags.env)
+    ).!
+  }
+
+  /**
+   * Executes the `sandbox init` command of the conductr-cli
+   */
+  private def sandboxInit(): Unit =
+    Process(Seq("sandbox", "init")).!
+
+  /**
+   * Executes the `sandbox stop` command of the conductr-cli
+   */
+  def sandboxStop(): Unit =
+    Process(Seq("sandbox", "stop")).!
 
   private def conductHelp(): Unit =
     s"conduct --help".!
@@ -179,9 +204,9 @@ object ConductRPlugin extends AutoPlugin {
           .map { case _ => SandboxHelp }
           .!!! { "Usage: sandbox --help" }
 
-      def initSubtask: Parser[SandboxNonArgSubtask] =
+      def initSubtask: Parser[SandboxInitSubtask.type] =
         token("init")
-          .map { case _ => SandboxNonArgSubtask("init") }
+          .map { case _ => SandboxInitSubtask }
           .!!!("Usage: sandbox init")
 
       def runSubtask: Parser[SandboxRunSubtask] =
@@ -206,9 +231,9 @@ object ConductRPlugin extends AutoPlugin {
       def isRunArg(arg: String, flag: String): Boolean =
         arg.startsWith(flag)
 
-      def stopSubtask: Parser[SandboxNonArgSubtask] =
+      def stopSubtask: Parser[SandboxStopSubtask.type] =
         token("stop")
-          .map { case _ => SandboxNonArgSubtask("stop") }
+          .map { case _ => SandboxStopSubtask }
           .!!!("Usage: sandbox stop")
 
       // Sandbox command specific arguments
@@ -496,7 +521,8 @@ object ConductRPlugin extends AutoPlugin {
   private trait SubtaskSuccess
   private sealed trait SandboxSubtask
   private case class SandboxRunSubtask(args: SandboxRunArgs) extends SandboxSubtask with SubtaskSuccess
-  private case class SandboxNonArgSubtask(command: String) extends SandboxSubtask with SubtaskSuccess
+  private object SandboxStopSubtask extends SandboxSubtask with SubtaskSuccess
+  private object SandboxInitSubtask extends SandboxSubtask with SubtaskSuccess
   private case object SandboxHelp extends SandboxSubtask
   private case class SandboxSubtaskHelp(command: String) extends SandboxSubtask
 
