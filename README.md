@@ -243,24 +243,27 @@ Give the logging infrastructure enough time to start before entering the `logs` 
 
 The following bundle settings are provided under the `BundleKeys` object:
 
-Name                 | Description
----------------------|-------------
-bundleConf           | The bundle configuration file contents.
-bundleType           | The type of configuration that this bundling relates to. By default Universal is used.
-checkInitialDelay    | Initial delay before the check uris are triggered. The `FiniteDuration` value gets rounded up to full seconds. Default is 3 seconds.
-checks               | Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example `Seq(uri("$WEB_HOST"))` will check that a endpoint named "web" will be checked given its host environment var. Once that URL becomes available then ConductR will be signalled that the bundle is ready. Note that a `docker+` prefix should be used when waiting on Docker components so that the Docker build event is waited on e.g. `Seq(uri("docker+$WEB_HOST"))`<br/>Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start. For example: `Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2"))`.
-compatibilityVersion | A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by [http://semver.org/]. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from [http://ometer.com/parallel.html]."
-configurationName    | The name of the directory of the additional configuration to use. Defaults to 'default'
-diskSpace            | The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required.
-endpoints            | Declares endpoints using an `Endpoint(protocol, bindPort, services)` structure. The default is `Map("web" -> Endpoint("http", services = Set(URI(s"http://:9000"))))` where the key is the `name` of this project. The "web" key is used to form a set of environment variables for your components. For example you will have a `WEB_BIND_PORT` in this example.
-overrideEndpoints    | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
-executableScriptPath | The relative path of the executableScript within the bundle.
-memory               | The amount of memory required to run the bundle.
-nrOfCpus             | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
-roles                | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".
-startCommand         | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dhttp.address=$WEB_BIND_IP -Dhttp.port=$WEB_BIND_PORT"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the memory BundleKey and heap flags should not be passed here.
-system               | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
-systemVersion        | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
+Name                  | Description
+----------------------|-------------
+bundleConf            | The bundle configuration file contents
+bundleConfVersion     | The version of the bundle.conf file. By default this is 1.
+bundleType            | The type of configuration that this bundling relates to. By default Universal is used.
+checkInitialDelay     | Initial delay before the check uris are triggered. The `FiniteDuration` value gets rounded up to full seconds. Default is 3 seconds.
+checks                | Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example `Seq(uri("$WEB_HOST"))` will check that a endpoint named "web" will be checked given its host environment var. Once that URL becomes available then ConductR will be signalled that the bundle is ready. Note that a `docker+` prefix should be used when waiting on Docker components so that the Docker build event is waited on e.g. `Seq(uri("docker+$WEB_HOST"))`<br/>Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start. For example: `Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2"))`.
+compatibilityVersion  | A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by [http://semver.org/]. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from [http://ometer.com/parallel.html]."
+conductrTargetVersion | The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 1.1.
+configurationName     | The name of the directory of the additional configuration to use. Defaults to 'default'
+diskSpace             | The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required.
+enableAcls            | Acls can be declared on an endpoint if this setting is 'true'. Otherwise only service endpoints can be declared. Endpoint acls can be used from ConductR 1.2 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 1.2+ 'true'.
+endpoints             | Declares endpoints. The default is Map("<project-name>" -> Endpoint("http", 0, Set.empty)) where the <project-name> is the name of your sbt project. The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
+executableScriptPath  | The relative path of the executableScript within the bundle.
+memory                | The amount of memory required to run the bundle.
+nrOfCpus              | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
+overrideEndpoints     | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
+roles                 | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".
+startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dhttp.address=$WEB_BIND_IP -Dhttp.port=$WEB_BIND_PORT"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the memory BundleKey and heap flags should not be passed here.
+system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
+systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
 
 ### Commands
 

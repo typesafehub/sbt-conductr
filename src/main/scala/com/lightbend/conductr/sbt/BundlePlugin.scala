@@ -9,8 +9,9 @@ import sbt.Keys._
 import com.typesafe.sbt.SbtNativePackager
 import com.typesafe.sbt.packager.universal.Archives
 import SbtNativePackager.Universal
-import java.io.{ FileInputStream, BufferedInputStream }
+import java.io.{ BufferedInputStream, FileInputStream }
 import java.security.MessageDigest
+
 import scala.util.matching.Regex
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -29,13 +30,15 @@ object BundlePlugin extends AutoPlugin {
   override def projectSettings =
     bundleSettings(Bundle) ++ configurationSettings(BundleConfiguration) ++
       Seq(
-        bundleConfVersion := BundleConfVersions.V_1_1_0,
+        bundleConfVersion := BundleConfVersion.V1,
+        conductrTargetVersion := ConductrVersion.V1_1,
         bundleType := Universal,
         checkInitialDelay := 3.seconds,
         checks := Seq.empty,
         compatibilityVersion := (version in Bundle).value.takeWhile(_ != '.'),
         configurationName := "default",
-        endpoints := DefaultEndpoints,
+        endpoints := getDefaultEndpoints(Bundle).value,
+        enableAcls := conductrTargetVersion.value >= ConductrVersion.V1_2,
         javaOptions in Bundle ++= Seq(
           s"-J-Xms${(memory in Bundle).value.round1k.underlying}",
           s"-J-Xmx${(memory in Bundle).value.round1k.underlying}"
@@ -62,16 +65,8 @@ object BundlePlugin extends AutoPlugin {
       bundleConf := getConfig(config, forAllSettings = true).value,
       executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
       NativePackagerKeys.packageName := (normalizedName in config).value + "-v" + (compatibilityVersion in config).value,
-      NativePackagerKeys.dist := Def.taskDyn {
-        Def.task {
-          createDist(config, (bundleType in config).value)
-        }.value
-      }.value,
-      NativePackagerKeys.stage := Def.taskDyn {
-        Def.task {
-          stageBundle(config, (bundleType in config).value)
-        }.value
-      }.value,
+      NativePackagerKeys.dist := Def.taskDyn(createDist(config, (bundleType in config).value)).value,
+      NativePackagerKeys.stage := Def.taskDyn(stageBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
       target := projectTarget.value / "bundle"
     )) ++ configNameSettings(config)
@@ -85,16 +80,8 @@ object BundlePlugin extends AutoPlugin {
       checks := Seq.empty,
       compatibilityVersion := (version in config).value.takeWhile(_ != '.'),
       executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
-      NativePackagerKeys.dist := Def.taskDyn {
-        Def.task {
-          createConfiguration(config, "Bundle configuration has been created")
-        }.value
-      }.value,
-      NativePackagerKeys.stage := Def.taskDyn {
-        Def.task {
-          stageConfiguration(config)
-        }.value
-      }.value,
+      NativePackagerKeys.dist := createConfiguration(config).value,
+      NativePackagerKeys.stage := stageConfiguration(config).value,
       NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
       target := projectTarget.value / "bundle-configuration",
       sourceDirectory := (sourceDirectory in config).value.getParentFile / "bundle-configuration"
@@ -134,12 +121,52 @@ object BundlePlugin extends AutoPlugin {
       systemVersionConfigName := (systemVersion in config).value -> toConfigName(systemVersion in (thisProjectRef.value, config), state.value)
     ))
 
+  /**
+   * Checks whether the specified bundle settings are valid.
+   * If one or more validations are failing a sys.error is thrown
+   */
+  private def validateSettings(config: Configuration): Def.Initialize[Task[Unit]] = Def.task {
+    // Checks that the project and global settings in the `BundlePlugin` are compatible with the `conductrTargetVersion`
+    def assertConductrVersionCompatibility: Seq[String] = {
+      val conductrVersion = (conductrTargetVersion in config).value
+      def assertEnableAcls: Option[String] =
+        if ((enableAcls in config).value && conductrVersion <= ConductrVersion.V1_1)
+          Some(s"'BundleKeys.enableAcls' is set to 'true' and the 'BundleKeys.conductrTargetVersion' is set to $conductrVersion. " +
+            s"Acls are only supported from ConductR 1.2 onwards. " +
+            s"Either change the 'BundleKeys.conductrTargetVersion' to 1.2+ or set 'BundleKeys.enableAcls' to 'false'.")
+        else None
+
+      assertEnableAcls.toSeq
+    }
+
+    // Checks that an endpoint contains not multiple endpoint types (Acl, Service)
+    def assertMultipleEndpointTypes: Seq[String] =
+      (endpoints in config).value.collect {
+        case (key, endpoint) if endpoint.acls.isDefined && endpoint.services.isDefined =>
+          s"The endpoint '$key' contains ACL and services declarations. Only one of these declarations can be set. " +
+            s"Specify either ACL or service information for the endpoint."
+      }.toSeq
+
+    // Validated assertions
+    val errors = assertConductrVersionCompatibility ++ assertMultipleEndpointTypes
+
+    if (errors.nonEmpty)
+      sys.error(
+        s"""The bundle settings are not valid. Please change the bundle settings.
+               |  Validation errors:
+               |${errors.map(error => s"  - $error").mkString("\n")}
+             """.stripMargin
+      )
+  }
+
   private def toConfigName(scoped: Scoped, state: State): Option[String] = {
     val extracted = Project.extract(state)
     extracted.structure.data.definingScope(scoped.scope, scoped.key).flatMap(_.config.toOption.map(_.name))
   }
 
   private def createDist(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
     val bundleTarget = (target in config).value
     val configTarget = bundleTarget / config.name / "tmp"
     def relParent(p: (File, String)): (File, String) =
@@ -159,10 +186,11 @@ object BundlePlugin extends AutoPlugin {
    * Creates a bundle configuration in the specified config target directory
    *
    * @param config under which the bundle configuration is created
-   * @param message that is printed if the bundle configuration has been successfully created.
    * @return the created bundle configuration file
    */
-  def createConfiguration(config: Configuration, message: String): Def.Initialize[Task[File]] = Def.task {
+  private def createConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
     val bundleTarget = (target in config).value
     val configurationTarget = (NativePackagerKeys.stage in config).value
     val configChildren = recursiveListFiles(Array(configurationTarget), NonDirectoryFilter)
@@ -171,8 +199,46 @@ object BundlePlugin extends AutoPlugin {
       bundleTarget,
       (configurationName in config).value,
       bundleMappings,
-      f => streams.value.log.info(s"$message: $f")
+      f => streams.value.log.info(s"Bundle configuration has been created: $f")
     )
+  }
+
+  /**
+   * Resolves the default endpoint based on the `enableAcls` flag.
+   * The default endpoint:
+   * - Uses 'http' as a protocol
+   * - Uses the automatically assigned bind port by ConductR
+   * - Does not declare any services / acls.
+   *   Therefore the service is accessible via the service locator but not from the outside world
+   */
+  def getDefaultEndpoints(config: Configuration): Def.Initialize[Task[Map[String, Endpoint]]] = Def.task {
+    if ((enableAcls in config).value)
+      Map(name.value -> Endpoint("http", 0, name.value))
+    else
+      Map(name.value -> Endpoint("http", 0, Set.empty[URI]))
+  }
+
+  /**
+   * Resolves the default web endpoints based on the `enableAcls` flag.
+   * The default web endpoint:
+   * - Uses 'http' as a protocol
+   * - Uses the automatically assigned bind port by ConductR
+   * - Declares one endpoint with either ACL or service information.
+   *   Therefore the service is accessible via the service locator and via the proxy
+   */
+  def getDefaultWebEndpoints(config: Configuration, servicePort: Int = 9000): Def.Initialize[Task[Map[String, Endpoint]]] = Def.task {
+    if ((enableAcls in config).value)
+      Map(name.value -> Endpoint("http", 0, name.value, RequestAcl(Http(Http.Request(path = Right("^/".r))))))
+    else
+      Map(name.value -> Endpoint("http", 0, Set(URI(s"http://:$servicePort"))))
+  }
+
+  /**
+   * Resolve the default options for a web project.
+   */
+  def getProjectBindIpAndPortEnvs: Def.Initialize[Task[Seq[String]]] = Def.task {
+    val projectName = envName(name.value)
+    Seq(s"-Dhttp.address=$$${projectName}_BIND_IP", s"-Dhttp.port=$$${projectName}_BIND_PORT")
   }
 
   // By default use the BundleKeys.endpoints settings key as endpoints
@@ -181,7 +247,17 @@ object BundlePlugin extends AutoPlugin {
     (overrideEndpoints in config).value.getOrElse((endpoints in config).value)
   }
 
-  private def shazar(
+  /**
+   * Creates a zip file for a given target directory.
+   * The name of the zip file contains a SHA256 digest of the target directory,
+   * meaning based on the content of the target directory a (unique) digest is created.
+   * @param archiveTarget The target for which the zip archive is created
+   * @param archiveName The first name part of the zip archive. The second part is the SHA256 digest
+   * @param bundleMappings included in the output
+   * @param logMessage This log messages is printed in the sbt console once the archive has been successfully created
+   * @return the zip archive
+   */
+  def shazar(
     archiveTarget: File,
     archiveName: String,
     bundleMappings: Seq[(File, String)],
@@ -304,26 +380,16 @@ object BundlePlugin extends AutoPlugin {
   private def formatServiceName(serviceName: String): String =
     s"""        service-name  = "$serviceName""""
 
-  private def formatEndpoints(bundleConfVersion: BundleConfVersions.Value, endpoints: Map[String, Endpoint]): String = {
+  private def formatEndpoints(bundleConfVersion: BundleConfVersion.Value, endpoints: Map[String, Endpoint]): String = {
     val formatted =
       for {
         (label, Endpoint(bindProtocol, bindPort, services, serviceName, acls)) <- endpoints
+        servicesOrAcls = Seq(
+          serviceName.map(formatServiceName),
+          services.map(formatServices),
+          acls.map(formatAcls)
+        ).flatten.mkString("\n")
       } yield {
-        if (acls.exists(_.nonEmpty) && bundleConfVersion != BundleConfVersions.V_1_2_0)
-          throw new IllegalArgumentException(s"Invalid configuration for endpoint $label - request ACL may only be specified for bundle.conf version 1.2.0")
-        else if (acls.exists(_.nonEmpty) && services.exists(_.nonEmpty))
-          throw new IllegalArgumentException(s"Invalid configuration for endpoint $label - either Services or Request ACL can be set")
-
-        val servicesOrAcls =
-          Seq(
-            serviceName.map(formatServiceName),
-            services.map(formatServices),
-            acls.map(formatAcls)
-          ).collect {
-              case Some(value) => value
-            }
-            .mkString("\n")
-
         s"""|      "$label" = {
             |        bind-protocol = "$bindProtocol"
             |        bind-port     = $bindPort
@@ -392,6 +458,8 @@ object BundlePlugin extends AutoPlugin {
   }
 
   private def stageBundle(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
     val bundleTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
     writeConfig(bundleTarget, (bundleConf in config).value)
     val componentTarget = bundleTarget / (normalizedName in config).value
@@ -400,14 +468,17 @@ object BundlePlugin extends AutoPlugin {
   }
 
   private def stageConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
     val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
     val generatedConf = (bundleConf in config).value
     val srcDir = (sourceDirectory in config).value / (configurationName in config).value
-    if (generatedConf.isEmpty && !srcDir.exists()) sys.error(
-      s"""Directory $srcDir does not exist.
-          | Specify the desired configuration directory name
-          |  with the 'configurationName' setting given that it is not "default"""".stripMargin
-    )
+    if (generatedConf.isEmpty && !srcDir.exists())
+      sys.error(
+        s"""Directory $srcDir does not exist.
+            | Specify the desired configuration directory name
+            |  with the 'configurationName' setting given that it is not "default"""".stripMargin
+      )
     IO.createDirectory(configurationTarget)
     if (generatedConf.nonEmpty) writeConfig(configurationTarget, generatedConf)
     IO.copyDirectory(srcDir, configurationTarget, overwrite = true, preserveLastModified = true)

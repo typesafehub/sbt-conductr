@@ -19,8 +19,7 @@ val checkPorts = taskKey[Unit]("Check that the specified ports are exposed to do
 checkPorts := {
   val content = "docker port cond-0".!!
   val expectedLines = Set(
-    """9999/tcp -> 0.0.0.0:9999""",
-    """9200/tcp -> 0.0.0.0:9200"""
+    """9999/tcp -> 0.0.0.0:9999"""
   )
 
   expectedLines.foreach(line => content should include(line))

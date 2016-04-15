@@ -31,6 +31,8 @@ object PlayBundlePlugin extends AutoPlugin {
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
       BundleKeys.memory := PlayBundleKeyDefaults.memory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
+      BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
+      javaOptions in Bundle ++= BundlePlugin.getProjectBindIpAndPortEnvs.value,
       conductrBundleLibVersion := Version.conductrBundleLib,
       libraryDependencies += Library.playConductrBundleLib(PlayVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value),
       resolvers += Resolver.typesafeBintrayReleases

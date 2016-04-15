@@ -28,7 +28,7 @@ object BundleImport {
    * Common interface which describes request mapping(s) that can be exposed by a service endpoint, i.e. sequence of
    * HTTP paths in case of HTTP-based endpoint, or set of ports in case of TCP-based endpoint
    */
-  trait ProtocolFamilyRequestMapping {
+  sealed trait ProtocolFamilyRequestMapping {
     def protocolFamily: String
   }
 
@@ -45,7 +45,7 @@ object BundleImport {
     implicit def method(m: String): Method.Value =
       Method.withName(m)
 
-    case class Request(method: Option[Method.Value], path: Either[String, Regex], rewrite: Option[String])
+    case class Request(method: Option[Method.Value] = None, path: Either[String, Regex], rewrite: Option[String] = None)
 
     implicit def request1(r: String): Request =
       Request(None, Left(r), None)
@@ -185,32 +185,60 @@ object BundleImport {
     acls: Option[Set[RequestAcl]]
   )
 
-  object BundleConfVersions extends Enumeration {
-    val V_1_1_0 = Value("1.1.0")
-    val V_1_2_0 = Value("1.2.0")
+  object EndpointType extends Enumeration {
+    val Service, Acl = Value
+  }
+
+  object BundleConfVersion extends Enumeration {
+    val V1 = Value("1")
+  }
+
+  object ConductrVersion extends Enumeration {
+    // The order of the versions matter because there are used to compare the versions with `>=`, `<=`, etc.
+    // Therefore the oldest version must come first, the latest version at last
+    val V1_1 = Value("1.1")
+    val V1_2 = Value("1.2")
   }
 
   object BundleKeys {
+    val bundleConf = TaskKey[String](
+      "bundle-conf",
+      "The bundle configuration file contents"
+    )
 
-    // Scheduling settings
-    val bundleConfVersion = SettingKey[BundleConfVersions.Value](
+    val bundleConfVersion = SettingKey[BundleConfVersion.Value](
       "bundle-conf-version",
-      "The format of the bundle configuration file to generate. By default this is 1.1.0."
+      "The version of the bundle.conf file. By default this is 1."
     )
 
-    val system = SettingKey[String](
-      "bundle-system",
-      "A logical name that can be used to associate multiple bundles with each other."
+    val bundleType = SettingKey[Configuration](
+      "bundle-type",
+      "The type of configuration that this bundling relates to. By default Universal is used."
     )
 
-    val nrOfCpus = SettingKey[Double](
-      "bundle-nr-of-cpus",
-      "The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required."
+    val checks = SettingKey[Seq[URI]](
+      "bundle-check-uris",
+      """Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2")) will check that a endpoint named "web" will be checked given its host environment var. Once that URL becomes available then ConductR will be signalled that the bundle is ready. Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start."""
     )
 
-    val memory = SettingKey[Bytes](
-      "bundle-memory",
-      "The amount of memory required to run the bundle. This value must a multiple of 1024 greater than 2 MB. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required."
+    val checkInitialDelay = SettingKey[FiniteDuration](
+      "bundle-check-initial-delay",
+      "Initial delay before the check uris are triggered. The 'FiniteDuration' value gets rounded up to full seconds. Default is 3 seconds."
+    )
+
+    val compatibilityVersion = SettingKey[String](
+      "bundle-compatibility-version",
+      "A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by http://semver.org/. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from http://ometer.com/parallel.html."
+    )
+
+    val conductrTargetVersion = SettingKey[ConductrVersion.Value](
+      "bundle-conductr-target-version",
+      "The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 1.1."
+    )
+
+    val configurationName = SettingKey[String](
+      "bundle-configuration-name",
+      "The name of the directory of the additional configuration to use. Defaults to 'default'"
     )
 
     val diskSpace = SettingKey[Bytes](
@@ -218,21 +246,14 @@ object BundleImport {
       "The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required."
     )
 
-    val roles = SettingKey[Set[String]](
-      "bundle-roles",
-      """The types of node in the cluster that this bundle can be deployed to. Defaults to "web"."""
+    val enableAcls = SettingKey[Boolean](
+      "bundle-enable-acls",
+      "Acls can be declared on an endpoint if this setting is 'true'. Otherwise only service endpoints can be declared. Endpoint acls can be used from ConductR 1.2 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 1.2+ 'true'."
     )
 
-    // General settings
-
-    val bundleConf = TaskKey[String](
-      "bundle-conf",
-      "The bundle configuration file contents"
-    )
-
-    val bundleType = SettingKey[Configuration](
-      "bundle-type",
-      "The type of configuration that this bundling relates to. By default Universal is used."
+    val endpoints = TaskKey[Map[String, Endpoint]](
+      "bundle-endpoints",
+      """Declares endpoints. The default is Map("<project-name>" -> Endpoint("http", 0, Set.empty)) where the <project-name> is the name of your sbt project. The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`."""
     )
 
     val executableScriptPath = SettingKey[String](
@@ -245,9 +266,14 @@ object BundleImport {
       "Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder."
     )
 
-    val endpoints = SettingKey[Map[String, Endpoint]](
-      "bundle-endpoints",
-      """Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set("http://:9000"))) where the service name is the name of this project. The "web" key is used to form a set of environment variables for your components. For example you will have a `WEB_BIND_PORT` in this example."""
+    val memory = SettingKey[Bytes](
+      "bundle-memory",
+      "The amount of memory required to run the bundle. This value must a multiple of 1024 greater than 2 MB. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required."
+    )
+
+    val nrOfCpus = SettingKey[Double](
+      "bundle-nr-of-cpus",
+      "The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required."
     )
 
     val overrideEndpoints = TaskKey[Option[Map[String, Endpoint]]](
@@ -255,24 +281,14 @@ object BundleImport {
       "Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None."
     )
 
-    val checkInitialDelay = SettingKey[FiniteDuration](
-      "bundle-check-initial-delay",
-      "Initial delay before the check uris are triggered. The 'FiniteDuration' value gets rounded up to full seconds. Default is 3 seconds."
+    val roles = SettingKey[Set[String]](
+      "bundle-roles",
+      """The types of node in the cluster that this bundle can be deployed to. Defaults to "web"."""
     )
 
-    val checks = SettingKey[Seq[URI]](
-      "bundle-check-uris",
-      """Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2")) will check that a endpoint named "web" will be checked given its host environment var. Once that URL becomes available then ConductR will be signalled that the bundle is ready. Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start."""
-    )
-
-    val configurationName = SettingKey[String](
-      "bundle-configuration-name",
-      "The name of the directory of the additional configuration to use. Defaults to 'default'"
-    )
-
-    val compatibilityVersion = SettingKey[String](
-      "bundle-compatibility-version",
-      "A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by http://semver.org/. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from http://ometer.com/parallel.html."
+    val system = SettingKey[String](
+      "bundle-system",
+      "A logical name that can be used to associate multiple bundles with each other."
     )
 
     val systemVersion = SettingKey[String](
@@ -315,6 +331,4 @@ object BundleImport {
   val Bundle = config("bundle") extend Universal
 
   val BundleConfiguration = config("configuration") extend Universal
-
-  val DefaultEndpoints = Map("web" -> Endpoint("http", 0, Set(URI("http://:9000"))))
 }

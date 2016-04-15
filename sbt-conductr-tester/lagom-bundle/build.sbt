@@ -1,5 +1,3 @@
-import ByteConversions._
-
 scalaVersion in ThisBuild := "2.11.8"
 version in ThisBuild := "0.1.0-SNAPSHOT"
 
@@ -13,6 +11,5 @@ lazy val `lagom-service-impl` = (project in file("lagom-service-impl"))
 lazy val `play-service` = (project in file("play-service"))
     .enablePlugins(PlayJava, LagomPlay)
     .settings(
-      BundleKeys.memory := 64.MiB,
       routesGenerator := InjectedRoutesGenerator
     )

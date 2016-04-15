@@ -22,6 +22,9 @@ package object sbt {
   def hash(bytes: Array[Byte]): String =
     Hash.toHex(bytes)
 
+  def envName(name: String) =
+    name.replaceAll("\\W", "_").toUpperCase
+
   @tailrec
   def recursiveListFiles(currentDirs: Array[File], filter: FileFilter, files: Array[File] = Array.empty): Array[File] =
     if (currentDirs.isEmpty)

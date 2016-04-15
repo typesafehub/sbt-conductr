@@ -28,6 +28,7 @@ object ConductRPlugin extends AutoPlugin {
 
   override def globalSettings: Seq[Setting[_]] =
     super.globalSettings ++ List(
+      Keys.aggregate in sandbox := false,
       Keys.aggregate in conduct := false,
 
       dist in Bundle := file(""),
@@ -99,9 +100,11 @@ object ConductRPlugin extends AutoPlugin {
 
   private def sandboxRunTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
     val projectImageVersion = if (hasRpLicense.value) Some(LatestConductrVersion) else None
+    val overrideEndpoints = (BundleKeys.overrideEndpoints in Bundle).?.map(_.flatten.getOrElse(Map.empty)).all(filter).value.flatten
+    val endpoints = (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value.flatten
+    val endpointsToUse = if (overrideEndpoints.nonEmpty) overrideEndpoints else endpoints
     val bundlePorts =
-      (BundleKeys.endpoints in Bundle).?.map(_.getOrElse(Map.empty)).all(filter).value
-        .flatten
+      endpointsToUse
         .map(_._2)
         .toSet
         .flatMap { endpoint: Endpoint =>

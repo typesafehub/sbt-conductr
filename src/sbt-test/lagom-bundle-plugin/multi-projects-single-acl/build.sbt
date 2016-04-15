@@ -10,6 +10,9 @@ lazy val frontendApi = (project in file("frontend-api"))
 lazy val frontendImpl = (project in file("frontend-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(frontendApi)
+  .settings(
+    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+  )
 
 lazy val backendApi = (project in file("backend-api"))
   .settings(libraryDependencies += lagomJavadslApi)
@@ -17,6 +20,9 @@ lazy val backendApi = (project in file("backend-api"))
 lazy val backendImpl = (project in file("backend-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(backendApi)
+  .settings(
+    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+  )
 
 // Test assertions
 val checkBundleConf = taskKey[Unit]("")

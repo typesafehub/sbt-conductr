@@ -1,0 +1,6 @@
+# ConductR 1.1 validation
+#   - enableAcls validation
+> set BundleKeys.conductrTargetVersion := ConductrVersion.V1_1
+> set BundleKeys.enableAcls := true
+-> bundle:dist
+> checkBundleConfNotGenerated
