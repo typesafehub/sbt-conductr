@@ -67,13 +67,13 @@ checkBundleConf := {
   val playContent = IO.read((target in `play-service` in Bundle).value / "bundle" / "tmp" / "bundle.conf").indent
   val expectedPlayMemory = "memory = 67108864"
   val expectedPlayStartCommand =
-    """start-command= ["play-service/bin/play-service", "-J-Xms67108864", "-J-Xmx67108864", "-Dhttp.address=$PLAY_SERVICE_BIND_IP", "-Dhttp.port=$PLAY_SERVICE_BIND_PORT"]""".stripMargin
+    """start-command= ["play-service/bin/play-service", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
   val expectedPlayEndpoints =
     """|endpoints = {
-       |  "play-service" = {
+       |  "web" = {
        |    bind-protocol = "http"
        |    bind-port     = 0
-       |    service-name  = "play-service"
+       |    service-name  = "web"
        |    acls          = [
        |      {
        |        http = {

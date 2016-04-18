@@ -27,9 +27,9 @@ checkBundleDist := {
       |  with-service-endpoint = {
       |    description      = "with-service-endpoint"
       |    file-system-type = "universal"
-      |    start-command    = ["with-service-endpoint/bin/with-service-endpoint", "-J-Xms134217728", "-J-Xmx134217728", "-Dhttp.address=$WITH_SERVICE_ENDPOINT_BIND_IP", "-Dhttp.port=$WITH_SERVICE_ENDPOINT_BIND_PORT"]
+      |    start-command    = ["with-service-endpoint/bin/with-service-endpoint", "-J-Xms134217728", "-J-Xmx134217728"]
       |    endpoints = {
-      |      "with-service-endpoint" = {
+      |      "web" = {
       |        bind-protocol = "http"
       |        bind-port     = 0
       |        services      = ["http://:9000"]
