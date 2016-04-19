@@ -58,7 +58,7 @@ object ConductrPlugin extends AutoPlugin {
       discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration)
     )
 
-  private final val LatestConductrVersion = "1.1.2"
+  private final val LatestConductrVersion = "1.1.3"
   private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
@@ -132,7 +132,7 @@ object ConductrPlugin extends AutoPlugin {
    * Executes the `sandbox run` command of the conductr-cli.
    */
   def sandboxRun(
-    conductrImageVersion: Option[String] = Some(LatestConductrVersion),
+    conductrImageVersion: Option[String],
     conductrImage: Option[String] = None,
     nrOfContainers: Option[Int] = None,
     features: Set[String] = Set.empty,
