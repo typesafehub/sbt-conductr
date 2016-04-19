@@ -58,7 +58,7 @@ object ConductrPlugin extends AutoPlugin {
       discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration)
     )
 
-  private final val LatestConductrVersion = "1.1.2"
+  private final val LatestConductrVersion = "1.1.3"
   private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
