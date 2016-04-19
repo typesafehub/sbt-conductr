@@ -203,6 +203,8 @@ object BundlePlugin extends AutoPlugin {
     )
   }
 
+  private final val DefaultEndpointName = "web"
+
   /**
    * Resolves the default endpoint based on the `enableAcls` flag.
    * The default endpoint:
@@ -213,9 +215,9 @@ object BundlePlugin extends AutoPlugin {
    */
   def getDefaultEndpoints(config: Configuration): Def.Initialize[Task[Map[String, Endpoint]]] = Def.task {
     if ((enableAcls in config).value)
-      Map(name.value -> Endpoint("http", 0, name.value))
+      Map(DefaultEndpointName -> Endpoint("http", 0, DefaultEndpointName))
     else
-      Map(name.value -> Endpoint("http", 0, Set.empty[URI]))
+      Map(DefaultEndpointName -> Endpoint("http", 0, Set.empty[URI]))
   }
 
   /**
@@ -228,17 +230,9 @@ object BundlePlugin extends AutoPlugin {
    */
   def getDefaultWebEndpoints(config: Configuration, servicePort: Int = 9000): Def.Initialize[Task[Map[String, Endpoint]]] = Def.task {
     if ((enableAcls in config).value)
-      Map(name.value -> Endpoint("http", 0, name.value, RequestAcl(Http(Http.Request(path = Right("^/".r))))))
+      Map(DefaultEndpointName -> Endpoint("http", 0, DefaultEndpointName, RequestAcl(Http(Http.Request(path = Right("^/".r))))))
     else
-      Map(name.value -> Endpoint("http", 0, Set(URI(s"http://:$servicePort"))))
-  }
-
-  /**
-   * Resolve the default options for a web project.
-   */
-  def getProjectBindIpAndPortEnvs: Def.Initialize[Task[Seq[String]]] = Def.task {
-    val projectName = envName(name.value)
-    Seq(s"-Dhttp.address=$$${projectName}_BIND_IP", s"-Dhttp.port=$$${projectName}_BIND_PORT")
+      Map(DefaultEndpointName -> Endpoint("http", 0, Set(URI(s"http://:$servicePort"))))
   }
 
   // By default use the BundleKeys.endpoints settings key as endpoints

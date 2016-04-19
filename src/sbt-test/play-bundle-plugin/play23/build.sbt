@@ -27,12 +27,12 @@ checkBundleDist := {
       |  play23 = {
       |    description      = "play23"
       |    file-system-type = "universal"
-      |    start-command    = ["play23/bin/play23", "-J-Xms134217728", "-J-Xmx134217728", "-Dhttp.address=$PLAY23_BIND_IP", "-Dhttp.port=$PLAY23_BIND_PORT"]
+      |    start-command    = ["play23/bin/play23", "-J-Xms134217728", "-J-Xmx134217728"]
       |    endpoints = {
-      |      "play23" = {
+      |      "web" = {
       |        bind-protocol = "http"
       |        bind-port     = 0
-      |        service-name  = "play23"
+      |        service-name  = "web"
       |        acls          = [
       |          {
       |            http = {
