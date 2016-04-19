@@ -255,7 +255,7 @@ conductrTargetVersion | The version of ConductR to that this bundle can be deplo
 configurationName     | The name of the directory of the additional configuration to use. Defaults to 'default'
 diskSpace             | The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required.
 enableAcls            | Acls can be declared on an endpoint if this setting is 'true'. Otherwise only service endpoints can be declared. Endpoint acls can be used from ConductR 1.2 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 1.2+ 'true'.
-endpoints             | Declares endpoints. The default is Map("<project-name>" -> Endpoint("http", 0, Set.empty)) where the <project-name> is the name of your sbt project. The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
+endpoints             | Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set.empty)). The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
 executableScriptPath  | The relative path of the executableScript within the bundle.
 memory                | The amount of memory required to run the bundle.
 nrOfCpus              | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
