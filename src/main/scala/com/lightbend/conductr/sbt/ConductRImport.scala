@@ -6,9 +6,9 @@ package com.lightbend.conductr.sbt
 
 import sbt._
 
-object ConductRImport {
+object ConductrImport {
 
-  object ConductRKeys {
+  object ConductrKeys {
 
     // Sandbox keys
     val hasRpLicense = SettingKey[Boolean](

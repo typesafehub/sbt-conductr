@@ -30,7 +30,7 @@ checkPorts := {
     expectedLines.foreach(line => content should include(line))
 }
 
-val checkConductRIsStopped = taskKey[Unit]("")
-checkConductRIsStopped := {
+val checkConductrIsStopped = taskKey[Unit]("")
+checkConductrIsStopped := {
   """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

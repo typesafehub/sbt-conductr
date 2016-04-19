@@ -3,7 +3,7 @@ import org.scalatest.Matchers._
 
 lazy val root = project
   .in(file("."))
-  .enablePlugins(JavaAppPackaging, ConductRPlugin)
+  .enablePlugins(JavaAppPackaging, ConductrPlugin)
 
 name := "conduct-end-to-end"
 version := "1.0.0"
