@@ -10,8 +10,8 @@ lazy val `lagom-service-impl` = (project in file("lagom-service-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(`lagom-service-api`)
 
-val checkConductRIsRunning = taskKey[Unit]("")
-checkConductRIsRunning := s"docker ps -q -f name=cond-".lines_! should have size 1
+val checkConductrIsRunning = taskKey[Unit]("")
+checkConductrIsRunning := s"docker ps -q -f name=cond-".lines_! should have size 1
 
-val checkConductRIsStopped = taskKey[Unit]("")
-checkConductRIsStopped := """docker ps --quiet --filter name=cond""".lines_! should have size 0
+val checkConductrIsStopped = taskKey[Unit]("")
+checkConductrIsStopped := """docker ps --quiet --filter name=cond""".lines_! should have size 0

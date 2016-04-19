@@ -16,13 +16,13 @@ import java.io.IOException
 /**
  * An sbt plugin that interact's with ConductR's controller and potentially other components.
  */
-object ConductRPlugin extends AutoPlugin {
+object ConductrPlugin extends AutoPlugin {
   import BundlePlugin.autoImport._
-  import ConductRImport._
+  import ConductrImport._
   import sbinary.DefaultProtocol.FileFormat
 
-  val autoImport = ConductRImport
-  import ConductRKeys._
+  val autoImport = ConductrImport
+  import ConductrKeys._
 
   override def trigger = allRequirements
 
@@ -37,7 +37,7 @@ object ConductRPlugin extends AutoPlugin {
       hasRpLicense := {
         // Same logic as in https://github.com/typesafehub/reactive-platform
         // Doesn't take reactive-platform as a dependency because it is not public.
-        val isMeta = (ConductRKeys.isSbtBuild in LocalRootProject).value
+        val isMeta = (ConductrKeys.isSbtBuild in LocalRootProject).value
         val base = (Keys.baseDirectory in LocalRootProject).value
         val propFile = if (isMeta) base / TypesafePropertiesName else base / "project" / TypesafePropertiesName
         propFile.exists

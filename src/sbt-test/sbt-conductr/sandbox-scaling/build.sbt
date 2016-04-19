@@ -27,7 +27,7 @@ checkContainers3 := {
   resolveRunningContainers should have size 3
 }
 
-val checkConductRIsStopped = taskKey[Unit]("")
-checkConductRIsStopped := {
+val checkConductrIsStopped = taskKey[Unit]("")
+checkConductrIsStopped := {
   resolveRunningContainers should have size 0
 }

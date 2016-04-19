@@ -14,4 +14,4 @@
 > sandbox run 1.1.2 -p 1111 -p 2222 -i typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr -n 3 -l debug -e key1=value1 -e key2=value2 -r frontend -r backend db -f visualization -f logging
 > sandbox stop
 
-> checkConductRIsStopped
+> checkConductrIsStopped
