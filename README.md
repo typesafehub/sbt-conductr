@@ -22,7 +22,7 @@ The conductr-cli is used to mange the ConductR cluster.
 sbt-conductr is enabled by simply declaring its dependency:
 
 ```scala
-addSbtPlugin("com.typesafe.conductr" % "sbt-conductr" % "1.5.2")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.0.0")
 ```
 
 This plugin is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
