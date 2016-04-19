@@ -132,7 +132,7 @@ object ConductrPlugin extends AutoPlugin {
    * Executes the `sandbox run` command of the conductr-cli.
    */
   def sandboxRun(
-    conductrImageVersion: Option[String] = Some(LatestConductrVersion),
+    conductrImageVersion: Option[String],
     conductrImage: Option[String] = None,
     nrOfContainers: Option[Int] = None,
     features: Set[String] = Set.empty,
