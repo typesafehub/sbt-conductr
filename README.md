@@ -90,7 +90,37 @@ produced by the native packager.
 Hitting return will cause the bundle to be uploaded. On successfully uploading the bundle the plugin will report
 the `BundleId` to use for subsequent commands on that bundle.
 
-### Configuration
+### Scheduling parameters
+
+An application need to provide ConductR scheduling paramters to produce a bundle successfully. These parameters effectively describe what resources are used by your application or service and are used to determine which machine they will run on.
+
+[Play](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/PlayBundlePlugin.scala) and [Lagom](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/LagomBundlePlugin.scala) bundle plugins are providing default scheduling paramters. For any other application it is mandatory to specify them. Otherwise the `bundle:dist` command will fail.
+
+#### Defaults
+
+**Play**
+
+* Memory: 128 MB
+* Cpus: 1
+* Disk space: 200 MB
+
+**Lagom**
+
+* Memory: 128 MB
+* Cpus: 1
+* Disk space: 200 MB 
+
+#### Set custom scheduling paramters
+
+We recommend to specify custom scheduling paramters for each application. Simply specify the `BundleKeys` in your `build.sbt`:
+
+```scala
+BundleKeys.nrOfCpus := 2.0
+BundleKeys.memory := 64.MiB
+BundleKeys.diskSpace := 50.MB
+```
+
+### Bundle configuration
 
 It is possible to produce additional configuration bundles that contain an optional `bundle.conf` the value of which override the main bundle, as
 well as arbitrary shell scripts. These additional configuration files must be placed in your project's src/bundle-configuration/default folder.
@@ -121,13 +151,15 @@ conduct load /my-project/target/bundle/my-bundle <HIT THE TAB KEY TO USE THE LAT
 
 sbt-conductr is capable of producing many bundles and bundle configurations for a given sbt module.
 
-#### Adding Java options
+#### Adding Start command options
 
-Suppose you need to add Java options to your start command. You'll need to do this, say, to get a Play application binding to the correct IP address and port (supposing that the endpoint is named "web"):
+Use the `BundleKeys.startCommand` to add additional options to the start command. Let's say you are using a Play application and want to specify a custom application secret then the option to the `BundleKeys.startCommand`:
 
 ```scala
-javaOptions in Bundle ++= Seq("-Dhttp.address=$WEB_BIND_IP", "-Dhttp.port=$WEB_BIND_PORT")
+BundleKeys.startCommand += "-Dplay.crypto.secret=dontsharethiskey"
 ```
+
+Note that memory heap is controlled by the memory BundleKey and heap flags should not be passed here.
 
 #### Renaming an executable
 
@@ -261,7 +293,7 @@ memory                | The amount of memory required to run the bundle.
 nrOfCpus              | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
 overrideEndpoints     | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
 roles                 | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".
-startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dhttp.address=$WEB_BIND_IP -Dhttp.port=$WEB_BIND_PORT"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the memory BundleKey and heap flags should not be passed here.
+startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dakka.cluster.roles.1=frontend"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the BundleKeys.memory key and heap flags should not be passed here.
 system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
 systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
 
