@@ -10,12 +10,12 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
  
 ## Table of contents
 
-* [Prerequisite](#Prerequisite)
-* [Setup](#Setup)
-* [Plugin Overview](#Plugin-overview)
-* [Command Overview](#Command-overview)
-* [ConductR Plugin](#ConductR-plugin)
-* [Bundle Plugins](#Bundle-plugins)
+* [Prerequisite](#prerequisite)
+* [Setup](#setup)
+* [Plugin Overview](#plugin-overview)
+* [Command Overview](#command-overview)
+* [ConductR Plugin](#conductr-plugin)
+* [Bundle Plugins](#cundle-plugins)
 
 ## Prerequisite
 
@@ -83,6 +83,8 @@ conduct stop                 | Stops all executions of a bundle given a bundle i
 conduct unload               | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 conduct logs                 | Retrieves log messages of a given bundle
 conduct events               | Retrieves events of a given bundle
+
+Each `sandbox` and `conduct` sub command has a help page particular for the sub command, e.g. `conduct run --help`.
 
 ## ConductR Plugin 
 
@@ -192,7 +194,7 @@ To retrieve log messages of a bundle use:
 conduct logs BUNDLE_NAME
 ```
 
-## Bundle Plugin
+## Bundle Plugins
 
 The bundle plugin produces ConductR bundles and bundle configurations. sbt-conductr contains several bundle plugin. One of the bundle plugin gets used for your project. Check out the [Plugin Overview](#Plugin-overview) section for more information.
 
