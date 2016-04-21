@@ -15,7 +15,7 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 * [Plugin Overview](#plugin-overview)
 * [Command Overview](#command-overview)
 * [ConductR Plugin](#conductr-plugin)
-* [Bundle Plugins](#cundle-plugins)
+* [Bundle Plugins](#bundle-plugins)
 
 ## Prerequisite
 
@@ -88,7 +88,7 @@ Each `sandbox` and `conduct` sub command has a help page particular for the sub 
 
 ## ConductR Plugin 
 
-With the ConductR plugin it is possible to execute the [conductr-cli](https://github.com/typesafehub/conductr-cli) commands within the sbt session. The [Command Overview](#Command-overview) section lists down all available `sandbox` and `conduct` commands.
+With the ConductR plugin it is possible to execute the [conductr-cli](https://github.com/typesafehub/conductr-cli) commands within the sbt session. The [Command Overview](#command-overview) section lists down all available `sandbox` and `conduct` commands.
 
 ### Starting cluster
 
@@ -196,7 +196,7 @@ conduct logs BUNDLE_NAME
 
 ## Bundle Plugins
 
-The bundle plugin produces ConductR bundles and bundle configurations. sbt-conductr contains several bundle plugin. One of the bundle plugin gets used for your project. Check out the [Plugin Overview](#Plugin-overview) section for more information.
+The bundle plugin produces ConductR bundles and bundle configurations. sbt-conductr contains several bundle plugin. One of the bundle plugin gets used for your project. Check out the [Plugin Overview](#plugin-overview) section for more information.
 
 ### Producing a bundle
 
