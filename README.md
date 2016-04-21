@@ -7,6 +7,15 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 * Produce a ConductR bundle
 * Start and stop a local ConductR cluster
 * Manage a ConductR cluster within a sbt session
+ 
+## Table of contents
+
+* [Prerequisite](#Prerequisite)
+* [Setup](#Setup)
+* [Plugin Overview](#Plugin-overview)
+* [Command Overview](#Command-overview)
+* [ConductR Plugin](#ConductR-plugin)
+* [Bundle Plugins](#Bundle-plugins)
 
 ## Prerequisite
 
@@ -17,21 +26,33 @@ Docker is required to run the ConductR cluster as if it were running on a number
 
 The conductr-cli is used to mange the ConductR cluster.
 
-## Usage
+## Setup
 
-sbt-conductr is enabled by simply declaring its dependency:
+Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
 addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.0.1")
 ```
 
-This plugin is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
+## Plugin Overview
+
+sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
+
+| Plugin                | Description                                                                    | Scope   | Trigger
+|-----------------------|--------------------------------------------------------------------------------|---------|--------- 
+| ConductRPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                    | Global  | Always enabled
+| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.   | Project | JavaAppPackaging
+| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.              | Project | Play && BundlePlugin
+| LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
+| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                 | Project | LagomJava && BundlePlugin
+
+The `ConductRPlugin` is enabled as soon as `sbt-conductr` has been added to the project. The `BundlePlugin` is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
 
 ```scala
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 ```
 
-Note that Lagom or Play user can enable one of the following plugins instead:
+In the context of Play or Lagom you should enable the following plugins to trigger the respective bundle plugin:
 
 | Project            | Description                                                                         |
 |--------------------|-------------------------------------------------------------------------------------|
@@ -42,17 +63,72 @@ Note that Lagom or Play user can enable one of the following plugins instead:
 | Play Java 2.4+     | `lazy val root = (project in file(".")).enablePlugins(PlayJava)`                    |
 | Play Java 2.3      | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayJava)`  |
 
-Now you can produce a bundle for your project:
+## Command Overview
 
-```console
-bundle:dist
-```
+The following `sbt-conductr` commands are available:
 
-To manage the ConductR cluster use the `sandbox` or `conduct` command. To start a three-node ConductR cluster on your local machine use:
+Property                     | Description
+-----------------------------|------------
+bundle:dist                  | Produce a ConductR bundle for all projects that have the native packager enabled
+configuration:dist           | Produce a bundle configuration for all projects that have the native packager enabled
+cassandra:configuration:dist | Produce one cassandra bundle configuration in the root target directory
+sandbox help                 | Get usage information of the sandbox command
+sandbox run                  | Start a local ConductR cluster
+sandbox stop                 | Stop the local ConductR cluster
+conduct help                 | Get usage information of the conduct command
+conduct info                 | Gain information on the cluster
+conduct load                 | Loads a bundle and an optional configuration to the ConductR
+conduct run                  | Runs a bundle given a bundle id with an optional absolute scale value specified with --scale
+conduct stop                 | Stops all executions of a bundle given a bundle id
+conduct unload               | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
+conduct logs                 | Retrieves log messages of a given bundle
+conduct events               | Retrieves events of a given bundle
+
+## ConductR Plugin 
+
+With the ConductR plugin it is possible to execute the [conductr-cli](https://github.com/typesafehub/conductr-cli) commands within the sbt session. The [Command Overview](#Command-overview) section lists down all available `sandbox` and `conduct` commands.
+
+### Starting cluster
+
+To start a three-node ConductR cluster on your local machine use:
 
 ```console
 sandbox run <CONDUCTR_VERSION> --nr-of-containers 3
 ```
+
+Visit the [ConductR Developer page](https://www.lightbend.com/product/conductr/developer) to pick up the latest ConductR version from the section **Quick Configuration**.
+
+To get an overview of all available `sandbox run` options use:
+
+```
+sandbox run --help
+```
+
+#### Features
+
+The sandbox contains handy features which can be optionally enabled during startup by specifying the `--feature` option, e.g.:
+
+```console
+sandbox run <CONDUCTR_VERSION> --feature visualization
+```
+
+The following features are available:
+
+| Name          | Description                                                                         |
+|---------------|-------------------------------------------------------------------------------------|
+| visualization | Provides a web interface to visualize the ConductR cluster together with the deployed running bundles. |
+| logging       | The sandbox provides out-of-the-box a simple logging service called `eslite`. This service is automatically enabled without specifying the `logging` feature. This in-memory logging service only captures the log messages within one node. In case you want to display log messages from multiple nodes use the `logging` feature. This will start a elasticsearch and kibana bundle. The elasticsearch bundle will capture the stdout and sterr output of your bundles. To display the log messages use either the `conduct logs` command or the Kibana UI on port 5601. Make sure that your VM has sufficient memory when using this feature. Kibana and elasticsearch together need 2 GB of memory (per node). |
+| monitoring    | Enables Lightbend Monitoring for your bundles                   |
+
+### Stopping cluster
+
+To stop the ConductR sandbox use:
+
+```
+sandbox stop
+```
+
+### Retrieving bundle state
 
 To check the status of your bundles use:
 
@@ -62,33 +138,71 @@ conduct info
 
 This will obtain information on the ConductR cluster.
 
-The IP address of the ConductR host is automatically retrieved and used if:
-- ConductR is running on the same host inside a docker container. The ConductR address is set to `http://{docker-host-ip}:9005`.
-- ConductR is running on the same host. The ConductR address is set to `http://{hostname}:9005`.
+### Loading bundles
 
-In other scenarios it is necessary to set the address to the ConductR server manually. You can do this by using the `--ip` and `--port` options of the `conduct command, e.g.
+To load a bundle to the ConductR cluster use:
 
-```console
-conduct info --ip 192.168.59.103 --port 9999
+```
+conduct load <HIT THE TAB KEY AND THEN RETURN>
 ```
 
-Produce a bundle by typing:
+Using the tab completion feature of sbt will produce a URI representing the location of the last produced bundle within the sbt project. In the context of a multi sbt project it is possible that multiple bundles, each per sub project, has been created. In order to use the tab completion it is then necessary to first switch to the sub project and then use `conduct load`.
+
+### Running bundles
+
+To start a bundle in the cluster use:
+
+```
+conduct run BUNDLE_NAME
+```
+
+This will start the bundle on one instance. To scale it to several instances use the `--scale` option:
+
+```
+conduct run --scale 3 BUNDLE_NAME
+```
+
+As the bundle name you can either use the bundle id or bundle name. Also the name specified doesn't need to exactly match to the name of the bundle. The specified name only needs to be unqiue within the ConductR cluster. So in case you want to run the bundle `this-is-a-very-long-bundle-name` you can just type:
+
+```
+conduct run t
+```
+
+If multiple bundles with a starting `t` exist then the command is aborted and an error message is displayed.
+
+To get an overview of all available `conduct run` options use:
+
+```
+sandbox run --help
+```
+
+### Stopping bundles
+
+Use the `stop` command to stop a bundle:
+
+```console
+conduct stop
+```
+
+### Retrieve log messages of a bundle
+
+To retrieve log messages of a bundle use:
+
+```
+conduct logs BUNDLE_NAME
+```
+
+## Bundle Plugin
+
+The bundle plugin produces ConductR bundles and bundle configurations. sbt-conductr contains several bundle plugin. One of the bundle plugin gets used for your project. Check out the [Plugin Overview](#Plugin-overview) section for more information.
+
+### Producing a bundle
+
+To produce a bundle use:
 
 ```console
 bundle:dist
 ```
-
-...and then load the bundle by typing:
-
-```console
-conduct load <HIT THE TAB KEY AND THEN RETURN>
-```
-
-Using the tab completion feature of sbt will produce a URI representing the location of the last distribution
-produced by the native packager.
-
-Hitting return will cause the bundle to be uploaded. On successfully uploading the bundle the plugin will report
-the `BundleId` to use for subsequent commands on that bundle.
 
 ### Scheduling parameters
 
@@ -125,13 +239,11 @@ BundleKeys.diskSpace := 50.MB
 It is possible to produce additional configuration bundles that contain an optional `bundle.conf` the value of which override the main bundle, as
 well as arbitrary shell scripts. These additional configuration files must be placed in your project's src/bundle-configuration/default folder.
 
-The bundle-configuration folder may contain many configurations in order to support development style scenarios, the desired configuration can be specified with the setting ("default" is the default folder name):
+The bundle-configuration folder may contain many configurations in order to support development style scenarios, the desired configuration can be specified with the setting ("default" is the default folder name) in the `build.sbt`:
 
 ```
 BundleKeys.configurationName := "default"
 ```
-
-...in the `build.sbt`.
 
 Then, to produce this additional bundle execute:
 
@@ -140,12 +252,6 @@ configuration:dist
 ```
 
 > Note that bundle configuration that is generally performed from within sbt is therefore part of the project to support developer use-cases. Operational use-cases where sensitive data is held in configuration is intended to be performed outside of sbt, and in conjunction with the [ConductR CLI](https://github.com/typesafehub/conductr-cli#command-line-interface-cli-for-typesafe-conductr) (specifically the `shazar` command).
-
-The `conduct load` command will pick up the latest configuration with the tab key. Simply hit the tab key after specifying the bundle:
-
-```console
-conduct load /my-project/target/bundle/my-bundle <HIT THE TAB KEY TO USE THE LATEST CONFIGURATION>
-```
 
 ### Advanced bundles and configuration
 
@@ -245,32 +351,6 @@ A configuration for the above can then be generated:
 backend:dist
 ```
 
-### Retrieve logs and events
-
-The log messages and events of a particular bundle can be displayed with the commands:
-
-```console
-conduct logs my-bundle
-conduct events my-bundle
-```
-
-Make sure that your logging infrastructure is up an running. Otherwise the command will timeout: 
-
-```console
-[trace] Stack trace suppressed: run last conductr-service-lookup/*:conduct for the full output.
-[error] (conductr-service-lookup/*:conduct) java.util.concurrent.TimeoutException: Futures timed out after [5 seconds]
-[error] Total time: 5 s, completed Sep 28, 2015 11:40:47 AM
-```
-
-With the `sandbox` command you can start the default logging infrastructure during ConductR cluster startup easily:
-
-```console
-sandbox run --feature logging
-conduct logs my-bundle
-```
-
-Give the logging infrastructure enough time to start before entering the `logs` or `events` command.
-
 ### Bundle settings
 
 The following bundle settings are provided under the `BundleKeys` object:
@@ -296,26 +376,6 @@ roles                 | The types of node in the cluster that this bundle can be
 startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dakka.cluster.roles.1=frontend"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the BundleKeys.memory key and heap flags should not be passed here.
 system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
 systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
-
-### Commands
-
-The following `sbt-conductr` commands are available:
-
-Property               | Description
------------------------|------------
-bundle:dist            | Produce a ConductR bundle for all projects that have the native packager enabled
-configuration:dist     | Produce a bundle configuration for all projects that have the native packager enabled
-sandbox help           | Get usage information of the sandbox command
-sandbox run            | Start a local ConductR cluster
-sandbox stop           | Stop the local ConductR cluster
-conduct help           | Get usage information of the conduct command
-conduct info           | Gain information on the cluster
-conduct load           | Loads a bundle and an optional configuration to the ConductR
-conduct run            | Runs a bundle given a bundle id with an optional absolute scale value specified with --scale
-conduct stop           | Stops all executions of a bundle given a bundle id
-conduct unload         | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
-conduct logs           | Retrieves log messages of a given bundle
-conduct events         | Retrieves events of a given bundle
 
 
 &copy; Lightbend Inc., 2014-2016
