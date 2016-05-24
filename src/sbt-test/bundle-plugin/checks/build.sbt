@@ -46,7 +46,7 @@ checkBundleConf := {
                             |  checks-status = {
                             |    description      = "Status check for the bundle component"
                             |    file-system-type = "universal"
-                            |    start-command    = ["check", "--initial-delay", "2", "$CHECKS_HOST?retry-count=5&retry-delay=3"]
+                            |    start-command    = ["check", "--initial-delay", "1", "$CHECKS_HOST?retry-count=5&retry-delay=3"]
                             |    endpoints        = {}
                             |  }
                             |}""".stripMargin

@@ -65,7 +65,7 @@ object BundlePlugin extends AutoPlugin {
       bundleConf := getConfig(config, forAllSettings = true).value,
       executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
       NativePackagerKeys.packageName := (normalizedName in config).value + "-v" + (compatibilityVersion in config).value,
-      NativePackagerKeys.dist := Def.taskDyn(createDist(config, (bundleType in config).value)).value,
+      NativePackagerKeys.dist := Def.taskDyn(createBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stage := Def.taskDyn(stageBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
       target := projectTarget.value / "bundle"
@@ -78,7 +78,6 @@ object BundlePlugin extends AutoPlugin {
     inConfig(config)(Seq(
       bundleConf := getConfig(config, forAllSettings = false).value,
       checks := Seq.empty,
-      compatibilityVersion := (version in config).value.takeWhile(_ != '.'),
       executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
       NativePackagerKeys.dist := createConfiguration(config).value,
       NativePackagerKeys.stage := stageConfiguration(config).value,
@@ -164,7 +163,7 @@ object BundlePlugin extends AutoPlugin {
     extracted.structure.data.definingScope(scoped.scope, scoped.key).flatMap(_.config.toOption.map(_.name))
   }
 
-  private def createDist(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
+  private def createBundle(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
     validateSettings(config).value
 
     val bundleTarget = (target in config).value
@@ -182,12 +181,7 @@ object BundlePlugin extends AutoPlugin {
     )
   }
 
-  /**
-   * Creates a bundle configuration in the specified config target directory
-   *
-   * @param config under which the bundle configuration is created
-   * @return the created bundle configuration file
-   */
+  // Creates a bundle configuration in the specified config target directory
   private def createConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
     validateSettings(config).value
 
@@ -201,6 +195,40 @@ object BundlePlugin extends AutoPlugin {
       bundleMappings,
       f => streams.value.log.info(s"Bundle configuration has been created: $f")
     )
+  }
+
+  private def stageBundle(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
+    val bundleTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
+    writeConfig(bundleTarget, (bundleConf in config).value)
+    val componentTarget = bundleTarget / (normalizedName in config).value
+    IO.copy((mappings in bundleTypeConfig).value.map(p => (p._1, componentTarget / p._2)))
+    componentTarget
+  }
+
+  private def stageConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
+    validateSettings(config).value
+
+    val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
+    val generatedConf = (bundleConf in config).value
+    val srcDir = (sourceDirectory in config).value / (configurationName in config).value
+    if (generatedConf.isEmpty && !srcDir.exists())
+      sys.error(
+        s"""Directory $srcDir does not exist.
+            | Specify the desired configuration directory name
+            |  with the 'configurationName' setting given that it is not "default"""".stripMargin
+      )
+    IO.createDirectory(configurationTarget)
+    if (generatedConf.nonEmpty) writeConfig(configurationTarget, generatedConf)
+    IO.copyDirectory(srcDir, configurationTarget, overwrite = true, preserveLastModified = true)
+    configurationTarget
+  }
+
+  private def writeConfig(target: File, contents: String): File = {
+    val configFile = target / "bundle.conf"
+    IO.write(configFile, contents, Utf8)
+    configFile
   }
 
   private final val DefaultEndpointName = "web"
@@ -245,6 +273,7 @@ object BundlePlugin extends AutoPlugin {
    * Creates a zip file for a given target directory.
    * The name of the zip file contains a SHA256 digest of the target directory,
    * meaning based on the content of the target directory a (unique) digest is created.
+   *
    * @param archiveTarget The target for which the zip archive is created
    * @param archiveName The first name part of the zip archive. The second part is the SHA256 digest
    * @param bundleMappings included in the output
@@ -395,93 +424,80 @@ object BundlePlugin extends AutoPlugin {
   }
 
   private def getConfig(config: Configuration, forAllSettings: Boolean): Def.Initialize[Task[String]] = Def.task {
-    val checkComponents = (checksConfigName in config).value match {
-      case (value, configName) if (forAllSettings || configName.isDefined) && value.nonEmpty =>
-        val checkInitialDelayValue = (checkInitialDelay in config).value
-        val checkInitialDelayInSeconds =
-          if (checkInitialDelayValue.toMillis % 1000 > 0)
-            checkInitialDelayValue.toSeconds + 1 // always round up
-          else
-            checkInitialDelayValue.toSeconds
-        Seq(
-          value.map(uri => s""""$uri"""").mkString(
-            s"""components = {
-                |  ${(normalizedName in config).value}-status = {
-                |    description      = "Status check for the bundle component"
-                |    file-system-type = "universal"
-                |    start-command    = ["check", "--initial-delay", "$checkInitialDelayInSeconds", """.stripMargin,
-            ", ",
-            s"""]
-                |    endpoints        = {}
-                |  }
-                |}""".stripMargin
-          )
-        )
-      case _ =>
-        Seq.empty[String]
-    }
+    /*
+     * This test is about determining if a value has been provided at a specific level of configuration,
+     * as distinct from delegation. We don’t want to determine the value of a given setting, but whether
+     * it has been defined at an exact point on the config axis...
+     * In the case of forAllSettings then we don’t care - we’re just going to write the value out.
+     */
+    def valueSuppliedForConfig[T](valueAndConfigName: (T, Option[String])): Boolean =
+      forAllSettings || valueAndConfigName._2.isDefined
 
-    def formatValue[T](format: String, valueAndConfigName: (T, Option[String])): Seq[String] =
-      valueAndConfigName match {
-        case (value, configName) if forAllSettings || configName.isDefined => Seq(format.format(value))
-        case _                                                             => Seq.empty[String]
+    if (valueSuppliedForConfig((normalizedNameConfigName in config).value) ||
+      valueSuppliedForConfig((compatibilityVersionConfigName in config).value) ||
+      valueSuppliedForConfig((systemConfigName in config).value) ||
+      valueSuppliedForConfig((systemVersionConfigName in config).value) ||
+      valueSuppliedForConfig((nrOfCpusConfigName in config).value) ||
+      valueSuppliedForConfig((memoryConfigName in config).value) ||
+      valueSuppliedForConfig((diskSpaceConfigName in config).value) ||
+      valueSuppliedForConfig((rolesConfigName in config).value) ||
+      valueSuppliedForConfig((projectInfoConfigName in config).value) ||
+      valueSuppliedForConfig((bundleTypeConfigName in config).value) ||
+      valueSuppliedForConfig((startCommandConfigName in config).value) ||
+      valueSuppliedForConfig((endpointsConfigName in config).value)) {
+
+      val checkComponents = (checksConfigName in config).value match {
+        case (value, configName) if (forAllSettings || configName.isDefined) && value.nonEmpty =>
+          val checkInitialDelayValue = (checkInitialDelay in config).value
+          val checkInitialDelayInSeconds = Math.max(1, checkInitialDelayValue.toSeconds)
+          Seq(
+            value.map(uri => s""""$uri"""").mkString(
+              s"""components = {
+                  |  ${(normalizedName in config).value}-status = {
+                  |    description      = "Status check for the bundle component"
+                  |    file-system-type = "universal"
+                  |    start-command    = ["check", "--initial-delay", "$checkInitialDelayInSeconds", """.stripMargin,
+              ", ",
+              s"""]
+                  |    endpoints        = {}
+                  |  }
+                  |}""".stripMargin
+            )
+          )
+        case _ =>
+          Seq.empty[String]
       }
 
-    def toString[T](valueAndConfigName: (T, Option[String]), f: T => String): (String, Option[String]) =
-      f(valueAndConfigName._1) -> valueAndConfigName._2
+      def formatValue[T](format: String, valueAndConfigName: (T, Option[String])): Seq[String] =
+        if (valueSuppliedForConfig(valueAndConfigName))
+          Seq(format.format(valueAndConfigName._1))
+        else
+          Seq.empty[String]
 
-    val declarations =
-      Seq(s"""version              = "${bundleConfVersion.value}"""") ++
-        formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
-        formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
-        formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
-        formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
-        formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
-        formatValue("memory               = %s", toString((memoryConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
-        formatValue("diskSpace            = %s", toString((diskSpaceConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
-        formatValue(s"roles                = %s", toString((rolesConfigName in config).value, (v: Set[String]) => formatSeq(v))) ++
-        Seq("components = {", s"  ${(normalizedName in config).value} = {") ++
-        formatValue(s"""    description      = "%s"""", toString((projectInfoConfigName in config).value, (v: ModuleInfo) => v.description)) ++
-        formatValue(s"""    file-system-type = "%s"""", (bundleTypeConfigName in config).value) ++
-        formatValue(s"""    start-command    = %s""", toString((startCommandConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
-        formatValue(s"""    endpoints = %s""", toString((endpointsConfigName in config).value, (v: Map[String, Endpoint]) => formatEndpoints(bundleConfVersion.value, v))) ++
-        Seq("  }", "}") ++
-        checkComponents
+      def toString[T](valueAndConfigName: (T, Option[String]), f: T => String): (String, Option[String]) =
+        f(valueAndConfigName._1) -> valueAndConfigName._2
 
-    declarations.mkString("\n")
-  }
+      val declarations =
+        Seq(s"""version              = "${bundleConfVersion.value}"""") ++
+          formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
+          formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
+          formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
+          formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
+          formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
+          formatValue("memory               = %s", toString((memoryConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
+          formatValue("diskSpace            = %s", toString((diskSpaceConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
+          formatValue(s"roles                = %s", toString((rolesConfigName in config).value, (v: Set[String]) => formatSeq(v))) ++
+          Seq("components = {", s"  ${(normalizedName in config).value} = {") ++
+          formatValue(s"""    description      = "%s"""", toString((projectInfoConfigName in config).value, (v: ModuleInfo) => v.description)) ++
+          formatValue(s"""    file-system-type = "%s"""", (bundleTypeConfigName in config).value) ++
+          formatValue(s"""    start-command    = %s""", toString((startCommandConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
+          formatValue(s"""    endpoints = %s""", toString((endpointsConfigName in config).value, (v: Map[String, Endpoint]) => formatEndpoints(bundleConfVersion.value, v))) ++
+          Seq("  }", "}") ++
+          checkComponents
 
-  private def stageBundle(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
-    validateSettings(config).value
-
-    val bundleTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
-    writeConfig(bundleTarget, (bundleConf in config).value)
-    val componentTarget = bundleTarget / (normalizedName in config).value
-    IO.copy((mappings in bundleTypeConfig).value.map(p => (p._1, componentTarget / p._2)))
-    componentTarget
-  }
-
-  private def stageConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
-    validateSettings(config).value
-
-    val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
-    val generatedConf = (bundleConf in config).value
-    val srcDir = (sourceDirectory in config).value / (configurationName in config).value
-    if (generatedConf.isEmpty && !srcDir.exists())
-      sys.error(
-        s"""Directory $srcDir does not exist.
-            | Specify the desired configuration directory name
-            |  with the 'configurationName' setting given that it is not "default"""".stripMargin
-      )
-    IO.createDirectory(configurationTarget)
-    if (generatedConf.nonEmpty) writeConfig(configurationTarget, generatedConf)
-    IO.copyDirectory(srcDir, configurationTarget, overwrite = true, preserveLastModified = true)
-    configurationTarget
-  }
-
-  private def writeConfig(target: File, contents: String): File = {
-    val configFile = target / "bundle.conf"
-    IO.write(configFile, contents, Utf8)
-    configFile
+      declarations.mkString("\n")
+    } else {
+      ""
+    }
   }
 }

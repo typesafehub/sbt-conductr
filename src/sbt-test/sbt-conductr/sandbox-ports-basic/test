@@ -1,4 +1,4 @@
-> sandbox run 1.1.2 --nr-of-containers 3 --port 1111 --port 2222
+> sandbox run 1.1.5 --nr-of-containers 3 --port 1111 --port 2222
 
 > checkPorts
 

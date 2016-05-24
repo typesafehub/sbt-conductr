@@ -15,16 +15,14 @@ BundleKeys.diskSpace := 5.MB
 
 val verifyConductLoad = taskKey[Unit]("")
 verifyConductLoad := {
-  conductInfo() should include("""NAME                           #REP  #STR  #RUN
-                               |reactive-maps-backend-region      1     0     0
-                               |reactive-maps-backend-summary     1     0     0""".stripMargin)
+  conductInfo() should include("""reactive-maps-backend-region      1     0     0
+                                 |reactive-maps-backend-summary     1     0     0""".stripMargin)
 }
 
 val verifyConductRun = taskKey[Unit]("")
 verifyConductRun := {
-  conductInfo() should include("""NAME                           #REP  #STR  #RUN
-                               |reactive-maps-backend-region      1     0     1
-                               |reactive-maps-backend-summary     1     0     1""".stripMargin)
+  conductInfo() should include("""reactive-maps-backend-region      1     0     1
+                                 |reactive-maps-backend-summary     1     0     1""".stripMargin)
 }
 
 val verifyConductStop = taskKey[Unit]("")

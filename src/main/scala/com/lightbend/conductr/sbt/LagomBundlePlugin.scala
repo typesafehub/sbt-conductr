@@ -91,7 +91,7 @@ object LagomBundlePlugin extends AutoPlugin {
     )
 
   override def buildSettings =
-    super.buildSettings ++ cassandraConfigurationSettings(CassandraConfiguration)
+    cassandraConfigurationSettings(CassandraConfiguration)
 
   /**
    * Override bundle settings from sbt-bundle with the collected Lagom endpoints
