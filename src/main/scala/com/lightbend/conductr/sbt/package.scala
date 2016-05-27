@@ -3,7 +3,6 @@ package com.lightbend.conductr
 import java.lang.reflect.InvocationTargetException
 import java.nio.charset.Charset
 import _root_.sbt._
-import _root_.sbt.Resolver.bintrayRepo
 import scala.reflect.ClassTag
 import scala.util.Try
 import scala.annotation.tailrec
@@ -63,10 +62,6 @@ package object sbt {
       }
   }
 
-  object Resolver {
-    val typesafeBintrayReleases = bintrayRepo("typesafe", "maven-releases")
-  }
-
   object Library {
     def playConductrBundleLib(playVersion: String, scalaVersion: String, conductrLibVersion: String) =
       "com.typesafe.conductr" % s"play${formatVersion(playVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
@@ -78,7 +73,7 @@ package object sbt {
   }
 
   object Version {
-    val conductrBundleLib = "1.4.3"
+    val conductrBundleLib = "1.4.4"
   }
 
   /**
@@ -87,7 +82,7 @@ package object sbt {
   object BaseKeys {
     val conductrBundleLibVersion = SettingKey[String](
       "play-bundle-conductr-bundle-lib-version",
-      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.3"
+      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.4"
     )
   }
 

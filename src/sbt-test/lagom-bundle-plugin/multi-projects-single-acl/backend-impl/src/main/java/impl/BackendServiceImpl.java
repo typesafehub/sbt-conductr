@@ -11,9 +11,7 @@ import akka.stream.javadsl.Source;
 public class BackendServiceImpl implements BackendService {
 
   @Override
-  public ServiceCall<NotUsed, NotUsed, NotUsed> bar() {
-    return (id, request) -> {
-      return CompletableFuture.completedFuture(NotUsed.getInstance());
-    };
+  public ServiceCall<NotUsed, NotUsed> bar() {
+    return request -> CompletableFuture.completedFuture(NotUsed.getInstance());
   }
 }

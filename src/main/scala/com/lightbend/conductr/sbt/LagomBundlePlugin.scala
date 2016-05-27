@@ -42,8 +42,7 @@ object LagomPlayBundlePlugin extends AutoPlugin {
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
       LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
-      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value),
-      resolvers += Resolver.typesafeBintrayReleases
+      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
     )
 }
 
@@ -86,7 +85,6 @@ object LagomBundlePlugin extends AutoPlugin {
         LagomImport.component("api-tools") % apiToolsConfig,
         Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
       ),
-      resolvers += Resolver.typesafeBintrayReleases,
       manageClasspath(apiToolsConfig)
     )
 
@@ -154,7 +152,7 @@ object LagomBundlePlugin extends AutoPlugin {
   private def stageCassandraConfiguration(config: Configuration, filter: ScopeFilter): Def.Initialize[Task[File]] = Def.task {
     val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
     // Use acls if in any of the projects 'enableAcls' is set to 'true'
-    val enableAcls = (BundleKeys.enableAcls in Bundle).?.map(_.getOrElse(false)).all(filter).value.exists(_ == true)
+    val enableAcls = (BundleKeys.enableAcls in Bundle).?.map(_.getOrElse(false)).all(filter).value.contains(true)
     val resourcePath = if (enableAcls) "bundle-configuration/cassandra-acls" else "bundle-configuration/cassandra-services"
     val jarFile = new File(this.getClass.getProtectionDomain.getCodeSource.getLocation.getPath)
     if (jarFile.isFile) {

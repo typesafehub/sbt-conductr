@@ -11,9 +11,7 @@ import akka.stream.javadsl.Source;
 public class DebitServiceImpl implements DebitService {
 
   @Override
-  public ServiceCall<NotUsed, NotUsed, NotUsed> debit() {
-    return (id, request) -> {
-      return CompletableFuture.completedFuture(NotUsed.getInstance());
-    };
+  public ServiceCall<NotUsed, NotUsed> debit() {
+    return request -> CompletableFuture.completedFuture(NotUsed.getInstance());
   }
 }

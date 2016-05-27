@@ -11,9 +11,7 @@ import akka.stream.javadsl.Source;
 public class FeedServiceImpl implements FeedService {
 
   @Override
-  public ServiceCall<NotUsed, NotUsed, NotUsed> feed() {
-    return (id, request) -> {
-      return CompletableFuture.completedFuture(NotUsed.getInstance());
-    };
+  public ServiceCall<NotUsed, NotUsed> feed() {
+    return request -> CompletableFuture.completedFuture(NotUsed.getInstance());
   }
 }

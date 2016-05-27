@@ -11,14 +11,14 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface BarService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> getBar();
-  ServiceCall<NotUsed, NotUsed, NotUsed> addBar();
+  ServiceCall<NotUsed, NotUsed> getBar();
+  ServiceCall<NotUsed, NotUsed> addBar();
 
   @Override
   default Descriptor descriptor() {
     return named("barservice").with(
-      restCall(Method.GET,  "/bar", getBar()),
-      restCall(Method.POST, "/bar", addBar())
+      restCall(Method.GET,  "/bar", this::getBar),
+      restCall(Method.POST, "/bar", this::addBar)
     ).withAutoAcl(true);
   }
 }

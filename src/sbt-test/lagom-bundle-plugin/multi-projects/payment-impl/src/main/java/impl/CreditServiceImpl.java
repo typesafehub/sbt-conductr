@@ -11,9 +11,7 @@ import akka.stream.javadsl.Source;
 public class CreditServiceImpl implements CreditService {
 
   @Override
-  public ServiceCall<NotUsed, NotUsed, NotUsed> credit() {
-    return (id, request) -> {
-      return CompletableFuture.completedFuture(NotUsed.getInstance());
-    };
+  public ServiceCall<NotUsed, NotUsed> credit() {
+    return request -> CompletableFuture.completedFuture(NotUsed.getInstance());
   }
 }

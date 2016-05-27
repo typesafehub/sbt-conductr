@@ -11,12 +11,12 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface DebitService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> debit();
+  ServiceCall<NotUsed, NotUsed> debit();
 
   @Override
   default Descriptor descriptor() {
     return named("/debitservice").with(
-      restCall(Method.GET,  "/", debit())
+      restCall(Method.GET,  "/", this::debit)
     ).withAutoAcl(true);
   }
 }
