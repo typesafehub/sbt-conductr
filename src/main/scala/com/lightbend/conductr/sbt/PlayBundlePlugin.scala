@@ -33,8 +33,7 @@ object PlayBundlePlugin extends AutoPlugin {
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
       conductrBundleLibVersion := Version.conductrBundleLib,
-      libraryDependencies += Library.playConductrBundleLib(PlayVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value),
-      resolvers += Resolver.typesafeBintrayReleases
+      libraryDependencies += Library.playConductrBundleLib(PlayVersion.current, scalaBinaryVersion.value, conductrBundleLibVersion.value)
     )
 }
 

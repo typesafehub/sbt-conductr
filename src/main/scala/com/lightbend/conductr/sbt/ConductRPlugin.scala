@@ -8,10 +8,15 @@ import sbt._
 import sbt.Keys._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
+import sbt.ProcessLogger
 import com.typesafe.sbt.packager.Keys._
 
 import language.postfixOps
 import java.io.IOException
+
+import scala.annotation.tailrec
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration._
 
 /**
  * An sbt plugin that interact's with ConductR's controller and potentially other components.
@@ -27,10 +32,7 @@ object ConductrPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   override def globalSettings: Seq[Setting[_]] =
-    super.globalSettings ++ List(
-      Keys.aggregate in sandbox := false,
-      Keys.aggregate in conduct := false,
-
+    List(
       dist in Bundle := file(""),
       dist in BundleConfiguration := file(""),
 
@@ -45,25 +47,162 @@ object ConductrPlugin extends AutoPlugin {
     )
 
   override def projectSettings: Seq[Setting[_]] =
-    super.projectSettings ++ List(
+    List(
       // Here we try to detect what binary universe we exist inside, so we can
       // accurately grab artifact revisions.
       isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
-
-      sandbox := sandboxTask.value.evaluated,
-      sandboxRunTaskInternal := sandboxRunTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      conduct := conductTask.value.evaluated,
 
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist).triggeredBy(dist in Bundle),
       discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration)
     )
 
-  private final val LatestConductrVersion = "1.1.3"
+  override def buildSettings: Seq[Setting[_]] =
+    List(
+      Keys.aggregate in conduct := false,
+      Keys.aggregate in generateInstallationScript := false,
+      Keys.aggregate in install := false,
+      Keys.aggregate in sandbox := false,
+
+      sandbox := sandboxTask.value.evaluated,
+      sandboxRunTaskInternal := sandboxRunTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
+      conduct := conductTask.value.evaluated,
+
+      installationData := installationDataTask.value,
+      generateInstallationScript := generateInstallationScriptTask().value,
+      install := installTask().value
+    )
+
+  private final val LatestConductrVersion = "1.1.5"
   private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
   private final val SandboxRunArgsAttrKey = AttributeKey[SandboxRunArgs]("conductr-sandbox-run-args")
   private final val sandboxRunTaskInternal = taskKey[Unit]("Internal Helper to call sandbox run task.")
+
+  private def installationDataTask: Def.Initialize[Task[Seq[InstallationData]]] = Def.taskDyn {
+    val rootProjectStructure = Project.extract(state.value).structure
+    val allProjects = rootProjectStructure.allProjects
+    val bundleInstallationScriptsTasks =
+      allProjects.map { project =>
+        val projectRef = ProjectRef(rootProjectStructure.root, project.id)
+
+        val bundleConfiguration = project.configurations.find(c => c.name == Bundle.name)
+        val bundleConfigurationConfiguration = project.configurations.find(c => c.name == BundleConfiguration.name)
+
+        (bundleConfiguration, bundleConfigurationConfiguration) match {
+          case (Some(b), Some(bc)) =>
+            Def.taskDyn {
+              val bundleName = (normalizedName in b in projectRef).value
+              val bundleFile = (dist in b in projectRef).value.toPath
+              val bundleConfigContents = (BundleKeys.bundleConf in bc in projectRef).value
+              val bundleConfigSrcDir = (sourceDirectory in bc in projectRef).value / (BundleKeys.configurationName in bc in projectRef).value
+              if (bundleConfigContents.nonEmpty || bundleConfigSrcDir.exists()) {
+                Def.task {
+                  val bundleConfigFile = (dist in bc in projectRef).value.toPath
+                  Some(InstallationData(bundleName, Right(bundleFile), Some(bundleConfigFile))): Option[InstallationData]
+                }
+              } else {
+                Def.task[Option[InstallationData]] {
+                  Some(InstallationData(bundleName, Right(bundleFile), None))
+                }
+              }
+            }
+          case _ =>
+            Def.taskDyn(Def.task[Option[InstallationData]](None))
+        }
+      }
+
+    def fold(a: Seq[InstallationData])(tasks: Seq[Def.Initialize[Task[Option[InstallationData]]]]): Def.Initialize[Task[Seq[InstallationData]]] =
+      tasks match {
+        case Nil =>
+          Def.task(a)
+        case x :: xs =>
+          Def.taskDyn {
+            x.value match {
+              case Some(v) => fold(a :+ v)(xs)
+              case None    => fold(a)(xs)
+            }
+          }
+      }
+
+    fold(List.empty)(bundleInstallationScriptsTasks)
+  }
+
+  private def generateInstallationScriptTask(): Def.Initialize[Task[File]] = Def.task {
+    val installDir = (target in LocalRootProject).value
+    val installationScript = installDir / "install.sh"
+    val installPath = installDir.toPath
+    val installationScriptContents = installationData.value.map {
+      case InstallationData(bundleName, bundle, bundleConfigFile) =>
+        val bundleIdEnv = bundleName.replaceAll("\\W", "_").toUpperCase + "_BUNDLE_ID"
+        val bundleArg = InstallationData.nameOrPath(
+          bundle match {
+            case Left(b)  => Left(b)
+            case Right(b) => Right(installPath.relativize(b))
+          }
+        )
+        val bundleConfigArg = bundleConfigFile.map(installPath.relativize).mkString("", "", " ")
+        s"""
+           |echo "Deploying $bundleName..."
+           |$bundleIdEnv=$$(conduct load $bundleArg $bundleConfigArg--long-ids -q)
+           |conduct run $${$bundleIdEnv} --no-wait -q
+                 """.stripMargin
+    }
+    IO.write(
+      installationScript,
+      installationScriptContents.mkString(
+        s"""#!/usr/bin/env bash
+            |cd "$$( dirname "$${BASH_SOURCE[0]}" )"
+            |""".stripMargin,
+        "",
+        """
+          |echo 'Your system is deployed. Running "conduct info" to observe the cluster.'
+          |conduct info
+          |""".stripMargin
+      ),
+      Utf8
+    )
+    println("\nThe ConductR installation script has been successfully created at:\n  " + installationScript)
+    installationScript.setExecutable(true)
+    installationScript
+  }
+
+  private def installTask(): Def.Initialize[Task[Unit]] = Def.task {
+    withProcessHandling {
+      val nrOfContainers = "docker ps -q --filter='name=cond-'".lines_!.size
+      if (nrOfContainers > 0) {
+        println("Restarting ConductR to ensure a clean state...")
+        "docker exec cond-0 rm /opt/conductr/conf/seed-nodes".! // Allow the first node to form the new cluster
+        for (n <- 0 until nrOfContainers) s"docker restart -t 0 cond-$n".!
+      } else {
+        throw new IllegalStateException("Please first start the sandbox using 'sandbox run'.")
+      }
+    }(sys.error("There was a problem re/starting the sandbox."))
+
+    withProcessHandling {
+      waitForConductr()
+
+      installationData.value.foreach {
+        case InstallationData(bundleName, bundle, bundleConfigFile) =>
+          println(s"Deploying $bundleName...")
+          val bundleArg = InstallationData.nameOrPath(bundle)
+          val bundleConfigArg = bundleConfigFile.mkString("", "", " ")
+          s"conduct load $bundleArg $bundleConfigArg--long-ids -q".lines_!.headOption match {
+            case Some(bundleId) =>
+              if (s"conduct run $bundleId --no-wait -q".! != 0)
+                throw new IllegalStateException(s"Bundle $bundleArg could not run")
+            case None =>
+              throw new IllegalStateException(s"Bundle $bundleArg could not be loaded")
+          }
+      }
+
+    }(sys.error("There was a problem installing the project to ConductR."))
+
+    println
+    println("""Your system is deployed. Running "conduct info" to observe the cluster.""")
+    "conduct info".!
+    println
+  }
 
   private def sandboxTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
     verifyCliInstallation()
@@ -98,6 +237,7 @@ object ConductrPlugin extends AutoPlugin {
   private def sandboxSubHelp(command: String): Unit =
     s"sandbox $command --help".!
 
+  // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def sandboxRunTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
     val projectImageVersion = if (hasRpLicense.value) Some(LatestConductrVersion) else None
     val overrideEndpoints = (BundleKeys.overrideEndpoints in Bundle).?.map(_.flatten.getOrElse(Map.empty)).all(filter).value.flatten
@@ -115,7 +255,7 @@ object ConductrPlugin extends AutoPlugin {
           }
         }
 
-    val args = state.value.get(SandboxRunArgsAttrKey).get
+    val args = state.value.get(SandboxRunArgsAttrKey).getOrElse(SandboxRunArgs())
     sandboxRun(
       conductrImageVersion = args.imageVersion orElse projectImageVersion,
       conductrImage = args.image,
@@ -169,6 +309,31 @@ object ConductrPlugin extends AutoPlugin {
    */
   def sandboxStop(): Unit =
     Process(Seq("sandbox", "stop")).!
+
+  /**
+   * A convenience function that waits on ConductR to become available.
+   *
+   * @param duration the max time to wait.
+   */
+  def waitForConductr(implicit duration: FiniteDuration = 20.seconds): Unit = {
+    print("Waiting for ConductR to start")
+
+    val deadline = duration.fromNow
+
+    @tailrec
+    def loop(deadline: Deadline): Unit = {
+      print(".")
+      if (deadline.isOverdue())
+        throw new TimeoutException(s"ConductR has not been started within ${duration.toSeconds} seconds!")
+      if (s"conduct info".!(NoProcessLogging) != 0) {
+        Thread.sleep(500)
+        loop(deadline)
+      }
+    }
+
+    loop(deadline)
+    println
+  }
 
   private def conductHelp(): Unit =
     s"conduct --help".!
@@ -304,10 +469,14 @@ object ConductrPlugin extends AutoPlugin {
         (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
           val bundle = loadFromContext(discoveredDist, ctx, s)
           val bundleConfig = loadFromContext(discoveredConfigDist, ctx, s)
-          val bundleNames: Set[String] =
+          val bundleNames =
             withProcessHandling {
-              (Process("conduct info") #| Process(Seq("awk", "{print $2}")) #| Process(Seq("awk", "{if(NR>1)print}"))).lines(NoProcessLogging).toSet
-            }(Set.empty)
+              "conduct info"
+                .lines_!(NoProcessLogging)
+                .slice(1, 11) //                         No more than this number of lines please, and no header...
+                .flatMap(_.split("\\s+").slice(1, 2)) // Just the second column i.e. the name
+                .toSet
+            }(Set.empty[String])
           parser(bundle, bundleConfig, bundleNames)
         }
       }

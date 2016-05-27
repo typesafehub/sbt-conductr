@@ -11,12 +11,12 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface BackendService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> bar();
+  ServiceCall<NotUsed, NotUsed> bar();
 
   @Override
   default Descriptor descriptor() {
     return named("backendservice").with(
-      restCall(Method.GET,  "/bar", bar())
+      restCall(Method.GET,  "/bar", this::bar)
     );
   }
 }

@@ -11,12 +11,12 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface FeedService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> feed();
+  ServiceCall<NotUsed, NotUsed> feed();
 
   @Override
   default Descriptor descriptor() {
     return named("/socialservice").with(
-      restCall(Method.GET,  "/", feed())
+      restCall(Method.GET,  "/", this::feed)
     ).withAutoAcl(true);
   }
 }

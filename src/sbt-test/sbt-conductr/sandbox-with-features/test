@@ -1,4 +1,4 @@
-> sandbox run 1.1.2 --feature visualization --feature logging
+> sandbox run 1.1.5 --feature visualization --feature logging
 
 > checkPorts
 

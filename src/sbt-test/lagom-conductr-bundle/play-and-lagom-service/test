@@ -1,0 +1,11 @@
+> sandbox run 1.1.5
+
+> install
+$ sleep 5000
+
+> verifyConductInfo
+
+> sandbox stop
+
+> generateInstallationScript
+$ exists target/install.sh

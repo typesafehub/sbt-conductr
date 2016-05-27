@@ -11,16 +11,16 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface FooService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> foos();
-  ServiceCall<NotUsed, NotUsed, NotUsed> foo();
-  ServiceCall<NotUsed, NotUsed, NotUsed> fooFriends();
+  ServiceCall<NotUsed, NotUsed> foos();
+  ServiceCall<NotUsed, NotUsed> foo();
+  ServiceCall<NotUsed, NotUsed> fooFriends();
 
   @Override
   default Descriptor descriptor() {
     return named("fooservice").with(
-      restCall(Method.GET,  "/foo", foos()),
-      restCall(Method.GET,  "/foo/:id", foo()),
-      restCall(Method.GET,  "/foo/:id/friends", fooFriends())
+      restCall(Method.GET,  "/foo", this::foos),
+      restCall(Method.GET,  "/foo/:id", this::foo),
+      restCall(Method.GET,  "/foo/:id/friends", this::fooFriends)
     ).withAutoAcl(true);
   }
 }

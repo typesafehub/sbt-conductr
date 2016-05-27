@@ -41,11 +41,12 @@ sbt-conductr contains several sbt auto plugins. The following table provides an 
 
 | Plugin                | Description                                                                    | Scope   | Trigger
 |-----------------------|--------------------------------------------------------------------------------|---------|--------- 
-| ConductRPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                    | Global  | Always enabled
+| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                    | Global  | Always enabled
 | BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.   | Project | JavaAppPackaging
 | PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.              | Project | Play && BundlePlugin
 | LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
 | LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                 | Project | LagomJava && BundlePlugin
+| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                          | Global  | ConductrPlugin && LagomBundlePlugin
 
 The `ConductRPlugin` is enabled as soon as `sbt-conductr` has been added to the project. The `BundlePlugin` is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
 
@@ -74,8 +75,8 @@ bundle:dist                  | Produce a ConductR bundle for all projects that h
 configuration:dist           | Produce a bundle configuration for all projects that have the native packager enabled
 cassandra:configuration:dist | Produce one cassandra bundle configuration in the root target directory
 sandbox help                 | Get usage information of the sandbox command
-sandbox run                  | Start a local ConductR cluster
-sandbox stop                 | Stop the local ConductR cluster
+sandbox run                  | Start a local ConductR sandbox
+sandbox stop                 | Stop the local ConductR sandbox
 conduct help                 | Get usage information of the conduct command
 conduct info                 | Gain information on the cluster
 conduct load                 | Loads a bundle and an optional configuration to the ConductR
@@ -84,6 +85,7 @@ conduct stop                 | Stops all executions of a bundle given a bundle i
 conduct unload               | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 conduct logs                 | Retrieves log messages of a given bundle
 conduct events               | Retrieves events of a given bundle
+install                      | Generates an installation script and then installs all of your projects to the local ConductR sandbox (expected to be running)
 
 Each `sandbox` and `conduct` sub command has a help page particular for the sub command, e.g. `conduct run --help`.
 
@@ -130,6 +132,16 @@ To stop the ConductR sandbox use:
 ```
 sandbox stop
 ```
+
+### Installing your project
+
+The `install` command will introspect your project and its sub-projects and then load and run everything in ConductR at once. The local sandbox is expected to be running and it will first be restarted to ensure that it is in a clean state.
+
+### Generating an installation script
+
+Just like the `install` command, the `generateInstallationScript` command also introspects your project but then writes what is required to load and run everything to a script. The command will output the location of the generated script once done. You are encouraged to copy this script and use it as the basis of installing your project for production deployments.
+
+You can run the script as many times as you need; ConductR load and run commands are idempotent thus allowing you to conveniently load and run any individual components that have stopped for some reason.
 
 ### Retrieving bundle state
 

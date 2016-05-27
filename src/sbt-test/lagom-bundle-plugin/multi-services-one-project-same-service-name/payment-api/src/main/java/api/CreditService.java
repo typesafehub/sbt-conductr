@@ -11,12 +11,12 @@ import static com.lightbend.lagom.javadsl.api.Service.*;
 
 public interface CreditService extends Service {
 
-  ServiceCall<NotUsed, NotUsed, NotUsed> credit();
+  ServiceCall<NotUsed, NotUsed> credit();
 
   @Override
   default Descriptor descriptor() {
     return named("paymentservice").with(
-      restCall(Method.GET,  "/credit", credit())
+      restCall(Method.GET,  "/credit", this::credit)
     ).withAutoAcl(true);
   }
 }
