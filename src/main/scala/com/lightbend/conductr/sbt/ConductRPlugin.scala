@@ -53,19 +53,19 @@ object ConductrPlugin extends AutoPlugin {
       isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
 
       discoveredDist <<= (dist in Bundle).storeAs(discoveredDist).triggeredBy(dist in Bundle),
-      discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration)
+      discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration),
+
+      conduct := conductTask.value.evaluated
     )
 
   override def buildSettings: Seq[Setting[_]] =
     List(
-      Keys.aggregate in conduct := false,
       Keys.aggregate in generateInstallationScript := false,
       Keys.aggregate in install := false,
       Keys.aggregate in sandbox := false,
 
       sandbox := sandboxTask.value.evaluated,
       sandboxRunTaskInternal := sandboxRunTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-      conduct := conductTask.value.evaluated,
 
       installationData := installationDataTask.value,
       generateInstallationScript := generateInstallationScriptTask().value,
