@@ -60,6 +60,7 @@ object ConductrPlugin extends AutoPlugin {
 
   override def buildSettings: Seq[Setting[_]] =
     List(
+      Keys.aggregate in conduct := false,
       Keys.aggregate in generateInstallationScript := false,
       Keys.aggregate in install := false,
       Keys.aggregate in sandbox := false,
