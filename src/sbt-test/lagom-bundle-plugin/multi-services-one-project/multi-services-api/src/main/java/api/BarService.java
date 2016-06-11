@@ -16,7 +16,7 @@ public interface BarService extends Service {
 
   @Override
   default Descriptor descriptor() {
-    return named("barservice").with(
+    return named("barservice").withCalls(
       restCall(Method.GET,  "/bar", this::getBar),
       restCall(Method.POST, "/bar", this::addBar)
     ).withAutoAcl(true);

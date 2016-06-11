@@ -17,7 +17,7 @@ public interface FooService extends Service {
 
   @Override
   default Descriptor descriptor() {
-    return named("fooservice").with(
+    return named("fooservice").withCalls(
       restCall(Method.GET,  "/foo", this::foos),
       restCall(Method.GET,  "/foo/:id", this::foo),
       restCall(Method.GET,  "/foo/:id/friends", this::fooFriends)

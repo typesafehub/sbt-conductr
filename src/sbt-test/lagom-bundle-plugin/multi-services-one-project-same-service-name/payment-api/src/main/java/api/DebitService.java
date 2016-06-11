@@ -15,7 +15,7 @@ public interface DebitService extends Service {
 
   @Override
   default Descriptor descriptor() {
-    return named("paymentservice").with(
+    return named("paymentservice").withCalls(
       restCall(Method.GET,  "/debit", this::debit)
     ).withAutoAcl(true);
   }
