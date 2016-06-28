@@ -170,7 +170,7 @@ object ConductrPlugin extends AutoPlugin {
 
   private def installTask(): Def.Initialize[Task[Unit]] = Def.task {
     withProcessHandling {
-      val nrOfContainers = "docker ps -q --filter='name=cond-'".lines_!.size
+      val nrOfContainers = """docker ps -q --filter="name=cond-"""".lines_!.size
       if (nrOfContainers > 0) {
         println("Restarting ConductR to ensure a clean state...")
         "docker exec cond-0 rm /opt/conductr/conf/seed-nodes".! // Allow the first node to form the new cluster
