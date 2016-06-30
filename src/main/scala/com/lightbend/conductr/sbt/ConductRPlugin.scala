@@ -73,7 +73,7 @@ object ConductrPlugin extends AutoPlugin {
       install := installTask().value
     )
 
-  private final val LatestConductrVersion = "1.1.6"
+  private final val LatestConductrVersion = "1.1.8-rc.1"
   private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
@@ -654,7 +654,7 @@ object ConductrPlugin extends AutoPlugin {
     def numberWithText(completionText: String): Parser[Int] =
       Space ~> token(IntBasic, completionText)
     def versionNumber(completionText: String): Parser[String] =
-      Space ~> token(identifier(charClass(_.isDigit), charClass(c => c == '.' || c.isDigit)), completionText)
+      Space ~> token(identifier(charClass(_.isDigit), charClass(c => c == '.' || c == '-' || c.isLetterOrDigit)), completionText)
     def withCompletionText(parser: Parser[String], completionText: String): Parser[String] =
       token(parser, completionText)
 

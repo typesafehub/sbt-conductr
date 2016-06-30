@@ -1,5 +1,5 @@
 # run sandbox
-> sandbox run 1.1.5
+> sandbox run 1.1.8-rc.1
 $ sleep 5000
 
 # conduct info
