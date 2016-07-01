@@ -1,10 +1,10 @@
-> sandbox run 1.1.5 --nr-of-containers 3
+> sandbox run 1.1.8-rc.1 --nr-of-containers 3
 
 > checkConductrRolesByBundle
 
 > sandbox stop
 
-> sandbox run 1.1.5 --nr-of-containers 4 --conductr-role new-role --conductr-role other-role
+> sandbox run 1.1.8-rc.1 --nr-of-containers 4 --conductr-role new-role --conductr-role other-role
 
 > checkConductrRolesBySandboxKey
 

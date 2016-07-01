@@ -1,12 +1,12 @@
-> sandbox run 1.1.5
+> sandbox run 1.1.8-rc.1
 
 > checkContainers1
 
-> sandbox run 1.1.5 --nr-of-containers 3
+> sandbox run 1.1.8-rc.1 --nr-of-containers 3
 
 > checkContainers3
 
-> sandbox run 1.1.5 --nr-of-containers 2
+> sandbox run 1.1.8-rc.1 --nr-of-containers 2
 
 > checkContainers2
 
