@@ -25,7 +25,7 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 
 Docker is required to run the ConductR cluster as if it were running on a number of machines in your network. You won't need to understand much about Docker for ConductR other than installing it as described in its "Get Started" section. If you are on Windows or Mac then you will become familiar with `docker-machine` which is a utility that controls a virtual machine for the purposes of running Docker.
 
-The conductr-cli is used to mange the ConductR cluster.
+The conductr-cli is used to manage the ConductR cluster.
 
 ## Setup
 
@@ -223,31 +223,42 @@ bundle:dist
 
 An application need to provide ConductR scheduling paramters to produce a bundle successfully. These parameters effectively describe what resources are used by your application or service and are used to determine which machine they will run on.
 
-[Play](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/PlayBundlePlugin.scala) and [Lagom](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/LagomBundlePlugin.scala) bundle plugins are providing default scheduling paramters. For any other application it is mandatory to specify them. Otherwise the `bundle:dist` command will fail.
+[Play](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/PlayBundlePlugin.scala) and [Lagom](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/LagomBundlePlugin.scala) bundle plugins provide default scheduling paramters. For any other application it is mandatory to specify them. Otherwise the `bundle:dist` command will fail.
 
 #### Defaults
 
 **Play**
 
-* Memory: 128 MB
+* Heap Memory: 128MiB
+* Resident Memory: 256 MiB
 * Cpus: 1
 * Disk space: 200 MB
 
 **Lagom**
 
-* Memory: 128 MB
+* Heap Memory: 128MiB
+* Resident Memory: 256 MiB
 * Cpus: 1
 * Disk space: 200 MB 
 
 #### Set custom scheduling paramters
 
-We recommend to specify custom scheduling paramters for each application. Simply specify the `BundleKeys` in your `build.sbt`:
+We recommend to specify custom scheduling parameters for each application in your `build.sbt`:
 
 ```scala
+javaOptions in Universal := Seq(
+  "-J-Xmx64m",
+  "-J-Xms64m"
+)
+
 BundleKeys.nrOfCpus := 2.0
-BundleKeys.memory := 64.MiB
+BundleKeys.memory := 128.MiB
 BundleKeys.diskSpace := 50.MB
 ```
+
+The `javaOptions` values declare the maximum and minimum heap size for your application respectively. Profiling your application under load will help you determine an optimal heap size. We recommend declaring the `BundleKeys.memory` value to be approximately twice that of the heap size. `BundleKeys.memory` represents the *resident* memory size of your application, which includes the heap, thread stacks, code caches, the code itself and so forth. On Unix, use the `top` command and observe the resident memory column (`RES`) with your application under load.
+
+`BundleKeys.memory` is used for locating machines with enough resources to run your application, and so it is particularly important to size it before you go to production.
 
 ### Bundle configuration
 
@@ -384,7 +395,7 @@ diskSpace             | The amount of disk space required to host an expanded bu
 enableAcls            | Acls can be declared on an endpoint if this setting is 'true'. Otherwise only service endpoints can be declared. Endpoint acls can be used from ConductR 1.2 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 1.2+ 'true'.
 endpoints             | Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set.empty)). The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
 executableScriptPath  | The relative path of the executableScript within the bundle.
-memory                | The amount of memory required to run the bundle.
+memory                | The amount of resident memory required to run the bundle. Use the Unix `top` command to determine this value by observing the `RES` and rounding up to the nearest 10MiB.
 nrOfCpus              | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
 overrideEndpoints     | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
 roles                 | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".

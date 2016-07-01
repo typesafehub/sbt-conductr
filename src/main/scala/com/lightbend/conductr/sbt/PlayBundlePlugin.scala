@@ -1,5 +1,8 @@
 package com.lightbend.conductr.sbt
 
+import com.typesafe.sbt.SbtNativePackager
+import SbtNativePackager.Universal
+
 import sbt._
 import sbt.Keys._
 
@@ -28,8 +31,12 @@ object PlayBundlePlugin extends AutoPlugin {
 
   override def projectSettings =
     Seq(
+      javaOptions in Universal ++= Seq(
+        s"-J-Xms${PlayBundleKeyDefaults.heapMemory.round1k.underlying}",
+        s"-J-Xmx${PlayBundleKeyDefaults.heapMemory.round1k.underlying}"
+      ),
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
-      BundleKeys.memory := PlayBundleKeyDefaults.memory,
+      BundleKeys.memory := PlayBundleKeyDefaults.residentMemory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
       conductrBundleLibVersion := Version.conductrBundleLib,

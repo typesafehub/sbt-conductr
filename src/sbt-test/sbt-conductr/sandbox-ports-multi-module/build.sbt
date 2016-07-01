@@ -10,6 +10,10 @@ lazy val frontend = (project in file("modules/frontend"))
   .enablePlugins(JavaAppPackaging)
   .dependsOn(common)
   .settings(
+    javaOptions in Universal := Seq(
+      "-J-Xms64m",
+      "-J-Xmx64m"
+    ),
     BundleKeys.nrOfCpus := 1.0,
     BundleKeys.memory := 64.MiB,
     BundleKeys.diskSpace := 50.MiB,
@@ -21,6 +25,10 @@ lazy val backend = (project in file("modules/backend"))
   .enablePlugins(JavaAppPackaging)
   .dependsOn(common)
   .settings(
+    javaOptions in Universal := Seq(
+      "-J-Xms128m",
+      "-J-Xmx128m"
+    ),
     BundleKeys.nrOfCpus := 1.0,
     BundleKeys.memory := 128.MiB,
     BundleKeys.diskSpace := 50.MiB,

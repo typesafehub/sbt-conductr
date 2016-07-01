@@ -6,6 +6,7 @@ import java.io.InputStream
 import java.util.jar.{ JarEntry, JarFile }
 
 import com.typesafe.sbt.SbtNativePackager
+import SbtNativePackager.Universal
 
 import scala.collection.JavaConverters._
 import play.api.libs.json._
@@ -37,8 +38,12 @@ object LagomPlayBundlePlugin extends AutoPlugin {
 
   override def projectSettings =
     Seq(
+      javaOptions in Universal ++= Seq(
+        s"-J-Xms${PlayBundleKeyDefaults.heapMemory.round1k.underlying}",
+        s"-J-Xmx${PlayBundleKeyDefaults.heapMemory.round1k.underlying}"
+      ),
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
-      BundleKeys.memory := PlayBundleKeyDefaults.memory,
+      BundleKeys.memory := PlayBundleKeyDefaults.residentMemory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
       LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
@@ -74,8 +79,12 @@ object LagomBundlePlugin extends AutoPlugin {
 
   override def projectSettings =
     bundleSettings(Bundle) ++ Seq(
+      javaOptions in Universal ++= Seq(
+        s"-J-Xms${PlayBundleKeyDefaults.heapMemory.round1k.underlying}",
+        s"-J-Xmx${PlayBundleKeyDefaults.heapMemory.round1k.underlying}"
+      ),
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
-      BundleKeys.memory := PlayBundleKeyDefaults.memory,
+      BundleKeys.memory := PlayBundleKeyDefaults.residentMemory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       ivyConfigurations += apiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project

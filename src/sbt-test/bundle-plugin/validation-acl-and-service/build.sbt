@@ -10,6 +10,11 @@ version := "0.1.0-SNAPSHOT"
 
 BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
 
+javaOptions in Universal := Seq(
+  "-J-Xms67108864",
+  "-J-Xmx67108864"
+)
+
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB

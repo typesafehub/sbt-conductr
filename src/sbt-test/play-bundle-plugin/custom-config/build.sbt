@@ -13,8 +13,7 @@ BundleKeys.memory := 64.MiB
 val checkBundleDist = taskKey[Unit]("check-bundle-dist-contents")
 checkBundleDist := {
   val bundleContentsConf = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
-  val expectedContentsConf =
-    """start-command    = ["custom-config/bin/custom-config", "-J-Xms67108864", "-J-Xmx67108864"]""".stripMargin
+  val expectedContentsConf = "memory               = 67108864"
   bundleContentsConf should include(expectedContentsConf)
 }
 

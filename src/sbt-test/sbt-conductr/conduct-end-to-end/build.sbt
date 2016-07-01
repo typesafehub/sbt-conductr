@@ -9,6 +9,11 @@ name := "conduct-end-to-end"
 version := "1.0.0"
 scalaVersion := "2.10.4"
 
+javaOptions in Universal := Seq(
+  "-J-Xms10m",
+  "-J-Xmx10m"
+)
+
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 10.MiB
 BundleKeys.diskSpace := 5.MB
