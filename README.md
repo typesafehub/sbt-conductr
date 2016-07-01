@@ -32,7 +32,7 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.4")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.5")
 ```
 
 ## Plugin Overview
@@ -229,14 +229,14 @@ An application need to provide ConductR scheduling paramters to produce a bundle
 
 **Play**
 
-* Heap Memory: 128MiB
+* Heap Memory: 128 MiB
 * Resident Memory: 256 MiB
 * Cpus: 1
 * Disk space: 200 MB
 
 **Lagom**
 
-* Heap Memory: 128MiB
+* Heap Memory: 128 MiB
 * Resident Memory: 256 MiB
 * Cpus: 1
 * Disk space: 200 MB 
