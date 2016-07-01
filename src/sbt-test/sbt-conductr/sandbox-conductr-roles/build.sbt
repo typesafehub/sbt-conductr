@@ -7,6 +7,11 @@ version := "0.1.0-SNAPSHOT"
 
 lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 
+javaOptions in Universal := Seq(
+  "-J-Xms64m",
+  "-J-Xmx64m"
+)
+
 // ConductR bundle keys
 BundleKeys.nrOfCpus := 1.0
 BundleKeys.memory := 64.MiB

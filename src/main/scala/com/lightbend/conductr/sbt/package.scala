@@ -93,7 +93,8 @@ package object sbt {
     import com.lightbend.conductr.sbt.BundleImport.ByteConversions._
 
     val nrOfCpus = 1.0
-    val memory = 128.MiB
+    val heapMemory = 128.MiB
+    val residentMemory = 256.MiB
     val diskSpace = 200.MB
   }
 

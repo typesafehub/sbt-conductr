@@ -39,10 +39,6 @@ object BundlePlugin extends AutoPlugin {
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
         enableAcls := conductrTargetVersion.value >= ConductrVersion.V1_2,
-        javaOptions in Bundle ++= Seq(
-          s"-J-Xms${(memory in Bundle).value.round1k.underlying}",
-          s"-J-Xmx${(memory in Bundle).value.round1k.underlying}"
-        ),
         projectTarget := target.value,
         roles := Set("web"),
         system := (normalizedName in Bundle).value,

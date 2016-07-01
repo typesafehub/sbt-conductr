@@ -268,7 +268,7 @@ object BundleImport {
 
     val memory = SettingKey[Bytes](
       "bundle-memory",
-      "The amount of memory required to run the bundle. This value must a multiple of 1024 greater than 2 MB. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required."
+      "The amount of resident memory required to run the bundle. Use the Unix `top` command to determine this value by observing the `RES` and rounding up to the nearest 10MiB. Required."
     )
 
     val nrOfCpus = SettingKey[Double](
