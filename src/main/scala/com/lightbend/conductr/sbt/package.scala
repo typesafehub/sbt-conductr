@@ -73,7 +73,7 @@ package object sbt {
   }
 
   object Version {
-    val conductrBundleLib = "1.4.5"
+    val conductrBundleLib = "1.4.7"
   }
 
   /**
@@ -82,7 +82,7 @@ package object sbt {
   object BaseKeys {
     val conductrBundleLibVersion = SettingKey[String](
       "play-bundle-conductr-bundle-lib-version",
-      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.5"
+      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.7"
     )
   }
 
