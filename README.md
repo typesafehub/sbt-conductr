@@ -231,14 +231,14 @@ An application need to provide ConductR scheduling paramters to produce a bundle
 
 * Heap Memory: 128 MiB
 * Resident Memory: 256 MiB
-* Cpus: 1
+* Cpus: 0.1
 * Disk space: 200 MB
 
 **Lagom**
 
 * Heap Memory: 128 MiB
 * Resident Memory: 256 MiB
-* Cpus: 1
+* Cpus: 0.1
 * Disk space: 200 MB 
 
 #### Set custom scheduling paramters
@@ -251,7 +251,7 @@ javaOptions in Universal := Seq(
   "-J-Xms64m"
 )
 
-BundleKeys.nrOfCpus := 2.0
+BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 128.MiB
 BundleKeys.diskSpace := 50.MB
 ```
@@ -319,7 +319,7 @@ Its frontend configuration is expressed in the regular way i.e. within the globa
 // Main bundle configuration
 
 normalizedName := "reactive-maps-frontend"
-BundleKeys.nrOfCpus := 2.0
+BundleKeys.nrOfCpus := 0.1
 ...
 ```
 
@@ -396,7 +396,7 @@ enableAcls            | Acls can be declared on an endpoint if this setting is '
 endpoints             | Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set.empty)). The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
 executableScriptPath  | The relative path of the executableScript within the bundle.
 memory                | The amount of resident memory required to run the bundle. Use the Unix `top` command to determine this value by observing the `RES` and rounding up to the nearest 10MiB.
-nrOfCpus              | The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required.
+nrOfCpus              | The minimum number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). This value is considered when starting a bundle on a node. If the specified CPUs exceeds the available CPUs on a node, then this node is not considered for scaling the bundle. Once running, the application is not restricted to the given value and tries to use all available CPUs on the node. Required.
 overrideEndpoints     | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
 roles                 | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".
 startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dakka.cluster.roles.1=frontend"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the BundleKeys.memory key and heap flags should not be passed here.

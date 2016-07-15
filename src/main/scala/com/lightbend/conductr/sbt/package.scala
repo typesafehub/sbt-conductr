@@ -92,7 +92,7 @@ package object sbt {
   object PlayBundleKeyDefaults {
     import com.lightbend.conductr.sbt.BundleImport.ByteConversions._
 
-    val nrOfCpus = 1.0
+    val nrOfCpus = 0.1
     val heapMemory = 128.MiB
     val residentMemory = 256.MiB
     val diskSpace = 200.MB

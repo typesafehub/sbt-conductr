@@ -14,7 +14,7 @@ javaOptions in Universal := Seq(
   "-J-Xmx67108864"
 )
 
-BundleKeys.nrOfCpus := 1.0
+BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
@@ -31,7 +31,7 @@ checkBundleConf := {
                             |compatibilityVersion = "0"
                             |system               = "acl-empty-request-mapping"
                             |systemVersion        = "0"
-                            |nrOfCpus             = 1.0
+                            |nrOfCpus             = 0.1
                             |memory               = 67108864
                             |diskSpace            = 10000000
                             |roles                = ["web"]
