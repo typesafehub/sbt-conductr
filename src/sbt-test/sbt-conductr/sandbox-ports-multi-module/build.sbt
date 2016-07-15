@@ -14,7 +14,7 @@ lazy val frontend = (project in file("modules/frontend"))
       "-J-Xms64m",
       "-J-Xmx64m"
     ),
-    BundleKeys.nrOfCpus := 1.0,
+    BundleKeys.nrOfCpus := 0.1,
     BundleKeys.memory := 64.MiB,
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("frontend"),
@@ -29,7 +29,7 @@ lazy val backend = (project in file("modules/backend"))
       "-J-Xms128m",
       "-J-Xmx128m"
     ),
-    BundleKeys.nrOfCpus := 1.0,
+    BundleKeys.nrOfCpus := 0.1,
     BundleKeys.memory := 128.MiB,
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("backend"),

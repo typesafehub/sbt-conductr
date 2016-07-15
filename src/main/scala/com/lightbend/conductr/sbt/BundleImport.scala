@@ -273,7 +273,7 @@ object BundleImport {
 
     val nrOfCpus = SettingKey[Double](
       "bundle-nr-of-cpus",
-      "The number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). Required."
+      "The minimum number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). This value is considered when starting a bundle on a node. If the specified CPUs exceeds the available CPUs on a node, then this node is not considered for scaling the bundle. Once running, the application is not restricted to the given value and tries to use all available CPUs on the node. Required."
     )
 
     val overrideEndpoints = TaskKey[Option[Map[String, Endpoint]]](

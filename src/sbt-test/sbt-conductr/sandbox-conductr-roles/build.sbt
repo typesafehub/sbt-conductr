@@ -13,7 +13,7 @@ javaOptions in Universal := Seq(
 )
 
 // ConductR bundle keys
-BundleKeys.nrOfCpus := 1.0
+BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 BundleKeys.roles := Set("bundle-role-1", "bundle-role-2")
