@@ -230,14 +230,14 @@ An application need to provide ConductR scheduling paramters to produce a bundle
 **Play**
 
 * Heap Memory: 128 MiB
-* Resident Memory: 256 MiB
+* Resident Memory: 384 MiB
 * Cpus: 0.1
 * Disk space: 200 MB
 
 **Lagom**
 
 * Heap Memory: 128 MiB
-* Resident Memory: 256 MiB
+* Resident Memory: 384 MiB
 * Cpus: 0.1
 * Disk space: 200 MB 
 
