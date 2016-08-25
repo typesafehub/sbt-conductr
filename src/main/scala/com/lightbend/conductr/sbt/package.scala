@@ -94,7 +94,7 @@ package object sbt {
 
     val nrOfCpus = 0.1
     val heapMemory = 128.MiB
-    val residentMemory = 256.MiB
+    val residentMemory = 384.MiB
     val diskSpace = 200.MB
   }
 
