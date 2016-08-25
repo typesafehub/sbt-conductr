@@ -19,7 +19,8 @@ before_install:
 
 install:
   - sudo apt-get -qqy update
-  - sudo apt-get -qqy install lxc-docker-1.6.0 slirp python3-setuptools
+  - sudo apt-get -qqy install slirp python3-setuptools
+  - sudo apt-get -qqy install -o Dpkg::Options::="--force-confold" lxc-docker-1.6.0
   - sudo sudo usermod -aG docker "$USER"
   - git clone git://github.com/cptactionhank/sekexe
   - sudo easy_install3 -U pip
