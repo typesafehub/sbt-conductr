@@ -243,7 +243,7 @@ An application need to provide ConductR scheduling paramters to produce a bundle
 
 #### Set custom scheduling paramters
 
-We recommend to specify custom scheduling parameters for each application in your `build.sbt`:
+If the above parameters are inappropriate then we recommend custom scheduling parameters in your `build.sbt` e.g.:
 
 ```scala
 javaOptions in Universal := Seq(
