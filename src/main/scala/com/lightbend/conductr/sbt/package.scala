@@ -64,16 +64,19 @@ package object sbt {
 
   object Library {
     def playConductrBundleLib(playVersion: String, scalaVersion: String, conductrLibVersion: String) =
-      "com.typesafe.conductr" % s"play${formatVersion(playVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
+      "com.typesafe.conductr" % s"play${formatVersionMajorMinor(playVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
     def lagomConductrBundleLib(lagomVersion: String, scalaVersion: String, conductrLibVersion: String) =
-      "com.typesafe.conductr" % s"lagom${formatVersion(lagomVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
+      "com.typesafe.conductr" % s"lagom${formatVersionMajor(lagomVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
 
-    private def formatVersion(version: String) =
+    private def formatVersionMajorMinor(version: String): String =
       version.filterNot(_ == '.').take(2)
+
+    private def formatVersionMajor(version: String): String =
+      version.filterNot(_ == '.').take(1)
   }
 
   object Version {
-    val conductrBundleLib = "1.4.7"
+    val conductrBundleLib = "1.4.8"
   }
 
   /**
@@ -82,7 +85,7 @@ package object sbt {
   object BaseKeys {
     val conductrBundleLibVersion = SettingKey[String](
       "play-bundle-conductr-bundle-lib-version",
-      "The version of conductr-bundle-lib to depend on. Defaults to 1.4.7"
+      s"The version of conductr-bundle-lib to depend on. Defaults to ${Version.conductrBundleLib}"
     )
   }
 
