@@ -32,7 +32,7 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.8")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.9")
 ```
 
 ## Plugin Overview
