@@ -11,7 +11,7 @@ lazy val debitImpl = (project in file("debit-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(debitApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2
   )
 
 lazy val creditApi = (project in file("credit-api"))
@@ -21,7 +21,7 @@ lazy val creditImpl = (project in file("credit-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(creditApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2
   )
 
 // Test assertions

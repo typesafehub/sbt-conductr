@@ -10,7 +10,7 @@ lazy val simpleImpl = (project in file("simple-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(simpleApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2,
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2,
     BundleKeys.enableAcls := true
   )
 

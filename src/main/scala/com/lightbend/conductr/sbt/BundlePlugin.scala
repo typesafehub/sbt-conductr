@@ -38,7 +38,7 @@ object BundlePlugin extends AutoPlugin {
         compatibilityVersion := (version in Bundle).value.takeWhile(_ != '.'),
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
-        enableAcls := conductrTargetVersion.value >= ConductrVersion.V1_2,
+        enableAcls := conductrTargetVersion.value >= ConductrVersion.V2,
         projectTarget := target.value,
         roles := Set("web"),
         system := (normalizedName in Bundle).value,

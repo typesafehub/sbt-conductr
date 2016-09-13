@@ -197,7 +197,7 @@ object BundleImport {
     // The order of the versions matter because there are used to compare the versions with `>=`, `<=`, etc.
     // Therefore the oldest version must come first, the latest version at last
     val V1_1 = Value("1.1")
-    val V1_2 = Value("1.2")
+    val V2 = Value("2")
   }
 
   object BundleKeys {
