@@ -11,7 +11,7 @@ lazy val paymentImpl = (project in file("payment-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(paymentApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2
   )
 
 lazy val socialApi = (project in file("social-api"))
@@ -21,7 +21,7 @@ lazy val socialImpl = (project in file("social-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(socialApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2
   )
 
 // Test assertions

@@ -11,7 +11,7 @@ lazy val multiServicesImpl = (project in file("multi-services-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(multiServicesApi)
   .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V1_2
+    BundleKeys.conductrTargetVersion := ConductrVersion.V2
   )
 
 // Test assertions

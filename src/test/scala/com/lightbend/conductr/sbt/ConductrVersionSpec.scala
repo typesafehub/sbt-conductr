@@ -9,8 +9,8 @@ class ConductrVersionSpec extends WordSpec with Matchers {
   "ConductrVersion" should {
 
     "order the versions correctly" in {
-      V1_1 < V1_2
-      V1_2 > V1_1
+      V1_1 < V2
+      V2 > V1_1
     }
   }
 }
