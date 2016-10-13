@@ -166,6 +166,16 @@ object BundleImport {
      */
     def apply(bindProtocol: String, bindPort: Int, serviceName: String, acls: RequestAcl*): Endpoint =
       new Endpoint(bindProtocol, bindPort, None, Some(serviceName), Some(acls.toSet))
+
+    /**
+     * Represents a service endpoint.
+     *
+     * @param bindProtocol the protocol to bind for this endpoint, e.g. "http"
+     * @param bindPort the port the bundle component’s application or service actually binds to; when this is 0 it will be dynamically allocated (which is the default)
+     * @param acls list of protocol and its corresponding paths (for http) or ports (for tcp) exposed by the service endpoint
+     */
+    def apply(bindProtocol: String, bindPort: Int, acls: RequestAcl*): Endpoint =
+      new Endpoint(bindProtocol, bindPort, None, None, Some(acls.toSet))
   }
 
   /**
