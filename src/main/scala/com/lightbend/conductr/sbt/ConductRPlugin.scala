@@ -276,7 +276,7 @@ object ConductrPlugin extends AutoPlugin {
     conductrImageVersion: Option[String],
     conductrImage: Option[String] = None,
     nrOfContainers: Option[Int] = None,
-    features: Set[String] = Set.empty,
+    features: Seq[Seq[String]] = Seq.empty,
     ports: Set[Int] = Set.empty,
     logLevel: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
@@ -291,7 +291,7 @@ object ConductrPlugin extends AutoPlugin {
         conductrImageVersion.toSeq ++
         conductrImage.withFlag(Flags.image) ++
         nrOfContainers.withFlag(Flags.nrOfContainers) ++
-        features.withFlag(Flags.feature) ++
+        features.flatMap(Flags.feature +: _) ++
         ports.withFlag(Flags.port) ++
         logLevel.withFlag(Flags.logLevel) ++
         conductrRoles.map(_.asConsoleNArg).withFlag(Flags.conductrRole) ++
@@ -394,7 +394,7 @@ object ConductrPlugin extends AutoPlugin {
               case LogLevelArg(v)       => currentArgs.copy(logLevel = Some(v))
               case NrOfContainersArg(v) => currentArgs.copy(nrOfContainers = Some(v))
               case PortArg(v)           => currentArgs.copy(ports = currentArgs.ports + v)
-              case FeatureArg(v)        => currentArgs.copy(features = currentArgs.features + v)
+              case FeatureArg(v)        => currentArgs.copy(features = currentArgs.features :+ v)
             }
         }
       def isRunArg(arg: String, flag: String): Boolean =
@@ -430,7 +430,8 @@ object ConductrPlugin extends AutoPlugin {
         Space ~> (token(Flags.port) | hideAutoCompletion("-p")) ~> numberWithText("<port>").map(PortArg(_))
 
       def feature: Parser[FeatureArg] =
-        Space ~> (token(Flags.feature) | hideAutoCompletion("-f")) ~> featureExamples.map(FeatureArg(_))
+        Space ~> (token(Flags.feature) | hideAutoCompletion("-f")) ~> (featureExamples ~ nonArgStringWithText("<feature_arg>").*)
+          .map { case (feature, args) => FeatureArg(feature +: args) }
 
       def featureExamples: Parser[String] =
         Space ~> token(StringBasic.examples(availableFeatures))
@@ -712,7 +713,7 @@ object ConductrPlugin extends AutoPlugin {
   private case class LogLevelArg(value: String) extends AnyVal with SandboxRunArg
   private case class NrOfContainersArg(value: Int) extends AnyVal with SandboxRunArg
   private case class PortArg(value: Int) extends AnyVal with SandboxRunArg
-  private case class FeatureArg(value: String) extends AnyVal with SandboxRunArg
+  private case class FeatureArg(value: Seq[String]) extends AnyVal with SandboxRunArg
   private case class SandboxRunArgs(
     imageVersion: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
@@ -721,7 +722,7 @@ object ConductrPlugin extends AutoPlugin {
     logLevel: Option[String] = None,
     nrOfContainers: Option[Int] = None,
     ports: Set[Int] = Set.empty,
-    features: Set[String] = Set.empty
+    features: Seq[Seq[String]] = Seq.empty
   )
 
   private object NoProcessLogging extends ProcessLogger {
