@@ -1,4 +1,4 @@
-> sandbox run 1.1.8-rc.1
+> sandbox run 1.1.10
 
 > install
 $ sleep 5000
