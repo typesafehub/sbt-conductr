@@ -354,6 +354,8 @@ object ConductrPlugin extends AutoPlugin {
     object Sandbox {
       import ArgumentConverters._
 
+      val availableFeatures = Set("visualization", "logging", "monitoring")
+
       // Sandbox parser
       lazy val subtask: Def.Initialize[State => Parser[SandboxSubtask]] = Def.value {
         case _ =>
@@ -428,8 +430,11 @@ object ConductrPlugin extends AutoPlugin {
         Space ~> (token(Flags.port) | hideAutoCompletion("-p")) ~> numberWithText("<port>").map(PortArg(_))
 
       def feature: Parser[FeatureArg] =
-        Space ~> (token(Flags.feature) | hideAutoCompletion("-f")) ~> nonArgStringWithText(s"Format: ${Flags.feature} <name> <optional_arg>").+
-          .map(args => FeatureArg(args))
+        Space ~> (token(Flags.feature) | hideAutoCompletion("-f")) ~> (featureExamples ~ nonArgStringWithText("<feature_arg>").*)
+          .map { case (feature, args) => FeatureArg(feature +: args) }
+
+      def featureExamples: Parser[String] =
+        Space ~> token(StringBasic.examples(availableFeatures))
 
       object Flags {
         val imageVersion = "--image-version"
