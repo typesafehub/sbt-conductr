@@ -12,6 +12,7 @@ env:
     - DOCKER_PORT_RANGE=2400:2500
     - SLIRP_HOST=$HOST_IP
     - SLIRP_PORTS=$(seq 2375 2500)
+    - unset DOCKER_MACHINE_NAME
 
 before_install:
   - sudo sh -c "wget -qO- https://get.docker.io/gpg | apt-key add -"
