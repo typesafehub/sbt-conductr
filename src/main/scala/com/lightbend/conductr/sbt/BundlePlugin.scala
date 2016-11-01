@@ -59,7 +59,7 @@ object BundlePlugin extends AutoPlugin {
   def bundleSettings(config: Configuration): Seq[Setting[_]] =
     inConfig(config)(Seq(
       bundleConf := getConfig(config, forAllSettings = true).value,
-      executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
+      executableScriptPath := s"${(normalizedName in config).value}/bin/${(executableScriptName in config).value}",
       NativePackagerKeys.packageName := (normalizedName in config).value + "-v" + (compatibilityVersion in config).value,
       NativePackagerKeys.dist := Def.taskDyn(createBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stage := Def.taskDyn(stageBundle(config, (bundleType in config).value)).value,
@@ -74,7 +74,7 @@ object BundlePlugin extends AutoPlugin {
     inConfig(config)(Seq(
       bundleConf := getConfig(config, forAllSettings = false).value,
       checks := Seq.empty,
-      executableScriptPath := (file((normalizedName in config).value) / "bin" / (executableScriptName in config).value).getPath,
+      executableScriptPath := s"${(normalizedName in config).value}/bin/${(executableScriptName in config).value}",
       NativePackagerKeys.dist := createConfiguration(config).value,
       NativePackagerKeys.stage := stageConfiguration(config).value,
       NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
