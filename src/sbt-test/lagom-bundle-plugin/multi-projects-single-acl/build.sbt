@@ -65,9 +65,7 @@ checkBundleConf := {
                                   |    bind-protocol = "http"
                                   |    bind-port     = 0
                                   |    service-name  = "backendservice"
-                                  |    acls          = [
-                                  |
-                                  |    ]
+                                  |    services= []
                                   |  },
                                   |  "akka-remote" = {
                                   |    bind-protocol = "tcp"
