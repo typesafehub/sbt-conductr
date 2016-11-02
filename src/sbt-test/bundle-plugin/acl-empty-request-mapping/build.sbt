@@ -19,7 +19,11 @@ BundleKeys.memory := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
 BundleKeys.endpoints := Map(
-  "empty-request-acl" -> Endpoint("http", 0, "empty-request-acl", RequestAcl())
+  "empty-request-acl-with-service-name" -> Endpoint("http", 0, "service-name", RequestAcl()),
+  "empty-request-acl" -> Endpoint("http", 0, RequestAcl()),
+  "service-name" -> Endpoint("http", 0, "service-name"),
+  "protocol-and-port" -> Endpoint("tcp", 5555),
+  "protocol" -> Endpoint("tcp")
 )
 
 val checkBundleConf = taskKey[Unit]("")
@@ -41,13 +45,32 @@ checkBundleConf := {
                             |    file-system-type = "universal"
                             |    start-command    = ["acl-empty-request-mapping/bin/acl-empty-request-mapping", "-J-Xms67108864", "-J-Xmx67108864"]
                             |    endpoints = {
+                            |      "protocol-and-port" = {
+                            |        bind-protocol = "tcp"
+                            |        bind-port     = 5555
+                            |        services      = []
+                            |      },
+                            |      "empty-request-acl-with-service-name" = {
+                            |        bind-protocol = "http"
+                            |        bind-port     = 0
+                            |        service-name  = "service-name"
+                            |        services      = []
+                            |      },
+                            |      "protocol" = {
+                            |        bind-protocol = "tcp"
+                            |        bind-port     = 0
+                            |        services      = []
+                            |      },
                             |      "empty-request-acl" = {
                             |        bind-protocol = "http"
                             |        bind-port     = 0
-                            |        service-name  = "empty-request-acl"
-                            |        acls          = [
-                            |
-                            |        ]
+                            |        services      = []
+                            |      },
+                            |      "service-name" = {
+                            |        bind-protocol = "http"
+                            |        bind-port     = 0
+                            |        service-name  = "service-name"
+                            |        services      = []
                             |      }
                             |    }
                             |  }
