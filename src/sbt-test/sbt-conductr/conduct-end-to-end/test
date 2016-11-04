@@ -5,8 +5,8 @@ $ sleep 5000
 # conduct info
 > conduct info
 
-# conduct services
-> conduct services
+# conduct service-names
+> conduct service-names
 
 # conduct acls http
 > conduct acls http

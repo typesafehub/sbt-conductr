@@ -462,7 +462,7 @@ object ConductrPlugin extends AutoPlugin {
             stopSubtask(bundleNames) |
             unloadSubtask(bundleNames) |
             infoSubtask |
-            servicesSubtask |
+            serviceNamesSubtask |
             aclsSubtask |
             eventsSubtask(bundleNames) |
             logsSubtask(bundleNames)
@@ -531,10 +531,10 @@ object ConductrPlugin extends AutoPlugin {
           .!!!("Usage: conduct info")
       def infoArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
 
-      def servicesSubtask: Parser[ConductSubtaskSuccess] =
-        token("services" ~> servicesArgs)
-          .map { case args => ConductSubtaskSuccess("services", optionalArgs(args)) }
-          .!!!("Usage: conduct services")
+      def serviceNamesSubtask: Parser[ConductSubtaskSuccess] =
+        token("service-names" ~> servicesArgs)
+          .map { case args => ConductSubtaskSuccess("service-names", optionalArgs(args)) }
+          .!!!("Usage: conduct service-names")
       def servicesArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
 
       def aclsSubtask: Parser[ConductSubtaskSuccess] =
