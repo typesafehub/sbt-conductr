@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.1.15-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.1.16-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is a sbt plugin that provides commands in sbt to:
@@ -32,7 +32,7 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.15")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.1.16")
 ```
 
 ## Plugin Overview
