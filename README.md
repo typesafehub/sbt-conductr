@@ -77,6 +77,7 @@ cassandra:configuration:dist | Produce one cassandra bundle configuration in the
 sandbox help                 | Get usage information of the sandbox command
 sandbox run                  | Start a local ConductR sandbox
 sandbox stop                 | Stop the local ConductR sandbox
+sandbox version              | Print the conductr-cli version
 conduct help                 | Get usage information of the conduct command
 conduct info                 | Gain information on the cluster
 conduct load                 | Loads a bundle and an optional configuration to the ConductR
@@ -85,6 +86,8 @@ conduct stop                 | Stops all executions of a bundle given a bundle i
 conduct unload               | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
 conduct logs                 | Retrieves log messages of a given bundle
 conduct events               | Retrieves events of a given bundle
+conduct service-names        | Retrieves the service names available to the service locator
+conduct version              | Print the conductr-cli version
 install                      | Generates an installation script and then installs all of your projects to the local ConductR sandbox (expected to be running)
 
 Each `sandbox` and `conduct` sub command has a help page particular for the sub command, e.g. `conduct run --help`.
