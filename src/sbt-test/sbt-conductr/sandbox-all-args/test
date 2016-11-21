@@ -7,11 +7,11 @@
 > sandbox run
 
 # sandbox long args
-> sandbox run 1.1.10 --port 1111 --port 2222 --image typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr --nr-of-containers 3 --log-level debug --env key1=value1 --env key2=value2 --conductr-role frontend --conductr-role backend db --feature visualization --feature logging
+> sandbox run 1.1.11 --port 1111 --port 2222 --image typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr --nr-of-containers 3 --log-level debug --env key1=value1 --env key2=value2 --conductr-role frontend --conductr-role backend db --feature visualization --feature logging
 > sandbox stop
 
 # sandbox short args
-> sandbox run 1.1.10 -p 1111 -p 2222 -i typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr -n 3 -l debug -e key1=value1 -e key2=value2 -r frontend -r backend db -f visualization -f logging
+> sandbox run 1.1.11 -p 1111 -p 2222 -i typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr -n 3 -l debug -e key1=value1 -e key2=value2 -r frontend -r backend db -f visualization -f logging
 > sandbox stop
 
 > checkConductrIsStopped

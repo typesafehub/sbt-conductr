@@ -1,4 +1,4 @@
-> sandbox run 1.1.10 --port 1111 --port 2222
+> sandbox run 1.1.11 --port 1111 --port 2222
 
 > checkDockerContainers
 
