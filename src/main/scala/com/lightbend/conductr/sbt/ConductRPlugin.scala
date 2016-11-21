@@ -211,9 +211,9 @@ object ConductrPlugin extends AutoPlugin {
     Parsers.Sandbox.subtask.parsed match {
       case SandboxHelp                 => sandboxHelp()
       case SandboxSubtaskHelp(command) => sandboxSubHelp(command)
-      case SandboxInitSubtask          => sandboxInit()
       case SandboxRunSubtask(args)     => Project.extract(state.value).runTask(sandboxRunTaskInternal, state.value.put(SandboxRunArgsAttrKey, args))
       case SandboxStopSubtask          => sandboxStop()
+      case SandboxVersionSubtask       => sandboxVersion()
     }
   }
 
@@ -300,16 +300,16 @@ object ConductrPlugin extends AutoPlugin {
   }
 
   /**
-   * Executes the `sandbox init` command of the conductr-cli
-   */
-  private def sandboxInit(): Unit =
-    Process(Seq("sandbox", "init")).!
-
-  /**
    * Executes the `sandbox stop` command of the conductr-cli
    */
   def sandboxStop(): Unit =
     Process(Seq("sandbox", "stop")).!
+
+  /**
+   * Executes the `sandbox version` command of the conductr-cli
+   */
+  def sandboxVersion(): Unit =
+    Process(Seq("sandbox", "version")).!
 
   /**
    * A convenience function that waits on ConductR to become available.
@@ -361,9 +361,9 @@ object ConductrPlugin extends AutoPlugin {
         case _ =>
           (Space ~> (
             helpSubtask |
-            initSubtask |
             runSubtask |
-            stopSubtask
+            stopSubtask |
+            versionSubtask
           )) ?? SandboxHelp
       }
 
@@ -372,11 +372,6 @@ object ConductrPlugin extends AutoPlugin {
         (hideAutoCompletion("-h") | token("--help"))
           .map { case _ => SandboxHelp }
           .!!! { "Usage: sandbox --help" }
-
-      def initSubtask: Parser[SandboxInitSubtask.type] =
-        token("init")
-          .map { case _ => SandboxInitSubtask }
-          .!!!("Usage: sandbox init")
 
       def runSubtask: Parser[SandboxRunSubtask] =
         token("run") ~> sandboxRunArgs
@@ -404,6 +399,11 @@ object ConductrPlugin extends AutoPlugin {
         token("stop")
           .map { case _ => SandboxStopSubtask }
           .!!!("Usage: sandbox stop")
+
+      def versionSubtask: Parser[SandboxVersionSubtask.type] =
+        token("version")
+          .map { case _ => SandboxVersionSubtask }
+          .!!!("Usage: sandbox version")
 
       // Sandbox command specific arguments
       def imageVersion: Parser[ImageVersionArg] =
@@ -696,7 +696,7 @@ object ConductrPlugin extends AutoPlugin {
   private sealed trait SandboxSubtask
   private case class SandboxRunSubtask(args: SandboxRunArgs) extends SandboxSubtask with SubtaskSuccess
   private object SandboxStopSubtask extends SandboxSubtask with SubtaskSuccess
-  private object SandboxInitSubtask extends SandboxSubtask with SubtaskSuccess
+  private object SandboxVersionSubtask extends SandboxSubtask with SubtaskSuccess
   private case object SandboxHelp extends SandboxSubtask
   private case class SandboxSubtaskHelp(command: String) extends SandboxSubtask
 
