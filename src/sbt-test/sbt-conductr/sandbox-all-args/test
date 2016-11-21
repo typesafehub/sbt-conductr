@@ -6,6 +6,9 @@
 # sandbox sub help
 > sandbox run
 
+# sandbox version
+> sandbox version
+
 # sandbox long args
 > sandbox run 1.1.10 --port 1111 --port 2222 --image typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr --nr-of-containers 3 --log-level debug --env key1=value1 --env key2=value2 --conductr-role frontend --conductr-role backend db --feature visualization --feature logging
 > sandbox stop
