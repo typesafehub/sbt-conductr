@@ -14,7 +14,7 @@ javaOptions in Universal := Seq(
 )
 
 BundleKeys.nrOfCpus := 0.1
-BundleKeys.memory := 64.MiB
+BundleKeys.memory := 32.MiB
 BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 

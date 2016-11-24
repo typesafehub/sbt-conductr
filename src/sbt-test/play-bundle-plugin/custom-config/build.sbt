@@ -9,6 +9,7 @@ version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.8"
 
 BundleKeys.memory := 64.MiB
+BundleKeys.minMemoryCheckValue := 64.MiB
 
 val checkBundleDist = taskKey[Unit]("check-bundle-dist-contents")
 checkBundleDist := {

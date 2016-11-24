@@ -19,6 +19,7 @@ import scala.concurrent.duration._
 object BundlePlugin extends AutoPlugin {
   import BundleImport._
   import BundleKeys._
+  import ByteConversions._
   import SbtNativePackager.autoImport._
 
   val autoImport = BundleImport
@@ -39,6 +40,7 @@ object BundlePlugin extends AutoPlugin {
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
         enableAcls := conductrTargetVersion.value >= ConductrVersion.V2,
+        minMemoryCheckValue := 384.MiB,
         projectTarget := target.value,
         roles := Set("web"),
         system := (normalizedName in Bundle).value,
@@ -122,7 +124,7 @@ object BundlePlugin extends AutoPlugin {
    */
   private def validateSettings(config: Configuration): Def.Initialize[Task[Unit]] = Def.task {
     // Checks that the project and global settings in the `BundlePlugin` are compatible with the `conductrTargetVersion`
-    def assertConductrVersionCompatibility: Seq[String] = {
+    val assertConductrVersionCompatibility: Seq[String] = {
       val conductrVersion = (conductrTargetVersion in config).value
       def assertEnableAcls: Option[String] =
         if ((enableAcls in config).value && conductrVersion <= ConductrVersion.V1_1)
@@ -135,15 +137,28 @@ object BundlePlugin extends AutoPlugin {
     }
 
     // Checks that an endpoint contains not multiple endpoint types (Acl, Service)
-    def assertMultipleEndpointTypes: Seq[String] =
+    val assertMultipleEndpointTypes: Seq[String] =
       (endpoints in config).value.collect {
         case (key, endpoint) if endpoint.acls.isDefined && endpoint.services.isDefined =>
           s"The endpoint '$key' contains ACL and services declarations. Only one of these declarations can be set. " +
             s"Specify either ACL or service information for the endpoint."
       }.toSeq
 
+    // Checks that a sufficient amount of memory is declared.
+    val assertSufficientMemory: Seq[String] = {
+      val memoryInBytes = (memory in config).value.underlying
+      val minMemoryCheckValueInBytes = (minMemoryCheckValue in config).value.underlying
+      (if (memoryInBytes < minMemoryCheckValueInBytes)
+        Some(s"The bundle's resident 'memory' setting of ${memoryInBytes >> 20} MiB is too low. Either increase it or lower the bundle's `minMemoryCheckValue` setting of ${minMemoryCheckValueInBytes >> 20} MiB. " +
+        s"Note that a bundle's resident memory is not Java heap memory. " +
+        s"Also note that exceeding this memory at runtime can cause your process to be killed unexpectedly. " +
+        s"Tip: Use the Unix `top` command to determine this value by observing the `RES` column for your process and then rounding up to the nearest 10 MiB.")
+      else
+        None).toSeq
+    }
+
     // Validated assertions
-    val errors = assertConductrVersionCompatibility ++ assertMultipleEndpointTypes
+    val errors = assertConductrVersionCompatibility ++ assertMultipleEndpointTypes ++ assertSufficientMemory
 
     if (errors.nonEmpty)
       sys.error(

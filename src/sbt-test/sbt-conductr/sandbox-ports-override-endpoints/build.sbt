@@ -15,6 +15,7 @@ javaOptions in Universal := Seq(
 // ConductR bundle keys
 BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
+BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 BundleKeys.overrideEndpoints in Bundle := Some(Map("other" -> Endpoint("http", services = Set(URI("http://:9001")))))
 

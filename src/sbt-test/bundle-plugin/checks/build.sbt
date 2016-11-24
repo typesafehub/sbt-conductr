@@ -16,6 +16,7 @@ javaOptions in Universal := Seq(
 
 BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
+BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 BundleKeys.checkInitialDelay := 1400.milliseconds
 BundleKeys.checks := Seq(uri("$CHECKS_HOST?retry-count=5&retry-delay=3"))
