@@ -17,6 +17,7 @@ javaOptions in Universal := Seq(
 
 BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
+BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
 BundleKeys.endpoints += "ping-service" -> Endpoint("http", 0, Some(Set(URI("http://:9001/ping-service"))), Some("ping-service"),

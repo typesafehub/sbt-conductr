@@ -16,6 +16,7 @@ lazy val frontend = (project in file("modules/frontend"))
     ),
     BundleKeys.nrOfCpus := 0.1,
     BundleKeys.memory := 64.MiB,
+    BundleKeys.minMemoryCheckValue := 64.MiB,
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("frontend"),
     BundleKeys.endpoints := Map("frontend" -> Endpoint("http", services = Set(URI("http://:9000"))))
@@ -31,6 +32,7 @@ lazy val backend = (project in file("modules/backend"))
     ),
     BundleKeys.nrOfCpus := 0.1,
     BundleKeys.memory := 128.MiB,
+    BundleKeys.minMemoryCheckValue := 128.MiB,
     BundleKeys.diskSpace := 50.MiB,
     BundleKeys.roles := Set("backend"),
     BundleKeys.endpoints := Map(

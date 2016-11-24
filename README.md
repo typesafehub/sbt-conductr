@@ -255,13 +255,13 @@ javaOptions in Universal := Seq(
 )
 
 BundleKeys.nrOfCpus := 0.1
-BundleKeys.memory := 128.MiB
+BundleKeys.memory := 384.MiB
 BundleKeys.diskSpace := 50.MB
 ```
 
-The `javaOptions` values declare the maximum and minimum heap size for your application respectively. Profiling your application under load will help you determine an optimal heap size. We recommend declaring the `BundleKeys.memory` value to be approximately twice that of the heap size. `BundleKeys.memory` represents the *resident* memory size of your application, which includes the heap, thread stacks, code caches, the code itself and so forth. On Unix, use the `top` command and observe the resident memory column (`RES`) with your application under load.
+The `javaOptions` values declare the maximum and minimum heap size for your application respectively. Profiling your application under load will help you determine an optimal heap size. We recommend declaring the `BundleKeys.memory` value to be at least 384 MiB. `BundleKeys.memory` represents the *resident* memory size of your application, which includes the heap, thread stacks, code caches, the code itself and so forth. On Unix, use the `top` command and observe the resident memory column (`RES`) with your application under load.
 
-`BundleKeys.memory` is used for locating machines with enough resources to run your application, and so it is particularly important to size it before you go to production.
+`BundleKeys.memory` is used for locating machines with enough resources to run your application, and so it is particularly important to size it before you go to production. Not setting this value correctly can lead to your bundle being killed by the operating system.
 
 ### Bundle configuration
 
@@ -399,6 +399,7 @@ enableAcls            | Acls can be declared on an endpoint if this setting is '
 endpoints             | Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set.empty)). The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
 executableScriptPath  | The relative path of the executableScript within the bundle.
 memory                | The amount of resident memory required to run the bundle. Use the Unix `top` command to determine this value by observing the `RES` and rounding up to the nearest 10MiB.
+minMemoryCheckValue   | The minimum value for the `memory` setting that is checked when creating a bundle. Defaults to 384MiB.
 nrOfCpus              | The minimum number of cpus required to run the bundle (can be fractions thereby expressing a portion of CPU). This value is considered when starting a bundle on a node. If the specified CPUs exceeds the available CPUs on a node, then this node is not considered for scaling the bundle. Once running, the application is not restricted to the given value and tries to use all available CPUs on the node. Required.
 overrideEndpoints     | Overrides the endpoints settings key with new endpoints. This task should be used if the endpoints need to be specified programmatically. The default is None.
 roles                 | The types of node in the cluster that this bundle can be deployed to. Defaults to "web".
