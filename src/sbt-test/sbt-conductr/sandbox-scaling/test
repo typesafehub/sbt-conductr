@@ -1,15 +1,13 @@
-> sandbox run 1.1.11
+> sandbox run 2.0.0
 
-> checkContainers1
+> checkInstances1
 
-> sandbox run 1.1.11 --nr-of-containers 3
+> sandbox run 2.0.0 --nr-of-instances 3:3
 
-> checkContainers3
+> checkInstances3
 
-> sandbox run 1.1.11 --nr-of-containers 2
+> sandbox run 2.0.0 --nr-of-instances 2:2
 
-> checkContainers2
+> checkInstances2
 
 > sandbox stop
-
-> checkConductrIsStopped

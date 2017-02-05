@@ -11,7 +11,4 @@ lazy val root = project
 BundleKeys.endpoints := Map("web" -> Endpoint("http", 0, Set(URI("http://:9000"))))
 
 val checkConductrIsRunning = taskKey[Unit]("")
-checkConductrIsRunning := s"docker ps -q -f name=cond-".lines_! should have size 1
-
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := """docker ps --quiet --filter name=cond""".lines_! should have size 0
+checkConductrIsRunning := s"sandbox ps -q".lines_! should have size 2

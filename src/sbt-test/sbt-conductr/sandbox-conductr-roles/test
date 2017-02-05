@@ -1,13 +1,11 @@
-> sandbox run 1.1.11 --nr-of-containers 3
+> sandbox run 2.0.0 --nr-of-containers 3
 
 > checkConductrRolesByBundle
 
 > sandbox stop
 
-> sandbox run 1.1.11 --nr-of-containers 4 --conductr-role new-role --conductr-role other-role
+> sandbox run 2.0.0 --nr-of-containers 4 --conductr-role new-role --conductr-role other-role
 
 > checkConductrRolesBySandboxKey
 
 > sandbox stop
-
-> checkConductrIsStopped

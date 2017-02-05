@@ -16,24 +16,19 @@ BundleKeys.memory := 64.MiB
 BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
-def resolveRunningContainers = """docker ps --quiet --filter name=cond""".lines_!
+def resolveRunningContainers = """sandbox ps -q""".lines_!
 
-val checkContainers1 = taskKey[Unit]("Check that 1 container is running.")
-checkContainers1 := {
-  resolveRunningContainers should have size 1
-}
-
-val checkContainers2 = taskKey[Unit]("Check that 2 containers are running.")
-checkContainers2 := {
+val checkInstances1 = taskKey[Unit]("Check that 2 instances of cores and agents are running.")
+checkInstances1 := {
   resolveRunningContainers should have size 2
 }
 
-val checkContainers3 = taskKey[Unit]("Check that 3 containers are running.")
-checkContainers3 := {
-  resolveRunningContainers should have size 3
+val checkInstances2 = taskKey[Unit]("Check that 4 instances of cores and agents are running.")
+checkInstances2 := {
+  resolveRunningContainers should have size 4
 }
 
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := {
-  resolveRunningContainers should have size 0
+val checkInstances3 = taskKey[Unit]("Check that 6 instances of cores and agents are running.")
+checkInstances3 := {
+  resolveRunningContainers should have size 6
 }

@@ -44,22 +44,12 @@ lazy val backend = (project in file("modules/backend"))
 val checkDockerContainers = taskKey[Unit]("Check that the specified ports are exposed to docker.")
 checkDockerContainers := {
   // cond-0
-  val contentCond0 = s"docker port cond-0".!!
-  val expectedLinesCond0 = Set(
-    """9000/tcp -> 0.0.0.0:9000""",
-    """9001/tcp -> 0.0.0.0:9001""",
-    """2551/tcp -> 0.0.0.0:2551""",
-    """9004/tcp -> 0.0.0.0:9004""",
-    """9005/tcp -> 0.0.0.0:9005""",
-    """9006/tcp -> 0.0.0.0:9006""",
-    """1111/tcp -> 0.0.0.0:1111""",
-    """2222/tcp -> 0.0.0.0:2222"""
+  val contentSandbox = s"docker port sandbox-haproxy".!!
+  val expectedLinesSandbox = Set(
+    """2551/tcp -> 192.168.10.1:2551""",
+    """1111/tcp -> 192.168.10.1:1111""",
+    """2222/tcp -> 192.168.10.1:2222"""
   )
-  expectedLinesCond0.foreach(line => contentCond0 should include(line))
+  expectedLinesSandbox.foreach(line => contentSandbox should include(line))
 
-}
-
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := {
-  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

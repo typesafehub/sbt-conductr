@@ -17,8 +17,3 @@ BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 64.MiB
 BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
-
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := {
-  """docker ps --quiet --filter name=cond""".lines_! should have size 0
-}
