@@ -1,5 +1,0 @@
-> sandbox run 2.0.0 --feature visualization --feature monitoring v2
-
-> checkPorts
-
-> sandbox stop
