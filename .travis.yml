@@ -26,14 +26,23 @@ install:
   - git clone git://github.com/cptactionhank/sekexe
   - sudo easy_install3 -U pip
   - pip3 install --user conductr-cli
+  # Ensure that our sandbox interfaces are prepared
   - sudo /sbin/ifconfig lo:0 192.168.10.1 netmask 255.255.255.0 up
   - sudo /sbin/ifconfig lo:1 192.168.10.2 netmask 255.255.255.0 up
   - sudo /sbin/ifconfig lo:2 192.168.10.3 netmask 255.255.255.0 up
   - sudo /sbin/ifconfig lo:3 192.168.10.4 netmask 255.255.255.0 up
-  
+  # Prep our sandbox with some temporary credentials for CI
+  - ./bin/create-credentials.sh
+  # Warm up some caches so that our tests don't timeout
+  - sandbox run 2.0.0 -f visualization -f monitoring > /dev/null
+  - conduct load -q cassandra
+  - conduct load -q reactive-maps-backend-region
+  - conduct load -q reactive-maps-backend-summary
+  # Tests go faster if we do this... less interactions with bintray etc
+  - export CONDUCTR_OFFLINE_MODE=1
+
 before_script:
   - "sekexe/run docker -d -H tcp://0.0.0.0:2375 &"
   - "while ! docker -H tcp://$HOST_IP:2375 info &> /dev/null ; do sleep 1; done"
-  - ./bin/create-credentials.sh
 
 script: sbt scripted
