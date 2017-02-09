@@ -24,18 +24,10 @@ BundleKeys.overrideEndpoints in Bundle := Some(Map("other" -> Endpoint("http", s
   */
 val checkPorts = taskKey[Unit]("Check that the specified ports are exposed to docker. Debug port should not be exposed.")
 checkPorts := {
-    val content = s"docker port cond-0".!!
+    val content = s"docker port sandbox-haproxy".!!
     val expectedLines = Set(
-      """9004/tcp -> 0.0.0.0:9004""",
-      """9005/tcp -> 0.0.0.0:9005""",
-      """9006/tcp -> 0.0.0.0:9006""",
-      """9001/tcp -> 0.0.0.0:9001"""
+      """9001/tcp -> 192.168.10.1:9001"""
     )
 
     expectedLines.foreach(line => content should include(line))
-}
-
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := {
-  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }

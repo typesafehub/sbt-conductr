@@ -1,5 +1,0 @@
-> sandbox run
-
-> sandbox stop
-
-> checkConductrIsStopped

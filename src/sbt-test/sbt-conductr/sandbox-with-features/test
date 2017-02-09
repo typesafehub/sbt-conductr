@@ -1,9 +1,5 @@
-> sandbox run 1.1.11 --feature visualization --feature monitoring v2
+> sandbox run 2.0.0 --feature visualization --feature monitoring v2
 
 > checkPorts
 
-> checkEnvs
-
 > sandbox stop
-
-> checkConductrIsStopped

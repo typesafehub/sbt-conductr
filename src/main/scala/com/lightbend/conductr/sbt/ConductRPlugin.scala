@@ -29,7 +29,8 @@ object ConductrPlugin extends AutoPlugin {
   val autoImport = ConductrImport
   import ConductrKeys._
 
-  override def trigger = allRequirements
+  override def trigger: PluginTrigger =
+    allRequirements
 
   override def globalSettings: Seq[Setting[_]] =
     List(
@@ -170,15 +171,14 @@ object ConductrPlugin extends AutoPlugin {
 
   private def installTask(): Def.Initialize[Task[Unit]] = Def.task {
     withProcessHandling {
-      val nrOfContainers = """docker ps -q --filter="name=cond-"""".lines_!.size
-      if (nrOfContainers > 0) {
+      val nrOfInstances = "sandbox ps -q".lines_!.size
+      if (nrOfInstances > 0) {
         println("Restarting ConductR to ensure a clean state...")
-        "docker exec cond-0 rm /opt/conductr/conf/seed-nodes".! // Allow the first node to form the new cluster
-        for (n <- 0 until nrOfContainers) s"docker restart -t 0 cond-$n".!
+        "sandbox restart".!
       } else {
         throw new IllegalStateException("Please first start the sandbox using 'sandbox run'.")
       }
-    }(sys.error("There was a problem re/starting the sandbox."))
+    }(sys.error("There was a problem re-starting the sandbox."))
 
     withProcessHandling {
       waitForConductr()
@@ -262,6 +262,7 @@ object ConductrPlugin extends AutoPlugin {
       conductrImageVersion = args.imageVersion orElse projectImageVersion,
       conductrImage = args.image,
       nrOfContainers = args.nrOfContainers,
+      nrOfInstances = args.nrOfInstances,
       features = args.features,
       ports = args.ports ++ bundlePorts,
       logLevel = args.logLevel,
@@ -277,6 +278,7 @@ object ConductrPlugin extends AutoPlugin {
     conductrImageVersion: Option[String],
     conductrImage: Option[String] = None,
     nrOfContainers: Option[Int] = None,
+    nrOfInstances: Option[(Int, Option[Int])] = None,
     features: Seq[Seq[String]] = Seq.empty,
     ports: Set[Int] = Set.empty,
     logLevel: Option[String] = None,
@@ -292,6 +294,10 @@ object ConductrPlugin extends AutoPlugin {
         conductrImageVersion.toSeq ++
         conductrImage.withFlag(Flags.image) ++
         nrOfContainers.withFlag(Flags.nrOfContainers) ++
+        nrOfInstances.map {
+          case (nrOfCores, Some(nrOfAgents)) => s"$nrOfCores:$nrOfAgents"
+          case (nrOfAgents, None)            => nrOfAgents.toString
+        }.withFlag(Flags.nrOfInstances) ++
         features.flatMap(Flags.feature +: _) ++
         ports.withFlag(Flags.port) ++
         logLevel.withFlag(Flags.logLevel) ++
@@ -355,7 +361,8 @@ object ConductrPlugin extends AutoPlugin {
   private object Parsers {
     final val NSeparator = ' '
     final val PairSeparator = '='
-    final val NonDashClass = charClass(_ != '-', "non-dash character")
+    final val NonDashClass: Parser[Char] =
+      charClass(_ != '-', "non-dash character")
 
     // Sandbox
     object Sandbox {
@@ -365,7 +372,7 @@ object ConductrPlugin extends AutoPlugin {
 
       // Sandbox parser
       lazy val subtask: Def.Initialize[State => Parser[SandboxSubtask]] = Def.value {
-        case _ =>
+        _ =>
           (Space ~> (
             helpSubtask |
             psSubtask |
@@ -378,14 +385,15 @@ object ConductrPlugin extends AutoPlugin {
       // Sandbox help command (sandbox --help)
       def helpSubtask: Parser[SandboxHelp.type] =
         (hideAutoCompletion("-h") | token("--help"))
-          .map { case _ => SandboxHelp }
+          .map { _ => SandboxHelp }
           .!!! { "Usage: sandbox --help" }
 
       def runSubtask: Parser[SandboxRunSubtask] =
         token("run") ~> sandboxRunArgs
-          .map { case args => SandboxRunSubtask(toRunArgs(args)) }
+          .map { args => SandboxRunSubtask(toRunArgs(args)) }
           .!!!("Usage: sandbox run --help")
-      def sandboxRunArgs = (conductrRole | env | image | logLevel | nrOfContainers | port | feature | imageVersion).*
+      def sandboxRunArgs: Parser[Seq[SandboxRunArg]] =
+        (conductrRole | env | image | logLevel | nrOfContainers | nrOfInstances | port | feature | imageVersion).*
       def toRunArgs(args: Seq[SandboxRunArg]): SandboxRunArgs =
         args.foldLeft(SandboxRunArgs()) {
           case (currentArgs, arg) =>
@@ -396,6 +404,7 @@ object ConductrPlugin extends AutoPlugin {
               case ImageArg(v)          => currentArgs.copy(image = Some(v))
               case LogLevelArg(v)       => currentArgs.copy(logLevel = Some(v))
               case NrOfContainersArg(v) => currentArgs.copy(nrOfContainers = Some(v))
+              case NrOfInstancesArg(v)  => currentArgs.copy(nrOfInstances = Some(v))
               case PortArg(v)           => currentArgs.copy(ports = currentArgs.ports + v)
               case FeatureArg(v)        => currentArgs.copy(features = currentArgs.features :+ v)
             }
@@ -405,22 +414,22 @@ object ConductrPlugin extends AutoPlugin {
 
       def psSubtask: Parser[SandboxPsSubtask.type] =
         token("ps")
-          .map { case _ => SandboxPsSubtask }
+          .map { _ => SandboxPsSubtask }
           .!!!("Usage: sandbox ps")
 
       def stopSubtask: Parser[SandboxStopSubtask.type] =
         token("stop")
-          .map { case _ => SandboxStopSubtask }
+          .map { _ => SandboxStopSubtask }
           .!!!("Usage: sandbox stop")
 
       def versionSubtask: Parser[SandboxVersionSubtask.type] =
         token("version")
-          .map { case _ => SandboxVersionSubtask }
+          .map { _ => SandboxVersionSubtask }
           .!!!("Usage: sandbox version")
 
       // Sandbox command specific arguments
       def imageVersion: Parser[ImageVersionArg] =
-        versionNumber("<conductr_version>").map(ImageVersionArg(_))
+        versionNumber("<conductr_version>").map(ImageVersionArg)
 
       def conductrRole: Parser[ConductrRoleArg] =
         Space ~> (token(Flags.conductrRole) | hideAutoCompletion("-r")) ~> nonArgStringWithText(s"Format: ${Flags.conductrRole} role1 role2").+
@@ -431,16 +440,19 @@ object ConductrPlugin extends AutoPlugin {
           .map(keyAndValue => EnvArg(keyAndValue.asScalaPairArg))
 
       def image: Parser[ImageArg] =
-        Space ~> (token(Flags.image) | hideAutoCompletion("-i")) ~> nonArgStringWithText("<conductr_image>").map(ImageArg(_))
+        Space ~> (token(Flags.image) | hideAutoCompletion("-i")) ~> nonArgStringWithText("<conductr_image>").map(ImageArg)
 
       def logLevel: Parser[LogLevelArg] =
-        Space ~> (token(Flags.logLevel) | hideAutoCompletion("-l")) ~> nonArgStringWithText("<log-level>").map(LogLevelArg(_))
+        Space ~> (token(Flags.logLevel) | hideAutoCompletion("-l")) ~> nonArgStringWithText("<log-level>").map(LogLevelArg)
 
       def nrOfContainers: Parser[NrOfContainersArg] =
-        Space ~> (token(Flags.nrOfContainers) | hideAutoCompletion("-n")) ~> numberWithText("<nr-of-containers>").map(NrOfContainersArg(_))
+        Space ~> token(Flags.nrOfContainers) ~> numberWithText("<nr-of-containers>").map(NrOfContainersArg)
+
+      def nrOfInstances: Parser[NrOfInstancesArg] =
+        Space ~> (token(Flags.nrOfInstances) | hideAutoCompletion("-n")) ~> instanceNumbers("<nr-of-cores>:<nr-of-agents> | <nr-of-agents>").map(NrOfInstancesArg)
 
       def port: Parser[PortArg] =
-        Space ~> (token(Flags.port) | hideAutoCompletion("-p")) ~> numberWithText("<port>").map(PortArg(_))
+        Space ~> (token(Flags.port) | hideAutoCompletion("-p")) ~> numberWithText("<port>").map(PortArg)
 
       def feature: Parser[FeatureArg] =
         Space ~> (token(Flags.feature) | hideAutoCompletion("-f")) ~> (featureExamples ~ nonArgStringWithText("<feature_arg>").*)
@@ -456,6 +468,7 @@ object ConductrPlugin extends AutoPlugin {
         val image = "--image"
         val logLevel = "--log-level"
         val nrOfContainers = "--nr-of-containers"
+        val nrOfInstances = "--nr-of-instances"
         val port = "--port"
         val feature = "--feature"
       }
@@ -499,7 +512,7 @@ object ConductrPlugin extends AutoPlugin {
       // Conduct help command (conduct --help)
       def helpSubtask: Parser[ConductHelp.type] =
         (hideAutoCompletion("-h") | token("--help"))
-          .map { case _ => ConductHelp }
+          .map { _ => ConductHelp }
           .!!! { "Usage: conduct --help" }
 
       // This parser is triggering the help of the conduct sub command if no argument for this command is specified
@@ -511,62 +524,71 @@ object ConductrPlugin extends AutoPlugin {
       // Sub command parsers
       def versionSubtask: Parser[ConductSubtaskSuccess] =
         (token("version") ~> commonArgs.?)
-          .map { case args => ConductSubtaskSuccess("version", optionalArgs(args)) }
+          .map { args => ConductSubtaskSuccess("version", optionalArgs(args)) }
           .!!!("Usage: conduct version")
 
       def loadSubtask(availableBundle: Option[File], availableBundleConfiguration: Option[File]): Parser[ConductSubtaskSuccess] =
         token("load") ~> withArgs(loadArgs)(bundle(availableBundle) ~ bundle(availableBundleConfiguration).?)
           .mapArgs { case (args, (bundle, config)) => ConductSubtaskSuccess("load", optionalArgs(args) ++ Seq(bundle.toString) ++ optionalArgs(config)) }
           .!!! { "Usage: conduct load --help" }
-      def loadArgs = hideAutoCompletion(commonArgs | resolveCacheDir | waitTimeout | noWait).*.map(seqToString).?
+      def loadArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | resolveCacheDir | waitTimeout | noWait).*.map(seqToString).?
 
       def runSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         token("run") ~> withArgs(runArgs(bundleNames))(bundleId(bundleNames))
           .mapArgs { case (args, bundle) => ConductSubtaskSuccess("run", optionalArgs(args) ++ Seq(bundle)) }
           .!!!("Usage: conduct run --help")
-      def runArgs(bundleNames: Set[String]) = hideAutoCompletion(commonArgs | waitTimeout | noWait | scale | affinity(bundleNames)).*.map(seqToString).?
+      def runArgs(bundleNames: Set[String]): Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | waitTimeout | noWait | scale | affinity(bundleNames)).*.map(seqToString).?
 
       def stopSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         token("stop") ~> withArgs(stopArgs)(bundleId(bundleNames))
           .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("stop", optionalArgs(args) ++ Seq(bundleId)) }
           .!!!("Usage: conduct stop --help")
-      def stopArgs = (waitTimeout | noWait).examples("--no-wait", "--wait-timeout").*.map(seqToString).?
+      def stopArgs: Parser[Option[String]] =
+        (waitTimeout | noWait).examples("--no-wait", "--wait-timeout").*.map(seqToString).?
 
       def unloadSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         token("unload") ~> withArgs(unloadArgs)(bundleId(bundleNames))
           .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("unload", optionalArgs(args) ++ Seq(bundleId)) }
           .!!!("Usage: conduct unload --help")
-      def unloadArgs = hideAutoCompletion(commonArgs | waitTimeout | noWait).*.map(seqToString).?
+      def unloadArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | waitTimeout | noWait).*.map(seqToString).?
 
       def infoSubtask: Parser[ConductSubtaskSuccess] =
         token("info" ~> infoArgs)
-          .map { case args => ConductSubtaskSuccess("info", optionalArgs(args)) }
+          .map { args => ConductSubtaskSuccess("info", optionalArgs(args)) }
           .!!!("Usage: conduct info")
-      def infoArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
+      def infoArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs).*.map(seqToString).?
 
       def serviceNamesSubtask: Parser[ConductSubtaskSuccess] =
         token("service-names" ~> servicesArgs)
-          .map { case args => ConductSubtaskSuccess("service-names", optionalArgs(args)) }
+          .map { args => ConductSubtaskSuccess("service-names", optionalArgs(args)) }
           .!!!("Usage: conduct service-names")
-      def servicesArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
+      def servicesArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs).*.map(seqToString).?
 
       def aclsSubtask: Parser[ConductSubtaskSuccess] =
         token("acls") ~> withArgs(aclArgs)(protocolFamily)
           .mapArgs { case (opts, protocolFamily) => ConductSubtaskSuccess("acls", optionalArgs(opts) ++ Seq(protocolFamily)) }
           .!!!("Usage: conduct acls --help")
-      def aclArgs = hideAutoCompletion(commonArgs).*.map(seqToString).?
+      def aclArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs).*.map(seqToString).?
 
       def eventsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         (token("events") ~> withArgs(eventsArgs)(bundleId(bundleNames)))
           .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("events", optionalArgs(args) ++ Seq(bundleId)) }
           .!!!("Usage: conduct events --help")
-      def eventsArgs = hideAutoCompletion(commonArgs | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
+      def eventsArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
 
       def logsSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
         token("logs") ~> withArgs(logsArgs)(bundleId(bundleNames))
           .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("logs", optionalArgs(args) ++ Seq(bundleId)) }
           .!!!("Usage: conduct logs --help")
-      def logsArgs = hideAutoCompletion(commonArgs | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
+      def logsArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
 
       // Command specific options
       def bundle(file: Option[File]): Parser[URI] =
@@ -657,12 +679,17 @@ object ConductrPlugin extends AutoPlugin {
       val nonArgString = identifier(NonDashClass, NotSpaceClass)
       Space ~> withCompletionText(nonArgString, completionText)
     }
-    def pairStringWithText(completionText: String): Parser[String] = {
-      val pairString = StringBasic.filter(isPairString(_), _ => "Invalid key=value string")
-      Space ~> withCompletionText(pairString, completionText)
+    def instanceNumbers(completionText: String): Parser[(Int, Option[Int])] = {
+      val nrOfInstances = token(IntBasic, completionText)
+      val nrOfAgents = ":" ~> token(IntBasic, completionText)
+      Space ~> nrOfInstances ~ nrOfAgents.?
     }
     def isPairString(s: String): Boolean =
       s.split(PairSeparator).length == 2
+    def pairStringWithText(completionText: String): Parser[String] = {
+      val pairString = StringBasic.filter(isPairString, _ => "Invalid key=value string")
+      Space ~> withCompletionText(pairString, completionText)
+    }
     def positiveNumber: Parser[Int] =
       Space ~> NatBasic
     def numberWithText(completionText: String): Parser[Int] =
@@ -726,6 +753,7 @@ object ConductrPlugin extends AutoPlugin {
   private case class ImageArg(value: String) extends AnyVal with SandboxRunArg
   private case class LogLevelArg(value: String) extends AnyVal with SandboxRunArg
   private case class NrOfContainersArg(value: Int) extends AnyVal with SandboxRunArg
+  private case class NrOfInstancesArg(value: (Int, Option[Int])) extends AnyVal with SandboxRunArg
   private case class PortArg(value: Int) extends AnyVal with SandboxRunArg
   private case class FeatureArg(value: Seq[String]) extends AnyVal with SandboxRunArg
   private case class SandboxRunArgs(
@@ -735,6 +763,7 @@ object ConductrPlugin extends AutoPlugin {
     image: Option[String] = None,
     logLevel: Option[String] = None,
     nrOfContainers: Option[Int] = None,
+    nrOfInstances: Option[(Int, Option[Int])] = None,
     ports: Set[Int] = Set.empty,
     features: Seq[Seq[String]] = Seq.empty
   )

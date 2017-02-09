@@ -1,7 +1,5 @@
-> sandbox run 1.1.11
+> sandbox run 2.0.0
 
 > checkPorts
 
 > sandbox stop
-
-> checkConductrIsStopped

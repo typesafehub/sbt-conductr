@@ -23,22 +23,11 @@ BundleKeys.diskSpace := 10.MB
  */
 val checkPorts = taskKey[Unit]("Check that the specified ports are exposed to docker. Debug port should not be exposed.")
 checkPorts := {
-  val content = "docker port cond-0".!!
+  val content = "docker port sandbox-haproxy".!!
   val expectedLines = Set(
-    """9999/tcp -> 0.0.0.0:9999"""
+    "3000/tcp -> 192.168.10.1:3000",
+    "9999/tcp -> 192.168.10.1:9999"
   )
 
   expectedLines.foreach(line => content should include(line))
-}
-
-val checkEnvs = taskKey[Unit]("Check if environment variables for features are set.")
-checkEnvs := {
-  val content = "docker inspect --format='{{.Config.Env}}' cond-0".!!
-  val expectedContent = "CONDUCTR_FEATURES=visualization,logging"
-  content should include(expectedContent)
-}
-
-val checkConductrIsStopped = taskKey[Unit]("")
-checkConductrIsStopped := {
-  """docker ps --quiet --filter name=cond""".lines_! should have size 0
 }
