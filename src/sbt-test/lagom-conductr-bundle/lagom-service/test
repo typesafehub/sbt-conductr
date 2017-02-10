@@ -1,7 +1,6 @@
 > sandbox run 2.0.0
 
 > install
-$ sleep 5000
 
 > verifyConductInfo
 

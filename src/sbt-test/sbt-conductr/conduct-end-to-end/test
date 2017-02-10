@@ -1,6 +1,5 @@
 # run sandbox
 > sandbox run 2.0.0
-$ sleep 5000
 
 # conduct info
 > conduct info
@@ -38,7 +37,7 @@ $ sleep 5000
 # conduct unload
 > conduct unload reactive-maps-backend-region
 > conduct unload reactive-maps-backend-summary
-$ sleep 5000
+$ sleep 1000
 > verifyConductUnload
 
 # stop sandbox
