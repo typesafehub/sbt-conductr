@@ -829,17 +829,25 @@ object ConductrPlugin extends AutoPlugin {
     override def buffer[T](f: => T): T = f
   }
 
-  private object ProcessConverters {
+  private[sbt] object ProcessConverters {
     implicit class OptionOps[T](val self: Option[T]) extends AnyVal {
       def withFlag(flag: String): Seq[String] =
-        self.fold(Seq.empty[String])(value => Seq(flag, value.toString))
+        self.toSeq.withFlag(flag)
     }
 
     implicit class TraversableOps[T](val self: Traversable[T]) extends AnyVal {
       def withFlag(flag: String): Seq[String] =
-        self.foldLeft(Seq.empty[String]) {
-          case (xs, x) => x.toString +: flag +: xs
-        }.reverse
+        self.flatMap { e =>
+          val s = e.toString
+
+          // python's argparse can't parse "--somearg" "-Dsomevalue", must be specified as "--somearg=-Dsomevalue"
+          // see http://bugs.python.org/issue9334
+
+          if (s.startsWith("-"))
+            Seq(s"$flag=$s")
+          else
+            Seq(flag, s)
+        }.toSeq
     }
   }
 }
