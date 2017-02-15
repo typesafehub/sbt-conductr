@@ -212,6 +212,7 @@ object ConductrPlugin extends AutoPlugin {
       case SandboxHelp                 => sandboxHelp()
       case SandboxSubtaskHelp(command) => sandboxSubHelp(command)
       case SandboxRunSubtask(args)     => Project.extract(state.value).runTask(sandboxRunTaskInternal, state.value.put(SandboxRunArgsAttrKey, args))
+      case SandboxLogsSubtask          => sandboxLogs()
       case SandboxPsSubtask            => sandboxPs()
       case SandboxStopSubtask          => sandboxStop()
       case SandboxVersionSubtask       => sandboxVersion()
@@ -322,6 +323,12 @@ object ConductrPlugin extends AutoPlugin {
   }
 
   /**
+   * Executes the `sandbox logs` command of the conductr-cli
+   */
+  def sandboxLogs(): Unit =
+    Process(Seq("sandbox", "logs")).!
+
+  /**
    * Executes the `sandbox ps` command of the conductr-cli
    */
   def sandboxPs(): Unit =
@@ -390,6 +397,7 @@ object ConductrPlugin extends AutoPlugin {
         _ =>
           (Space ~> (
             helpSubtask |
+            logsSubtask |
             psSubtask |
             runSubtask |
             stopSubtask |
@@ -431,6 +439,11 @@ object ConductrPlugin extends AutoPlugin {
         }
       def isRunArg(arg: String, flag: String): Boolean =
         arg.startsWith(flag)
+
+      def logsSubtask: Parser[SandboxLogsSubtask.type] =
+        token("logs")
+          .map { _ => SandboxLogsSubtask }
+          .!!!("Usage: sandbox logs")
 
       def psSubtask: Parser[SandboxPsSubtask.type] =
         token("ps")
@@ -780,6 +793,7 @@ object ConductrPlugin extends AutoPlugin {
   private trait SubtaskSuccess
   private sealed trait SandboxSubtask
   private case class SandboxRunSubtask(args: SandboxRunArgs) extends SandboxSubtask with SubtaskSuccess
+  private object SandboxLogsSubtask extends SandboxSubtask with SubtaskSuccess
   private object SandboxPsSubtask extends SandboxSubtask with SubtaskSuccess
   private object SandboxStopSubtask extends SandboxSubtask with SubtaskSuccess
   private object SandboxVersionSubtask extends SandboxSubtask with SubtaskSuccess
