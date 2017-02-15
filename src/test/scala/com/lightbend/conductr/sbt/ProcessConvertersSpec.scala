@@ -17,6 +17,17 @@ class ProcessConvertersSpec extends WordSpec with Matchers {
       Seq("-Dmy.greeting=hello world").withFlag("--args") shouldBe Seq("--args=-Dmy.greeting=hello world")
     }
 
+    "format typical arguments from Set correctly" in {
+      Set("false", "true").withFlag("--enable-feature") shouldBe Seq("--enable-feature", "false", "--enable-feature", "true")
+
+      Set("hello world", "hi").withFlag("--greeting") shouldBe Seq("--greeting", "hello world", "--greeting", "hi")
+    }
+
+    "format dash (-) arguments from Set correctly" in {
+      Set("false", "-Denable=false").withFlag("--arg") shouldBe Seq("--arg", "false", "--arg=-Denable=false")
+      Set("-Dmy.greeting=hello world").withFlag("--args") shouldBe Seq("--args=-Dmy.greeting=hello world")
+    }
+
     "format typical arguments from Option correctly" in {
       None.withFlag("--arg") shouldBe Seq()
 

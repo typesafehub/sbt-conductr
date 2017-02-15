@@ -837,7 +837,7 @@ object ConductrPlugin extends AutoPlugin {
 
     implicit class TraversableOps[T](val self: Traversable[T]) extends AnyVal {
       def withFlag(flag: String): Seq[String] =
-        self.flatMap { e =>
+        self.toSeq.flatMap { e =>
           val s = e.toString
 
           // python's argparse can't parse "--somearg" "-Dsomevalue", must be specified as "--somearg=-Dsomevalue"
@@ -847,7 +847,7 @@ object ConductrPlugin extends AutoPlugin {
             Seq(s"$flag=$s")
           else
             Seq(flag, s)
-        }.toSeq
+        }
     }
   }
 }
