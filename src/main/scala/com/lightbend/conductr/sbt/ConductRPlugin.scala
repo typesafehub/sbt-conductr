@@ -267,7 +267,12 @@ object ConductrPlugin extends AutoPlugin {
       ports = args.ports ++ bundlePorts,
       logLevel = args.logLevel,
       conductrRoles = args.conductrRoles,
-      envs = args.envs
+      envs = args.envs,
+      envsCore = args.envsCore,
+      envsAgent = args.envsAgent,
+      args = args.args,
+      argsAgent = args.argsAgent,
+      argsCore = args.argsCore
     )
   }
 
@@ -283,7 +288,12 @@ object ConductrPlugin extends AutoPlugin {
     ports: Set[Int] = Set.empty,
     logLevel: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
-    envs: Map[String, String] = Map.empty
+    envs: Map[String, String] = Map.empty,
+    envsCore: Map[String, String] = Map.empty,
+    envsAgent: Map[String, String] = Map.empty,
+    args: Seq[String] = Seq.empty,
+    argsCore: Seq[String] = Seq.empty,
+    argsAgent: Seq[String] = Seq.empty
   ): Unit = {
     import Parsers.Sandbox.Flags
     import Parsers.ArgumentConverters._
@@ -302,7 +312,12 @@ object ConductrPlugin extends AutoPlugin {
         ports.withFlag(Flags.port) ++
         logLevel.withFlag(Flags.logLevel) ++
         conductrRoles.map(_.asConsoleNArg).withFlag(Flags.conductrRole) ++
-        envs.map(_.asConsolePairArg).withFlag(Flags.env)
+        envs.map(_.asConsolePairArg).withFlag(Flags.env) ++
+        envsCore.map(_.asConsolePairArg).withFlag(Flags.envCore) ++
+        envsAgent.map(_.asConsolePairArg).withFlag(Flags.envAgent) ++
+        args.withFlag(Flags.arg) ++
+        argsCore.withFlag(Flags.argCore) ++
+        argsAgent.withFlag(Flags.argAgent)
     ).!
   }
 
@@ -393,7 +408,7 @@ object ConductrPlugin extends AutoPlugin {
           .map { args => SandboxRunSubtask(toRunArgs(args)) }
           .!!!("Usage: sandbox run --help")
       def sandboxRunArgs: Parser[Seq[SandboxRunArg]] =
-        (conductrRole | env | image | logLevel | nrOfContainers | nrOfInstances | port | feature | imageVersion).*
+        (conductrRole | env | envCore | envAgent | arg | argCore | argAgent | image | logLevel | nrOfContainers | nrOfInstances | port | feature | imageVersion).*
       def toRunArgs(args: Seq[SandboxRunArg]): SandboxRunArgs =
         args.foldLeft(SandboxRunArgs()) {
           case (currentArgs, arg) =>
@@ -401,6 +416,11 @@ object ConductrPlugin extends AutoPlugin {
               case ImageVersionArg(v)   => currentArgs.copy(imageVersion = Some(v))
               case ConductrRoleArg(v)   => currentArgs.copy(conductrRoles = currentArgs.conductrRoles :+ v)
               case EnvArg(v)            => currentArgs.copy(envs = currentArgs.envs + v)
+              case EnvCoreArg(v)        => currentArgs.copy(envsCore = currentArgs.envsCore + v)
+              case EnvAgentArg(v)       => currentArgs.copy(envsAgent = currentArgs.envsAgent + v)
+              case ArgArg(v)            => currentArgs.copy(args = currentArgs.args :+ v)
+              case ArgCoreArg(v)        => currentArgs.copy(argsCore = currentArgs.argsCore :+ v)
+              case ArgAgentArg(v)       => currentArgs.copy(argsAgent = currentArgs.argsAgent :+ v)
               case ImageArg(v)          => currentArgs.copy(image = Some(v))
               case LogLevelArg(v)       => currentArgs.copy(logLevel = Some(v))
               case NrOfContainersArg(v) => currentArgs.copy(nrOfContainers = Some(v))
@@ -439,6 +459,26 @@ object ConductrPlugin extends AutoPlugin {
         Space ~> (token(Flags.env) | hideAutoCompletion("-e")) ~> pairStringWithText(s"Format: ${Flags.env} key=value")
           .map(keyAndValue => EnvArg(keyAndValue.asScalaPairArg))
 
+      def envCore: Parser[EnvCoreArg] =
+        Space ~> token(Flags.envCore) ~> pairStringWithText(s"Format: ${Flags.envCore} key=value")
+          .map(keyAndValue => EnvCoreArg(keyAndValue.asScalaPairArg))
+
+      def envAgent: Parser[EnvAgentArg] =
+        Space ~> token(Flags.envAgent) ~> pairStringWithText(s"Format: ${Flags.envAgent} key=value")
+          .map(keyAndValue => EnvAgentArg(keyAndValue.asScalaPairArg))
+
+      def arg: Parser[ArgArg] =
+        Space ~> token(Flags.arg) ~> nonArgStringWithText("<argument>")
+          .map(arg => ArgArg(arg))
+
+      def argCore: Parser[ArgCoreArg] =
+        Space ~> token(Flags.argCore) ~> nonArgStringWithText("<argument>")
+          .map(arg => ArgCoreArg(arg))
+
+      def argAgent: Parser[ArgAgentArg] =
+        Space ~> token(Flags.argAgent) ~> nonArgStringWithText("<argument>")
+          .map(arg => ArgAgentArg(arg))
+
       def image: Parser[ImageArg] =
         Space ~> (token(Flags.image) | hideAutoCompletion("-i")) ~> nonArgStringWithText("<conductr_image>").map(ImageArg)
 
@@ -464,7 +504,12 @@ object ConductrPlugin extends AutoPlugin {
       object Flags {
         val imageVersion = "--image-version"
         val conductrRole = "--conductr-role"
+        val arg = "--arg"
+        val argCore = "--arg-core"
+        val argAgent = "--arg-agent"
         val env = "--env"
+        val envCore = "--env-core"
+        val envAgent = "--env-agent"
         val image = "--image"
         val logLevel = "--log-level"
         val nrOfContainers = "--nr-of-containers"
@@ -750,6 +795,11 @@ object ConductrPlugin extends AutoPlugin {
   private case class ImageVersionArg(value: String) extends AnyVal with SandboxRunArg
   private case class ConductrRoleArg(value: Set[String]) extends AnyVal with SandboxRunArg
   private case class EnvArg(value: (String, String)) extends AnyVal with SandboxRunArg
+  private case class EnvCoreArg(value: (String, String)) extends AnyVal with SandboxRunArg
+  private case class EnvAgentArg(value: (String, String)) extends AnyVal with SandboxRunArg
+  private case class ArgArg(value: String) extends AnyVal with SandboxRunArg
+  private case class ArgCoreArg(value: String) extends AnyVal with SandboxRunArg
+  private case class ArgAgentArg(value: String) extends AnyVal with SandboxRunArg
   private case class ImageArg(value: String) extends AnyVal with SandboxRunArg
   private case class LogLevelArg(value: String) extends AnyVal with SandboxRunArg
   private case class NrOfContainersArg(value: Int) extends AnyVal with SandboxRunArg
@@ -760,6 +810,11 @@ object ConductrPlugin extends AutoPlugin {
     imageVersion: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
     envs: Map[String, String] = Map.empty,
+    envsCore: Map[String, String] = Map.empty,
+    envsAgent: Map[String, String] = Map.empty,
+    args: Seq[String] = Seq.empty,
+    argsCore: Seq[String] = Seq.empty,
+    argsAgent: Seq[String] = Seq.empty,
     image: Option[String] = None,
     logLevel: Option[String] = None,
     nrOfContainers: Option[Int] = None,
