@@ -51,7 +51,7 @@ checkCassandraConf := {
   val runtimeConfigContent = IO.read(cassandraConfigurationDir / "runtime-config.sh").indent
   val expectedRuntimeConfigContent = """|# Demonstrate providing an entirely new configuration directory
                                         |CURRENT_PATH=`dirname "$0"`
-                                        |export $CASSANDRA_CONF=$CURRENT_PATH/cassandra-conf""".stripMargin.indent
+                                        |export CASSANDRA_CONF=$CURRENT_PATH/cassandra-conf""".stripMargin.indent
   runtimeConfigContent should include (expectedRuntimeConfigContent)
 
   val cassandraYaml = cassandraConfigurationDir / "cassandra-conf" / "cassandra.yaml"
