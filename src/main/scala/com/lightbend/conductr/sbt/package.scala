@@ -76,7 +76,7 @@ package object sbt {
   }
 
   object Version {
-    val conductrBundleLib = "1.5.1-SNAPSHOT"
+    val conductrBundleLib = "1.6.1"
   }
 
   /**
