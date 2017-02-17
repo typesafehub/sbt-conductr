@@ -7,6 +7,7 @@ import java.util.jar.{ JarEntry, JarFile }
 
 import com.typesafe.sbt.SbtNativePackager
 import SbtNativePackager.Universal
+import com.lightbend.conductr.sbt.LagomBundleImport.LagomBundleKeys
 
 import scala.collection.JavaConverters._
 import play.api.libs.json._
@@ -46,9 +47,52 @@ object LagomPlayBundlePlugin extends AutoPlugin {
       BundleKeys.memory := PlayBundleKeyDefaults.residentMemory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
       BundleKeys.endpoints := BundlePlugin.getDefaultWebEndpoints(Bundle).value,
-      LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
-      libraryDependencies += Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+      LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib
     )
+}
+
+/**
+ * Provides support for Lagom Play Java projects
+ */
+object LagomPlayJavaBundlePlugin extends AutoPlugin {
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomPlayJava$") match {
+        case Failure(_)             => NoOpPlugin
+        case Success(lagomPlayJava) => BundlePlugin && lagomPlayJava
+      }
+    }
+
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Setting[_]] = Seq(
+    libraryDependencies +=
+      Library.lagomConductrBundleLib("java", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+  )
+}
+
+/**
+ * Provides support for Lagom Play Scala projects
+ */
+object LagomPlayScalaBundlePlugin extends AutoPlugin {
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomPlayScala$") match {
+        case Failure(_)              => NoOpPlugin
+        case Success(lagomPlayScala) => BundlePlugin && lagomPlayScala
+      }
+    }
+
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Setting[_]] = Seq(
+    libraryDependencies +=
+      Library.lagomConductrBundleLib("scala", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+  )
 }
 
 /**
@@ -66,9 +110,9 @@ object LagomBundlePlugin extends AutoPlugin {
 
   override def requires =
     withContextClassloader(classLoader) { loader =>
-      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomJava$") match {
-        case Failure(_)         => NoOpPlugin
-        case Success(lagomJava) => BundlePlugin && lagomJava
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.Lagom$") match {
+        case Failure(_)     => NoOpPlugin
+        case Success(lagom) => BundlePlugin && lagom
       }
     }
 
@@ -90,10 +134,7 @@ object LagomBundlePlugin extends AutoPlugin {
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
       LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
       LagomBundleKeys.endpointsPort := 9000,
-      libraryDependencies ++= Seq(
-        LagomImport.component("api-tools") % apiToolsConfig,
-        Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
-      ),
+      libraryDependencies += LagomImport.component("api-tools") % apiToolsConfig,
       manageClasspath(apiToolsConfig)
     )
 
@@ -334,6 +375,50 @@ object LagomBundlePlugin extends AutoPlugin {
       .map(toEndpoint)
       .foldLeft(Map.empty[String, Endpoint])(mergeEndpoint)
   }
+}
+
+/**
+ * Provides support for Lagom Java projects
+ */
+object LagomJavaBundlePlugin extends AutoPlugin {
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomJava$") match {
+        case Failure(_)         => NoOpPlugin
+        case Success(lagomJava) => BundlePlugin && lagomJava
+      }
+    }
+
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Setting[_]] = Seq(
+    libraryDependencies +=
+      Library.lagomConductrBundleLib("java", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+  )
+}
+
+/**
+ * Provides support for Lagom Scala projects
+ */
+object LagomScalaBundlePlugin extends AutoPlugin {
+  private val classLoader = this.getClass.getClassLoader
+
+  override def requires =
+    withContextClassloader(classLoader) { loader =>
+      Reflection.getSingletonObject[Plugins.Basic](classLoader, "com.lightbend.lagom.sbt.LagomScala$") match {
+        case Failure(_)          => NoOpPlugin
+        case Success(lagomScala) => BundlePlugin && lagomScala
+      }
+    }
+
+  override def trigger = allRequirements
+
+  override def projectSettings: Seq[Setting[_]] = Seq(
+    libraryDependencies +=
+      Library.lagomConductrBundleLib("scala", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+  )
 }
 
 /**
