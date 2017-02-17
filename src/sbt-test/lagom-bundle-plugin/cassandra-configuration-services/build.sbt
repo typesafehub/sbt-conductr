@@ -49,9 +49,9 @@ checkCassandraConf := {
   bundleConfContent should include (expectedBundleConfContent)
 
   val runtimeConfigContent = IO.read(cassandraConfigurationDir / "runtime-config.sh").indent
-  val expectedRuntimeConfigContent = """|# Demonstrate providing an entirely new configuration directory
-                                        |CURRENT_PATH=`dirname "$0"`
-                                        |export CASSANDRA_CONF=$CURRENT_PATH/cassandra-conf""".stripMargin.indent
+  val expectedRuntimeConfigContent = """|# Setting Cassandra configuration directory to the bundle configuration directory
+                                        |BUNDLE_CONFIG_DIR="$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )"
+                                        |export CASSANDRA_CONF=$BUNDLE_CONFIG_DIR/cassandra-conf""".stripMargin.indent
   runtimeConfigContent should include (expectedRuntimeConfigContent)
 
   val cassandraYaml = cassandraConfigurationDir / "cassandra-conf" / "cassandra.yaml"

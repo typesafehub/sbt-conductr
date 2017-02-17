@@ -1,3 +1,3 @@
-# Demonstrate providing an entirely new configuration directory
-CURRENT_PATH=`dirname "$0"`
-export CASSANDRA_CONF=$CURRENT_PATH/cassandra-conf
+# Setting Cassandra configuration directory to the bundle configuration directory
+BUNDLE_CONFIG_DIR="$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd )"
+export CASSANDRA_CONF=$BUNDLE_CONFIG_DIR/cassandra-conf
