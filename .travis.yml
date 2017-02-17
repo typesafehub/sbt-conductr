@@ -1,29 +1,16 @@
 # Need Ubuntu trusty to install pip3
 dist: trusty
 
+sudo: required
+
 jdk: oraclejdk8
 python: 3.5
 language: scala
-
-env:
-  global:
-    - "HOST_IP=$( (/sbin/ifconfig eth0 2> /dev/null || /sbin/ifconfig venet0:0 2> /dev/null ) | grep 'inet addr' | awk -F: '{print $2}' | awk '{print $1}')"
-    - DOCKER_HOST=tcp://$HOST_IP:2375
-    - DOCKER_PORT_RANGE=2400:2500
-    - SLIRP_HOST=$HOST_IP
-    - SLIRP_PORTS=$(seq 2375 2500)
-    - unset DOCKER_MACHINE_NAME
-
-before_install:
-  - sudo sh -c "wget -qO- https://get.docker.io/gpg | apt-key add -"
-  - sudo sh -c "echo deb https://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
+services: docker
 
 install:
   - sudo apt-get -qqy update
-  - sudo apt-get -qqy install slirp python3-setuptools
-  - sudo apt-get -qqy install -o Dpkg::Options::="--force-confold" lxc-docker-1.6.0
-  - sudo sudo usermod -aG docker "$USER"
-  - git clone git://github.com/cptactionhank/sekexe
+  - sudo apt-get -qqy install python3-setuptools
   - sudo easy_install3 -U pip
   - pip3 install --user conductr-cli
   # Ensure that our sandbox interfaces are prepared
@@ -38,11 +25,7 @@ install:
   - conduct load -q cassandra
   - conduct load -q reactive-maps-backend-region
   - conduct load -q reactive-maps-backend-summary
-  # Tests go faster if we do this... less interactions with bintray etc
+  # Tests go faster if we do this... less interactions with bintray etc.
   - export CONDUCTR_OFFLINE_MODE=1
-
-before_script:
-  - "sekexe/run docker -d -H tcp://0.0.0.0:2375 &"
-  - "while ! docker -H tcp://$HOST_IP:2375 info &> /dev/null ; do sleep 1; done"
 
 script: sbt scripted
