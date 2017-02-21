@@ -8,6 +8,7 @@ import sbt._
 import sbt.Keys._
 import com.typesafe.sbt.SbtNativePackager
 import com.typesafe.sbt.packager.universal.Archives
+import sbtassembly.AssemblyPlugin
 import SbtNativePackager.Universal
 import java.io.{ BufferedInputStream, FileInputStream }
 import java.security.MessageDigest
@@ -17,6 +18,7 @@ import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 object BundlePlugin extends AutoPlugin {
+  import AssemblyPlugin.autoImport._
   import BundleImport._
   import BundleKeys._
   import ByteConversions._
@@ -24,7 +26,7 @@ object BundlePlugin extends AutoPlugin {
 
   val autoImport = BundleImport
 
-  override def requires = SbtNativePackager
+  override def requires = AssemblyPlugin && SbtNativePackager
 
   override def trigger = AllRequirements
 
@@ -43,9 +45,14 @@ object BundlePlugin extends AutoPlugin {
         minMemoryCheckValue := 384.MiB,
         projectTarget := target.value,
         roles := Set("web"),
+        NativePackagerKeys.scriptClasspathOrdering := {
+          val assemblyFile = assembly.value
+          Seq(assemblyFile -> (file("lib") / assemblyFile.getName).getPath)
+        },
         system := (normalizedName in Bundle).value,
         systemVersion := (compatibilityVersion in Bundle).value,
-        startCommand := Seq((executableScriptPath in Bundle).value) ++ (javaOptions in Bundle).value
+        startCommand := Seq((executableScriptPath in Bundle).value) ++ (javaOptions in Bundle).value,
+        test in assembly := {}
       )
 
   override def projectConfigurations: Seq[Configuration] =
