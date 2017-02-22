@@ -37,14 +37,14 @@ addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 
 sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
 
-| Plugin                | Description                                                                    | Scope   | Trigger
-|-----------------------|--------------------------------------------------------------------------------|---------|--------- 
-| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                    | Global  | Always enabled
-| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.   | Project | JavaAppPackaging
-| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.              | Project | Play && BundlePlugin
+| Plugin                | Description                                                                              | Scope   | Trigger
+|-----------------------|------------------------------------------------------------------------------------------|---------|--------- 
+| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                              | Global  | Always enabled
+| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.             | Project | JavaAppPackaging
+| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.                        | Project | Play && BundlePlugin
 | LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
-| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                 | Project | LagomJava && BundlePlugin
-| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                          | Global  | ConductrPlugin && LagomBundlePlugin
+| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                           | Project | LagomJava && BundlePlugin OR LagomScala && BundlePlugin
+| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                                    | Global  | ConductrPlugin && LagomBundlePlugin
 
 The `ConductRPlugin` is enabled as soon as `sbt-conductr` has been added to the project. The `BundlePlugin` is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
 
@@ -56,7 +56,8 @@ In the context of Play or Lagom you should enable the following plugins to trigg
 
 | Project            | Description                                                                         |
 |--------------------|-------------------------------------------------------------------------------------|
-| Lagom Java 1.2.x-  | `lazy val myService = (project in file(".")).enablePlugins(LagomJava)`              |
+| Lagom Java 1.3.x   | `lazy val myService = (project in file(".")).enablePlugins(LagomJava)`              |
+| Lagom Scala 1.3.x  | `lazy val myService = (project in file(".")).enablePlugins(LagomScala)`             |
 | Play Java in Lagom | `lazy val myService = (project in file(".")).enablePlugins(LagomPlay)`              |
 | Play Scala 2.4+    | `lazy val root = (project in file(".")).enablePlugins(PlayScala)`                   |
 | Play Scala 2.3     | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayScala)` |
