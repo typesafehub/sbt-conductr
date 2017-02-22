@@ -65,8 +65,8 @@ package object sbt {
   object Library {
     def playConductrBundleLib(playVersion: String, scalaVersion: String, conductrLibVersion: String) =
       "com.typesafe.conductr" % s"play${formatVersionMajorMinor(playVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
-    def lagomConductrBundleLib(lagomVersion: String, scalaVersion: String, conductrLibVersion: String) =
-      "com.typesafe.conductr" % s"lagom${formatVersionMajor(lagomVersion)}-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
+    def lagomConductrBundleLib(language: String, lagomVersion: String, scalaVersion: String, conductrLibVersion: String) =
+      "com.typesafe.conductr" % s"lagom${formatVersionMajor(lagomVersion)}-$language-conductr-bundle-lib_$scalaVersion" % conductrLibVersion
 
     private def formatVersionMajorMinor(version: String): String =
       version.filterNot(_ == '.').take(2)
@@ -76,7 +76,7 @@ package object sbt {
   }
 
   object Version {
-    val conductrBundleLib = "1.5.0"
+    val conductrBundleLib = "1.6.1"
   }
 
   /**

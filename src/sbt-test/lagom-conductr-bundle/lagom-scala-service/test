@@ -1,0 +1,10 @@
+> sandbox run 2.0.0
+
+> install
+
+> verifyConductInfo
+
+> sandbox stop
+
+> generateInstallationScript
+$ exists target/install.sh
