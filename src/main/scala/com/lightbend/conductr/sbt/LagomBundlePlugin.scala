@@ -69,7 +69,7 @@ object LagomPlayJavaBundlePlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     libraryDependencies +=
-      Library.lagomConductrBundleLib("java", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+      Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
   )
 }
 
@@ -91,7 +91,7 @@ object LagomPlayScalaBundlePlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     libraryDependencies +=
-      Library.lagomConductrBundleLib("scala", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+      Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
   )
 }
 
@@ -395,7 +395,7 @@ object LagomJavaBundlePlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     libraryDependencies +=
-      Library.lagomConductrBundleLib("java", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+      Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
   )
 }
 
@@ -417,7 +417,7 @@ object LagomScalaBundlePlugin extends AutoPlugin {
 
   override def projectSettings: Seq[Setting[_]] = Seq(
     libraryDependencies +=
-      Library.lagomConductrBundleLib("scala", LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
+      Library.lagomConductrBundleLib(LagomVersion.current, scalaBinaryVersion.value, LagomBundleKeys.conductrBundleLibVersion.value)
   )
 }
 

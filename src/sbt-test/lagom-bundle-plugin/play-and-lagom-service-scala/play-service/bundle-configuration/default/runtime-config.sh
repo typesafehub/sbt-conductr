@@ -1,1 +1,0 @@
-export APPLICATION_SECRET="thisismyapplicationsecret-pleasedonttellanyone"
