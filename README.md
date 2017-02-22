@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.2.5-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.3.0-rc.1-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is a sbt plugin that provides commands in sbt to:
@@ -43,7 +43,6 @@ addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 
 sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
 
-<<<<<<< HEAD
 | Plugin                | Description                                                                              | Scope   | Trigger
 |-----------------------|------------------------------------------------------------------------------------------|---------|--------- 
 | ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                              | Global  | Always enabled
