@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.2.4-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.2.5-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is a sbt plugin that provides commands in sbt to:
@@ -20,10 +20,8 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 
 ## Prerequisite
 
-* [Docker](https://www.docker.com/)
+* [Docker](https://www.docker.com/) (when using Docker based bundles)
 * [conductr-cli](http://conductr.lightbend.com/docs/1.1.x/CLI)
-
-Docker is required to run the ConductR cluster as if it were running on a number of machines in your network. You won't need to understand much about Docker for ConductR other than installing it as described in its "Get Started" section. If you are on Windows or Mac then you will become familiar with `docker-machine` which is a utility that controls a virtual machine for the purposes of running Docker.
 
 The conductr-cli is used to manage the ConductR cluster.
 
@@ -32,7 +30,7 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.4")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 ```
 
 ## Plugin Overview
@@ -58,7 +56,7 @@ In the context of Play or Lagom you should enable the following plugins to trigg
 
 | Project            | Description                                                                         |
 |--------------------|-------------------------------------------------------------------------------------|
-| Lagom Java         | `lazy val myService = (project in file(".")).enablePlugins(LagomJava)`              |
+| Lagom Java 1.2.x-  | `lazy val myService = (project in file(".")).enablePlugins(LagomJava)`              |
 | Play Java in Lagom | `lazy val myService = (project in file(".")).enablePlugins(LagomPlay)`              |
 | Play Scala 2.4+    | `lazy val root = (project in file(".")).enablePlugins(PlayScala)`                   |
 | Play Scala 2.3     | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayScala)` |
