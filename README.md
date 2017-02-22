@@ -30,6 +30,12 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.0-rc.1")
+```
+
+If your project is using Lagom 1.2.x or a previous Lagom version use:
+
+```scala
 addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 ```
 
@@ -37,10 +43,11 @@ addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 
 sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
 
+<<<<<<< HEAD
 | Plugin                | Description                                                                              | Scope   | Trigger
 |-----------------------|------------------------------------------------------------------------------------------|---------|--------- 
 | ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                              | Global  | Always enabled
-| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.             | Project | JavaAppPackaging
+| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaging application.             | Project | JavaAppPackaging
 | PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.                        | Project | Play && BundlePlugin
 | LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
 | LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                           | Project | LagomJava && BundlePlugin OR LagomScala && BundlePlugin
