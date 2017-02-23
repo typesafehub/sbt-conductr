@@ -15,7 +15,6 @@ lazy val `lagom-service-impl` = (project in file("lagom-service-impl"))
       "-J-Xms268435456",
       "-J-Xmx268435456"
     ),
-    BundleKeys.conductrTargetVersion := ConductrVersion.V2,
     BundleKeys.memory := 256.MiB,
     BundleKeys.minMemoryCheckValue := 256.MiB
   )
@@ -28,7 +27,6 @@ lazy val `play-service` = (project in file("play-service"))
       "-J-Xms67108864",
       "-J-Xmx67108864"
     ),
-    BundleKeys.conductrTargetVersion := ConductrVersion.V2,
     routesGenerator := InjectedRoutesGenerator,
     BundleKeys.memory := 64.MiB,
     BundleKeys.minMemoryCheckValue := 64.MiB

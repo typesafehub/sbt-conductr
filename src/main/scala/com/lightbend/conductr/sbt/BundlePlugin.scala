@@ -28,18 +28,18 @@ object BundlePlugin extends AutoPlugin {
 
   override def trigger = AllRequirements
 
-  override def projectSettings =
+  override def projectSettings: Seq[Setting[_]] =
     bundleSettings(Bundle) ++ configurationSettings(BundleConfiguration) ++
       Seq(
         bundleConfVersion := BundleConfVersion.V1,
-        conductrTargetVersion := ConductrVersion.V1_1,
+        conductrTargetVersion := ConductrVersion.V2_0,
         bundleType := Universal,
         checkInitialDelay := 3.seconds,
         checks := Seq.empty,
         compatibilityVersion := (version in Bundle).value.takeWhile(_ != '.'),
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
-        enableAcls := conductrTargetVersion.value >= ConductrVersion.V2,
+        enableAcls := conductrTargetVersion.value >= ConductrVersion.V2_0,
         minMemoryCheckValue := 384.MiB,
         projectTarget := target.value,
         roles := Set("web"),
@@ -414,7 +414,7 @@ object BundlePlugin extends AutoPlugin {
   private def formatServiceName(serviceName: String): String =
     s"""        service-name  = "$serviceName""""
 
-  private def formatEndpoints(bundleConfVersion: BundleConfVersion.Value, endpoints: Map[String, Endpoint]): String = {
+  private def formatEndpoints(endpoints: Map[String, Endpoint]): String = {
     val formatted =
       for {
         (label, Endpoint(bindProtocol, bindPort, services, serviceName, acls)) <- endpoints
@@ -502,7 +502,7 @@ object BundlePlugin extends AutoPlugin {
           formatValue(s"""    description      = "%s"""", toString((projectInfoConfigName in config).value, (v: ModuleInfo) => v.description)) ++
           formatValue(s"""    file-system-type = "%s"""", (bundleTypeConfigName in config).value) ++
           formatValue(s"""    start-command    = %s""", toString((startCommandConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
-          formatValue(s"""    endpoints = %s""", toString((endpointsConfigName in config).value, (v: Map[String, Endpoint]) => formatEndpoints(bundleConfVersion.value, v))) ++
+          formatValue(s"""    endpoints = %s""", toString((endpointsConfigName in config).value, (v: Map[String, Endpoint]) => formatEndpoints(v))) ++
           Seq("  }", "}") ++
           checkComponents
 

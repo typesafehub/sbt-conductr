@@ -7,7 +7,6 @@ lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
 name := "acl-no-service-name"
 
 version := "0.1.0-SNAPSHOT"
-BundleKeys.conductrTargetVersion := ConductrVersion.V2
 
 javaOptions in Universal := Seq(
   "-J-Xms67108864",
