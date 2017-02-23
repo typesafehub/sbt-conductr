@@ -11,6 +11,7 @@ lazy val simpleImpl = (project in file("simple-impl"))
   .enablePlugins(LagomScala)
   .dependsOn(simpleApi)
   .settings(
+    BundleKeys.conductrTargetVersion := ConductrVersion.V1_1,
     BundleKeys.enableAcls := false
   )
 

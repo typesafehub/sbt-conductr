@@ -8,8 +8,6 @@ name := "play24"
 version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.8"
 
-BundleKeys.conductrTargetVersion := ConductrVersion.V2
-
 val checkBundleDist = taskKey[Unit]("check-bundle-dist-contents")
 checkBundleDist := {
   val bundleContentsConf = IO.read((target in Bundle).value / "bundle" / "tmp" / "bundle.conf")
