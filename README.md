@@ -37,14 +37,14 @@ addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
 
 sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
 
-| Plugin                | Description                                                                    | Scope   | Trigger
-|-----------------------|--------------------------------------------------------------------------------|---------|--------- 
-| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                    | Global  | Always enabled
-| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaing application.   | Project | JavaAppPackaging
-| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.              | Project | Play && BundlePlugin
+| Plugin                | Description                                                                              | Scope   | Trigger
+|-----------------------|------------------------------------------------------------------------------------------|---------|--------- 
+| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                              | Global  | Always enabled
+| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaging application.            | Project | JavaAppPackaging
+| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.                        | Project | Play && BundlePlugin
 | LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
-| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                 | Project | LagomJava && BundlePlugin
-| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                          | Global  | ConductrPlugin && LagomBundlePlugin
+| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                           | Project | LagomJava && BundlePlugin
+| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                                    | Global  | ConductrPlugin && LagomBundlePlugin
 
 The `ConductRPlugin` is enabled as soon as `sbt-conductr` has been added to the project. The `BundlePlugin` is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
 
@@ -390,10 +390,10 @@ bundleType            | The type of configuration that this bundling relates to.
 checkInitialDelay     | Initial delay before the check uris are triggered. The `FiniteDuration` value gets rounded up to full seconds. Default is 3 seconds.
 checks                | Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example `Seq(uri("$WEB_HOST"))` will check that a endpoint named "web" will be checked given its host environment var. Once that URL becomes available then ConductR will be signalled that the bundle is ready. Note that a `docker+` prefix should be used when waiting on Docker components so that the Docker build event is waited on e.g. `Seq(uri("docker+$WEB_HOST"))`<br/>Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start. For example: `Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2"))`.
 compatibilityVersion  | A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by [http://semver.org/]. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from [http://ometer.com/parallel.html]."
-conductrTargetVersion | The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 1.1.
+conductrTargetVersion | The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 2.0.
 configurationName     | The name of the directory of the additional configuration to use. Defaults to 'default'
 diskSpace             | The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required.
-enableAcls            | Acls can be declared on an endpoint if this setting is 'true'. Otherwise only service endpoints can be declared. Endpoint acls can be used from ConductR 1.2 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 1.2+ 'true'.
+enableAcls            | Acls can be declared on an endpoint if this setting is 'true'. Otherwise, only service endpoints can be declared. Endpoint acls can be used from ConductR 2.0 onwards. Therefore, the default in ConductR 1.1- is 'false' and in ConductR 2.0+ 'true'.
 endpoints             | Declares endpoints. The default is Map("web" -> Endpoint("http", 0, Set.empty)). The endpoint key is used to form a set of environment variables for your components, e.g. for the endpoint key "web" ConductR creates the environment variable `WEB_BIND_PORT`.
 executableScriptPath  | The relative path of the executableScript within the bundle.
 memory                | The amount of resident memory required to run the bundle. Use the Unix `top` command to determine this value by observing the `RES` and rounding up to the nearest 10MiB.

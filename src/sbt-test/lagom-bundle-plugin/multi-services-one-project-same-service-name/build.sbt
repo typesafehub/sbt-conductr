@@ -10,9 +10,6 @@ lazy val paymentApi = (project in file("payment-api"))
 lazy val paymentImpl = (project in file("payment-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(paymentApi)
-  .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V2
-  )
 
 // Test assertions
 val checkBundleConf = taskKey[Unit]("")

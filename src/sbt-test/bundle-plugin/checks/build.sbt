@@ -43,6 +43,7 @@ checkBundleConf := {
                             |      "web" = {
                             |        bind-protocol = "http"
                             |        bind-port     = 0
+                            |        service-name  = "web"
                             |        services      = []
                             |      }
                             |    }
