@@ -8,6 +8,7 @@ name := "custom-config"
 version := "0.1.0-SNAPSHOT"
 scalaVersion := "2.11.8"
 
+BundleKeys.conductrTargetVersion := ConductrVersion.V1_1
 BundleKeys.enableAcls := false
 BundleKeys.memory := 64.MiB
 BundleKeys.minMemoryCheckValue := 64.MiB

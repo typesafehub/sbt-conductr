@@ -9,10 +9,6 @@ lazy val simpleApi = (project in file("simple-api"))
 lazy val simpleImpl = (project in file("simple-impl"))
   .enablePlugins(LagomJava)
   .dependsOn(simpleApi)
-  .settings(
-    BundleKeys.conductrTargetVersion := ConductrVersion.V2,
-    BundleKeys.enableAcls := true
-  )
 
 // Test assertions
 val checkCassandraConf = taskKey[Unit]("")

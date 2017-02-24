@@ -8,8 +8,6 @@ name := "validation-acl-and-service"
 
 version := "0.1.0-SNAPSHOT"
 
-BundleKeys.conductrTargetVersion := ConductrVersion.V2
-
 javaOptions in Universal := Seq(
   "-J-Xms67108864",
   "-J-Xmx67108864"

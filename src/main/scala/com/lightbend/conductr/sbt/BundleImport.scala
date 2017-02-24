@@ -215,7 +215,7 @@ object BundleImport {
     // The order of the versions matter because there are used to compare the versions with `>=`, `<=`, etc.
     // Therefore the oldest version must come first, the latest version at last
     val V1_1 = Value("1.1")
-    val V2 = Value("2")
+    val V2_0 = Value("2.0")
   }
 
   object BundleKeys {
@@ -251,7 +251,7 @@ object BundleImport {
 
     val conductrTargetVersion = SettingKey[ConductrVersion.Value](
       "bundle-conductr-target-version",
-      "The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 1.1."
+      "The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 2.0."
     )
 
     val configurationName = SettingKey[String](
