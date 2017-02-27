@@ -265,6 +265,7 @@ object ConductrPlugin extends AutoPlugin {
       nrOfContainers = args.nrOfContainers,
       nrOfInstances = args.nrOfInstances,
       features = args.features,
+      noDefaultFeatures = args.noDefaultFeatures,
       ports = args.ports ++ bundlePorts,
       logLevel = args.logLevel,
       conductrRoles = args.conductrRoles,
@@ -286,6 +287,7 @@ object ConductrPlugin extends AutoPlugin {
     nrOfContainers: Option[Int] = None,
     nrOfInstances: Option[(Int, Option[Int])] = None,
     features: Seq[Seq[String]] = Seq.empty,
+    noDefaultFeatures: Boolean = false,
     ports: Set[Int] = Set.empty,
     logLevel: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
@@ -309,6 +311,7 @@ object ConductrPlugin extends AutoPlugin {
           case (nrOfCores, Some(nrOfAgents)) => s"$nrOfCores:$nrOfAgents"
           case (nrOfAgents, None)            => nrOfAgents.toString
         }.withFlag(Flags.nrOfInstances) ++
+        (if (noDefaultFeatures) Seq(Flags.noDefaultFeatures) else Seq.empty) ++
         features.flatMap(Flags.feature +: _) ++
         ports.withFlag(Flags.port) ++
         logLevel.withFlag(Flags.logLevel) ++
@@ -416,7 +419,7 @@ object ConductrPlugin extends AutoPlugin {
           .map { args => SandboxRunSubtask(toRunArgs(args)) }
           .!!!("Usage: sandbox run --help")
       def sandboxRunArgs: Parser[Seq[SandboxRunArg]] =
-        (conductrRole | env | envCore | envAgent | arg | argCore | argAgent | image | logLevel | nrOfContainers | nrOfInstances | port | feature | imageVersion).*
+        (conductrRole | env | envCore | envAgent | arg | argCore | argAgent | image | logLevel | nrOfContainers | nrOfInstances | port | feature | noDefaultFeatures | imageVersion).*
       def toRunArgs(args: Seq[SandboxRunArg]): SandboxRunArgs =
         args.foldLeft(SandboxRunArgs()) {
           case (currentArgs, arg) =>
@@ -435,6 +438,7 @@ object ConductrPlugin extends AutoPlugin {
               case NrOfInstancesArg(v)  => currentArgs.copy(nrOfInstances = Some(v))
               case PortArg(v)           => currentArgs.copy(ports = currentArgs.ports + v)
               case FeatureArg(v)        => currentArgs.copy(features = currentArgs.features :+ v)
+              case NoDefaultFeaturesArg => currentArgs.copy(noDefaultFeatures = true)
             }
         }
       def isRunArg(arg: String, flag: String): Boolean =
@@ -514,6 +518,9 @@ object ConductrPlugin extends AutoPlugin {
       def featureExamples: Parser[String] =
         Space ~> token(StringBasic.examples(availableFeatures))
 
+      def noDefaultFeatures: Parser[NoDefaultFeaturesArg.type] =
+        Space ~> token(Flags.noDefaultFeatures).map(_ => NoDefaultFeaturesArg)
+
       object Flags {
         val imageVersion = "--image-version"
         val conductrRole = "--conductr-role"
@@ -529,6 +536,7 @@ object ConductrPlugin extends AutoPlugin {
         val nrOfInstances = "--nr-of-instances"
         val port = "--port"
         val feature = "--feature"
+        val noDefaultFeatures = "--no-default-features"
       }
     }
 
@@ -820,6 +828,7 @@ object ConductrPlugin extends AutoPlugin {
   private case class NrOfInstancesArg(value: (Int, Option[Int])) extends AnyVal with SandboxRunArg
   private case class PortArg(value: Int) extends AnyVal with SandboxRunArg
   private case class FeatureArg(value: Seq[String]) extends AnyVal with SandboxRunArg
+  private case object NoDefaultFeaturesArg extends SandboxRunArg
   private case class SandboxRunArgs(
     imageVersion: Option[String] = None,
     conductrRoles: Seq[Set[String]] = Seq.empty,
@@ -834,7 +843,8 @@ object ConductrPlugin extends AutoPlugin {
     nrOfContainers: Option[Int] = None,
     nrOfInstances: Option[(Int, Option[Int])] = None,
     ports: Set[Int] = Set.empty,
-    features: Seq[Seq[String]] = Seq.empty
+    features: Seq[Seq[String]] = Seq.empty,
+    noDefaultFeatures: Boolean = false
   )
 
   private object NoProcessLogging extends ProcessLogger {
