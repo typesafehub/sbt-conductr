@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.3.0--RC1-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is a sbt plugin that provides commands in sbt to:
@@ -30,13 +30,13 @@ The conductr-cli is used to manage the ConductR cluster.
 Add sbt-conductr to your `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.0-RC1")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.0")
 ```
 
 If your project is using Lagom 1.2.x or a previous Lagom version use:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.5")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.6")
 ```
 
 ## Plugin Overview
