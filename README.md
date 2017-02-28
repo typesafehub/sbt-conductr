@@ -17,6 +17,7 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 * [Command Overview](#command-overview)
 * [ConductR Plugin](#conductr-plugin)
 * [Bundle Plugins](#bundle-plugins)
+* [Developers](#developers)
 
 ## Prerequisite
 
@@ -410,6 +411,32 @@ roles                 | The types of node in the cluster that this bundle can be
 startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dakka.cluster.roles.1=frontend"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the BundleKeys.memory key and heap flags should not be passed here.
 system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
 systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
+
+## Developers
+
+#### Running unit tests
+
+```
+# Run all tests
+sbt test
+
+# Run a single test
+sbt test-only com.lightbend.conductr.sbt.BundlePluginSpec
+```
+
+#### Running scripted tests
+
+```
+# bash - Run all tests
+sbt scripted
+
+# bash - Run a single test
+sbt "scripted sbt-conductr/conduct-common-args"
+
+# sbt - Interactive test output
+set scriptedBufferLog := false
+scripted sbt-conductr/conduct-common-args
+```
 
 
 &copy; Lightbend Inc., 2014-2016

@@ -2,19 +2,30 @@
 > conduct
 > conduct --help
 
-# conduct sub help
+# conduct subs
+> conduct acls
+> conduct acls -h http
+> conduct acls -h tcp
+> conduct events
+> conduct events -h
+> conduct events --help
+> conduct info -h
+> conduct info --help
 > conduct load
 > conduct load -h
 > conduct load --help
-> conduct info
-> conduct info -h
-> conduct info --help
 > conduct run
-> conduct run -h
 > conduct run --help
-
-# conduct version
+> conduct service-names -h
+> conduct service-names --help
+> conduct stop
+> conduct stop -h
+> conduct stop --help
+> conduct unload -h
+> conduct unload --help
 > conduct version
+> conduct version -h
+> conduct version --help
 
 # common opts
-> conduct info -q -v --long-ids --api-version 2 --local-connection --ip 1.1.1.1 --port 9999 --settings-dir /some/path --custom-settings-file /some/path --custom-plugins-dir /some/path
+> conduct info -h -q -v --long-ids --api-version 2 --local-connection --ip 1.1.1.1 --port 9999 --settings-dir /some/path --custom-settings-file /some/path --custom-plugins-dir /some/path
