@@ -1,4 +1,4 @@
-> sandbox run 2.0.0 --nr-of-instances 3:3 --feature visualization --feature monitoring v2 --port 1111 --port 2222 --port 2551
+> sandbox run 2.0.0 --nr-of-instances 3:3 --feature visualization --feature monitoring --port 1111 --port 2222 --port 2551
 
 # sandbox checks
 > checkInstances3
