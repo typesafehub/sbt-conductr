@@ -138,9 +138,6 @@ object LagomBundlePlugin extends AutoPlugin {
       manageClasspath(apiToolsConfig)
     )
 
-  override def buildSettings =
-    cassandraConfigurationSettings(CassandraConfiguration)
-
   /**
    * Override bundle settings from sbt-bundle with the collected Lagom endpoints
    */
@@ -172,70 +169,10 @@ object LagomBundlePlugin extends AutoPlugin {
     }
 
   /**
-   * Bundle configuration for cassandra.
-   * Only one bundle configuration for the entire project is created. This configuration should be used for a scenario
-   * in which multiple Lagom services can use the same Cassandra database, e.g. on ConductR sandbox
-   * Note that each Lagom services has a separate keyspace on ConductR and is therefore logically separated
-   * even there are using the same DB.
-   */
-  private def cassandraConfigurationSettings(config: Configuration): Seq[Setting[_]] =
-    inConfig(config)(
-      Seq(
-        BundleKeys.configurationName := "cassandra-configuration",
-        target := (baseDirectory in LocalRootProject).value / "target" / "bundle-configuration",
-        NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
-        NativePackagerKeys.stage := stageCassandraConfiguration(config, ScopeFilter(inAnyProject, inAnyConfiguration)).value,
-        NativePackagerKeys.dist := createCassandraConfiguration(config).value
-      ) ++ dontAggregate(NativePackagerKeys.stage, NativePackagerKeys.dist)
-    )
-
-  /**
    * Use this to not perform tasks for the aggregated projects, i.e sub projects.
    */
   private def dontAggregate(keys: Scoped*): Seq[Setting[_]] =
     keys.map(aggregate in _ := false)
-
-  /**
-   * Copies the default cassandra configuration from `sbt-conductr/src/main/resources/bundle-configuration/cassandra` to
-   * the project's target root directory
-   */
-  private def stageCassandraConfiguration(config: Configuration, filter: ScopeFilter): Def.Initialize[Task[File]] = Def.task {
-    val configurationTarget = (NativePackagerKeys.stagingDirectory in config).value / config.name
-    // Use acls if in any of the projects 'enableAcls' is set to 'true'
-    val enableAcls = (BundleKeys.enableAcls in Bundle).?.map(_.getOrElse(false)).all(filter).value.contains(true)
-    val resourcePath = if (enableAcls) "bundle-configuration/cassandra-acls" else "bundle-configuration/cassandra-services"
-    val jarFile = new File(this.getClass.getProtectionDomain.getCodeSource.getLocation.getPath)
-    if (jarFile.isFile) {
-      val jar = new JarFile(jarFile)
-      IO.createDirectory(configurationTarget)
-      copyDirectoryFromJar(jar, configurationTarget, s"$resourcePath/")
-    } else {
-      val urlOpt = Option(this.getClass.getResource(s"/$resourcePath"))
-      val url = urlOpt.getOrElse {
-        sys.error("The cassandra configuration of LagomBundlePlugin can't be found. It should be either in the jar file or in the projects resources directory.")
-      }
-      IO.createDirectory(configurationTarget)
-      IO.copyDirectory(new File(url.toURI), configurationTarget, overwrite = true, preserveLastModified = false)
-    }
-
-    configurationTarget
-  }
-
-  /**
-   * Create a cassandra configuration bundle.
-   */
-  private def createCassandraConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
-    val bundleTarget = (target in config).value
-    val configurationTarget = (NativePackagerKeys.stage in config).value
-    val configChildren = recursiveListFiles(Array(configurationTarget), NonDirectoryFilter)
-    val bundleMappings: Seq[(File, String)] = configChildren.flatMap(_.pair(relativeTo(configurationTarget)))
-    BundlePlugin.shazar(
-      bundleTarget,
-      (BundleKeys.configurationName in config).value,
-      bundleMappings,
-      f => streams.value.log.info(s"Cassandra bundle configuration has been created: $f")
-    )
-  }
 
   /**
    * Scans a jar file and filters files based on the `dirPrefix` parameter.
