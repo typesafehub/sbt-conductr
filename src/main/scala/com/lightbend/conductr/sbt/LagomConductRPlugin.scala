@@ -12,10 +12,7 @@ object LagomConductRPlugin extends AutoPlugin {
   import ConductrPlugin.autoImport._
   import ConductrKeys._
 
-  import LagomBundlePlugin.autoImport._
-
   import SbtNativePackager.autoImport._
-  import NativePackagerKeys._
 
   override def requires = ConductrPlugin && LagomBundlePlugin
 
@@ -23,11 +20,12 @@ object LagomConductRPlugin extends AutoPlugin {
 
   override def buildSettings: Seq[Setting[_]] =
     List(
-      installationData ++= installationDataTask.value
+      // Cassandra should be started as the first service to not produce unnecessary warnings in the log
+      // that the Cassandra contact point is not available
+      installationData := installationDataTask.value ++ installationData.value
     )
 
   private def installationDataTask: Def.Initialize[Task[Seq[InstallationData]]] = Def.task {
-    val cassandraConfigPath = (dist in CassandraConfiguration).value.toPath
-    List(InstallationData("cassandra", Left("cassandra"), Some(cassandraConfigPath)))
+    List(InstallationData("cassandra", Left("cassandra"), None))
   }
 }

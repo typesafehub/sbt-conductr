@@ -4,9 +4,6 @@ import sbt._
 
 object LagomBundleImport {
 
-  // Configuration to produce a bundle configuration for cassandra
-  val CassandraConfiguration = config("cassandra-configuration") extend BundleImport.BundleConfiguration
-
   object LagomBundleKeys {
     val conductrBundleLibVersion = BaseKeys.conductrBundleLibVersion
 
