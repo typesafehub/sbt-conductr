@@ -34,7 +34,6 @@ object ConductrImport {
   )
 
   object ConductrKeys {
-
     val hasRpLicense = SettingKey[Boolean](
       "conductr-has-rp-license",
       "Checks that the project has a reactive platform license"
