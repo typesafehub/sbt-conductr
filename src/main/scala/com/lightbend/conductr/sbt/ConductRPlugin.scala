@@ -174,7 +174,7 @@ object ConductrPlugin extends AutoPlugin {
       val nrOfInstances = "sandbox ps -q".lines_!.size
       if (nrOfInstances > 0) {
         println("Restarting ConductR to ensure a clean state...")
-        "sandbox restart".!
+        runProcess(Seq("sandbox", "restart"))
       } else {
         throw new IllegalStateException("Please first start the sandbox using 'sandbox run'.")
       }
@@ -190,8 +190,7 @@ object ConductrPlugin extends AutoPlugin {
           val bundleConfigArg = bundleConfigFile.mkString("", "", " ")
           s"conduct load $bundleArg $bundleConfigArg--long-ids -q".lines_!.headOption match {
             case Some(bundleId) =>
-              if (s"conduct run $bundleId --no-wait -q".! != 0)
-                throw new IllegalStateException(s"Bundle $bundleArg could not run")
+              runProcess(Seq("conduct", "run", bundleId, "--no-wait", "-q"), s"Bundle $bundleArg could not run")
             case None =>
               throw new IllegalStateException(s"Bundle $bundleArg could not be loaded")
           }
@@ -201,7 +200,7 @@ object ConductrPlugin extends AutoPlugin {
 
     println
     println("""Your system is deployed. Running "conduct info" to observe the cluster.""")
-    "conduct info".!
+    runProcess(Seq("conduct", "info"))
     println
   }
 
@@ -235,10 +234,10 @@ object ConductrPlugin extends AutoPlugin {
     }(sys.error(s"The conductr-cli has not been installed. Follow the instructions on http://conductr.lightbend.com/docs/$LatestConductrDocVersion/CLI to install the CLI."))
 
   private def sandboxHelp(): Unit =
-    s"sandbox --help".!
+    runProcess(Seq("sandbox", "--help"))
 
   private def sandboxSubHelp(command: String): Unit =
-    s"sandbox $command --help".!
+    runProcess(Seq("sandbox", command, "--help"))
 
   // FIXME: The filter must be passed in presently: https://github.com/sbt/sbt/issues/1095
   private def sandboxRunTask(filter: ScopeFilter): Def.Initialize[Task[Unit]] = Def.task {
@@ -302,7 +301,7 @@ object ConductrPlugin extends AutoPlugin {
     import Parsers.ArgumentConverters._
     import ProcessConverters._
 
-    Process(
+    runProcess(
       Seq("sandbox", "run") ++
         conductrImageVersion.toSeq ++
         conductrImage.withFlag(Flags.image) ++
@@ -315,39 +314,39 @@ object ConductrPlugin extends AutoPlugin {
         features.flatMap(Flags.feature +: _) ++
         ports.withFlag(Flags.port) ++
         logLevel.withFlag(Flags.logLevel) ++
-        conductrRoles.map(_.asConsoleNArg).withFlag(Flags.conductrRole) ++
+        conductrRoles.flatMap(r => if (r.nonEmpty) Flags.conductrRole +: r.toSeq else r) ++
         envs.map(_.asConsolePairArg).withFlag(Flags.env) ++
         envsCore.map(_.asConsolePairArg).withFlag(Flags.envCore) ++
         envsAgent.map(_.asConsolePairArg).withFlag(Flags.envAgent) ++
         args.withFlag(Flags.arg) ++
         argsCore.withFlag(Flags.argCore) ++
         argsAgent.withFlag(Flags.argAgent)
-    ).!
+    )
   }
 
   /**
    * Executes the `sandbox logs` command of the conductr-cli
    */
   def sandboxLogs(): Unit =
-    Process(Seq("sandbox", "logs")).!
+    runProcess(Seq("sandbox", "logs"))
 
   /**
    * Executes the `sandbox ps` command of the conductr-cli
    */
   def sandboxPs(): Unit =
-    Process(Seq("sandbox", "ps")).!
+    runProcess(Seq("sandbox", "ps"))
 
   /**
    * Executes the `sandbox stop` command of the conductr-cli
    */
   def sandboxStop(): Unit =
-    Process(Seq("sandbox", "stop")).!
+    runProcess(Seq("sandbox", "stop"))
 
   /**
    * Executes the `sandbox version` command of the conductr-cli
    */
   def sandboxVersion(): Unit =
-    Process(Seq("sandbox", "version")).!
+    runProcess(Seq("sandbox", "version"))
 
   /**
    * A convenience function that waits on ConductR to become available.
@@ -375,13 +374,20 @@ object ConductrPlugin extends AutoPlugin {
   }
 
   private def conductHelp(): Unit =
-    s"conduct --help".!
+    runProcess(Seq("conduct", "--help"))
 
   private def conductSubHelp(command: String): Unit =
-    s"conduct $command --help".!
+    runProcess(Seq("conduct", command, "--help"))
 
   private def conductSubtask(command: String, args: Seq[String]): Unit =
-    Process(Seq("conduct", command) ++ args).!
+    runProcess(Seq("conduct", command) ++ args)
+
+  private def runProcess(args: Seq[String], message: String = ""): Unit = {
+    val code = Process(args).!
+
+    if (code != 0)
+      sys.error(if (message == "") s"exited with $code" else message)
+  }
 
   private object Parsers {
     final val NSeparator = ' '
@@ -400,6 +406,8 @@ object ConductrPlugin extends AutoPlugin {
         _ =>
           (Space ~> (
             helpSubtask |
+            subHelpSubtask |
+            subHelpFlagSubtask |
             logsSubtask |
             psSubtask |
             runSubtask |
@@ -413,6 +421,16 @@ object ConductrPlugin extends AutoPlugin {
         (hideAutoCompletion("-h") | token("--help"))
           .map { _ => SandboxHelp }
           .!!! { "Usage: sandbox --help" }
+
+      // This parser is triggering the help of the sandbox sub command if no argument for this command is specified
+      // Example: `sandbox run` will execute `sandbox run --help`
+      def subHelpSubtask: Parser[SandboxSubtaskHelp] =
+        token("run")
+          .map(SandboxSubtaskHelp)
+
+      def subHelpFlagSubtask: Parser[SandboxSubtaskHelp] =
+        ((token("version") | token("run") | token("restart") | token("stop") | token("ps") | token("logs")) ~ (Space ~ (token("-h") | token("--help"))))
+          .map { case (command, _) => SandboxSubtaskHelp(command) }
 
       def runSubtask: Parser[SandboxRunSubtask] =
         token("run") ~> sandboxRunArgs
@@ -520,6 +538,11 @@ object ConductrPlugin extends AutoPlugin {
 
       def noDefaultFeatures: Parser[NoDefaultFeaturesArg.type] =
         Space ~> token(Flags.noDefaultFeatures).map(_ => NoDefaultFeaturesArg)
+
+      def commonArgs: Parser[String] =
+        help
+
+      def help: Parser[String] = Space ~> (token("--help") | token("-h"))
 
       object Flags {
         val imageVersion = "--image-version"
@@ -777,11 +800,6 @@ object ConductrPlugin extends AutoPlugin {
           val parts = self.split(PairSeparator)
           parts(0) -> parts(1)
         }
-      }
-
-      implicit class SetOps[T](val self: Set[T]) extends AnyVal {
-        def asConsoleNArg: String =
-          self.mkString(" ")
       }
 
       implicit class PairOps[K, V](val self: (K, V)) extends AnyVal {
