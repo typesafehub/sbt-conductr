@@ -12,7 +12,7 @@ install:
   - sudo apt-get -qqy update
   - sudo apt-get -qqy install python3-setuptools
   - sudo easy_install3 -U pip
-  - pip3 install --user git+git://github.com/typesafehub/conductr-cli.git@master
+  - pip3 install --user conductr-cli
   # Ensure that our sandbox interfaces are prepared
   - sudo /sbin/ifconfig lo:0 192.168.10.1 netmask 255.255.255.255 up
   - sudo /sbin/ifconfig lo:1 192.168.10.2 netmask 255.255.255.255 up
@@ -27,6 +27,7 @@ install:
   - conduct load -q eslite
   - conduct load -q reactive-maps-backend-region
   - conduct load -q reactive-maps-backend-summary
+  - sandbox stop
   # Tests go faster if we do this... less interactions with bintray etc.
   - export CONDUCTR_OFFLINE_MODE=1
 
