@@ -21,7 +21,7 @@ install:
   # Prep our sandbox with some temporary credentials for CI
   - ./bin/create-credentials.sh
   # Warm up some caches so that our tests don't timeout
-  - sandbox run 2.0.0 -f visualization -f monitoring > /dev/null
+  - sandbox run 2.0.2 -f visualization -f monitoring > /dev/null
   - conduct load -q cassandra
   - conduct load -q cinnamon-grafana-docker
   - conduct load -q eslite
