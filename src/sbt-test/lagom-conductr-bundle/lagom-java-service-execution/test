@@ -1,0 +1,17 @@
+##
+## This test starts a sandbox, deploys a LagomJava service and executes an HTTP request
+## through the Service Gateway to ensure the service is reachable.
+##
+
+> sandbox run 2.0.2
+
+> install
+
+> verifyConductInfo
+
+> verifyIsStarted lagom-service-impl
+
+$ sleep 5000
+> assertRequest 9000 /foo foo-response-hardcoded in FooServiceImpl
+
+> sandbox stop
