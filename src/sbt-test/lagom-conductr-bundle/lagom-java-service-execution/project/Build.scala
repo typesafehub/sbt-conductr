@@ -13,12 +13,12 @@ object DevModeBuild {
   val ConnectTimeout = 10000
   val ReadTimeout = 10000
 
-  def waitForRequestToContain(uri: String, toContain: String): Unit = {
+  def waitForRequestToContain(uri: String, toContain: String)(totalAttempts:Int=10): Unit = {
     waitFor[String](
       makeRequest(uri),
       _.contains(toContain),
       actual => s"'$actual' did not contain '$toContain'"
-    )
+    )(totalAttempts)
   }
 
   def makeRequest(uri: String): String = {
@@ -35,10 +35,10 @@ object DevModeBuild {
     finally if(conn != null) conn.disconnect()
   }
 
-  def waitFor[T](check: => T, assertion: T => Boolean, error: T => String): Unit = {
+  def waitFor[T](check: => T, assertion: T => Boolean, error: T => String)(totalAttempts:Int=10): Unit = {
     var checks = 0
     var actual = check
-    while (!assertion(actual) && checks < 10) {
+    while (!assertion(actual) && checks < totalAttempts) {
       Thread.sleep(1000)
       actual = check
       checks += 1
