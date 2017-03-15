@@ -37,7 +37,7 @@ checkBundleConf := {
                                   |        http = {
                                   |          requests = [
                                   |            {
-                                  |              path-beg = "/"
+                                  |              path-beg = "/debit"
                                   |            }
                                   |          ]
                                   |        }
@@ -53,7 +53,7 @@ checkBundleConf := {
                                   |        http = {
                                   |          requests = [
                                   |            {
-                                  |              path-beg = "/"
+                                  |              path-beg = "/credit"
                                   |            }
                                   |          ]
                                   |        }
@@ -79,7 +79,7 @@ checkBundleConf := {
                                  |        http = {
                                  |          requests = [
                                  |            {
-                                 |              path-beg = "/"
+                                 |              path-beg = "/feed"
                                  |            }
                                  |          ]
                                  |        }
