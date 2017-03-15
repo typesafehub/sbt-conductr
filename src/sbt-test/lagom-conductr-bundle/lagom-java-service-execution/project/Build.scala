@@ -4,7 +4,9 @@
 import java.net.HttpURLConnection
 import java.io.{BufferedReader, InputStreamReader}
 
-import sbt.{IO, File}
+import sbt.{File, IO}
+
+import scala.util.{Failure, Success, Try}
 
 // copy/pasted and adapted from
 // https://github.com/lagom/lagom/blob/d9f4df0f56f7c567e88602fa91698b8d8f5de3d9/dev/sbt-plugin/src/sbt-test/sbt-plugin/run-all-javadsl/project/Build.scala#L9
@@ -17,11 +19,16 @@ object DevModeBuild {
     waitFor[String](
       makeRequest(uri),
       _.contains(toContain),
-      actual => s"'$actual' did not contain '$toContain'"
+      _ match {
+        case Success(msg) => s"'${msg}' did not contain '$toContain'"
+        case Failure(t) =>
+          t.printStackTrace()
+          t.getMessage
+      }
     )(totalAttempts)
   }
 
-  def makeRequest(uri: String): String = {
+  def makeRequest(uri: String): Try[String] = Try {
     var conn: java.net.HttpURLConnection = null
     try {
       val url = new java.net.URL(uri)
@@ -35,15 +42,15 @@ object DevModeBuild {
     finally if(conn != null) conn.disconnect()
   }
 
-  def waitFor[T](check: => T, assertion: T => Boolean, error: T => String)(totalAttempts:Int=10): Unit = {
+  def waitFor[T](check: => Try[T], assertion: T => Boolean, error: Try[T] => String)(totalAttempts:Int=10): Unit = {
     var checks = 0
     var actual = check
-    while (!assertion(actual) && checks < totalAttempts) {
+    while (actual.isFailure || !assertion(actual.get) && checks < totalAttempts) {
       Thread.sleep(1000)
       actual = check
       checks += 1
     }
-    if (!assertion(actual)) {
+    if (actual.isFailure && !assertion(actual.get)) {
       throw new RuntimeException(error(actual))
     }
   }

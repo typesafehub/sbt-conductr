@@ -1,5 +1,7 @@
 import org.scalatest.Matchers._
 
+import scala.util.{Failure, Success, Try}
+
 scalaVersion in ThisBuild := "2.11.7"
 version in ThisBuild := "0.1.0-SNAPSHOT"
 
@@ -24,11 +26,13 @@ InputKey[Unit]("verifyIsStarted") := {
   val args = Def.spaceDelimited().parsed
   val bundleName = args(0)
   DevModeBuild.waitFor[String](
-    bundleStatus(bundleName).trim,
+    Success(bundleStatus(bundleName).trim),
     _.equals("101"), // 101 -->  #REPlica==1  #STaRting==0  #RUNning== 1
-    (actual:String) => {
-      val message = s"Timeout awaiting [$bundleName] to start."
-      org.scalatest.Matchers.fail(message)
+    _ match {
+      case Success(msg) =>
+        val message = s"Timeout awaiting [$bundleName] to start."
+        org.scalatest.Matchers.fail(message)
+      case Failure(t) => throw t
     }
   )(maximumAttempts)
   // retry _maximumAttempts_ times with a hardcoded delay between attempts of 1 sec. This doesn't consider the
