@@ -30,8 +30,8 @@ InputKey[Unit]("verifyIsStarted") := {
       val message = s"Timeout awaiting [$bundleName] to start."
       org.scalatest.Matchers.fail(message)
     }
-  )(60)
-  // retry 60 times with a hardcoded delay between attempts of 1 sec. This doesn't consider the
+  )(maximumAttempts)
+  // retry _maximumAttempts_ times with a hardcoded delay between attempts of 1 sec. This doesn't consider the
   // command execution time so this await could be around 2 minutes if `conduct info` takes 1 sec for every
   // time it runs.
 }
@@ -49,5 +49,7 @@ InputKey[Unit]("assertRequest") := {
   val path = args(1)
   val expect = args.drop(2).mkString(" ")
 
-  DevModeBuild.waitForRequestToContain(s"http://192.168.10.1:${port}${path}", expect)(60)
+  DevModeBuild.waitForRequestToContain(s"http://192.168.10.1:${port}${path}", expect)(maximumAttempts)
 }
+
+val maximumAttempts = 60

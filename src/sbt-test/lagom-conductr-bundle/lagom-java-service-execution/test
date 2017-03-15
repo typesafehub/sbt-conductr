@@ -7,11 +7,8 @@
 
 > install
 
-> verifyConductInfo
-
 > verifyIsStarted lagom-service-impl
 
-$ sleep 5000
 > assertRequest 9000 /foo foo-response-hardcoded in FooServiceImpl
 
 > sandbox stop
