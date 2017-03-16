@@ -56,4 +56,4 @@ InputKey[Unit]("assertRequest") := {
   DevModeBuild.waitForRequestToContain(s"http://192.168.10.1:${port}${path}", expect)(maximumAttempts)
 }
 
-val maximumAttempts = 60
+val maximumAttempts = 5
