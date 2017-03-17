@@ -16,7 +16,7 @@ public interface FeedService extends Service {
   @Override
   default Descriptor descriptor() {
     return named("/socialservice").withCalls(
-      restCall(Method.GET,  "/", this::feed)
+      restCall(Method.GET,  "/feed", this::feed)
     ).withAutoAcl(true);
   }
 }
