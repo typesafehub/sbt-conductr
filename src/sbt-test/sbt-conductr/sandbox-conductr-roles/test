@@ -4,7 +4,7 @@
 
 > sandbox stop
 
-> sandbox run 2.0.2 --no-default-features --nr-of-instances 4:4 --conductr-role new-role --conductr-role other-role
+> sandbox run 2.0.2 --no-default-features --nr-of-instances 3:3 --conductr-role new-role --conductr-role other-role
 
 > checkConductrRolesBySandboxKey
 
