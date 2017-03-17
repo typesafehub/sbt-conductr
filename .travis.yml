@@ -30,4 +30,4 @@ install:
   # Tests go faster if we do this... less interactions with bintray etc.
   - export CONDUCTR_OFFLINE_MODE=1
 
-script: sbt scripted
+script: sbt "scripted public/*"
