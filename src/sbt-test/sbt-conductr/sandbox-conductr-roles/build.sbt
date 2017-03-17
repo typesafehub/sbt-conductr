@@ -33,7 +33,7 @@ checkConductrRolesByBundle := {
 val checkConductrRolesBySandboxKey = taskKey[Unit]("Check that the declared sandbox roles are used.")
 checkConductrRolesBySandboxKey := {
   val psOutput = s"ps ax".lines_!.toList
-  for (i <- 1 to 4) {
+  for (i <- 1 to 3) {
     val agent = psOutput.filter(_.contains(s"-Dconductr.agent.ip=192.168.10.$i"))
     agent should have size 1
     val expectedContent =

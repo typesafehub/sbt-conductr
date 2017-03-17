@@ -17,7 +17,6 @@ install:
   - sudo /sbin/ifconfig lo:0 192.168.10.1 netmask 255.255.255.255 up
   - sudo /sbin/ifconfig lo:1 192.168.10.2 netmask 255.255.255.255 up
   - sudo /sbin/ifconfig lo:2 192.168.10.3 netmask 255.255.255.255 up
-  - sudo /sbin/ifconfig lo:3 192.168.10.4 netmask 255.255.255.255 up
   # Prep our sandbox with some temporary credentials for CI
   - ./bin/create-credentials.sh
   # Warm up some caches so that our tests don't timeout
