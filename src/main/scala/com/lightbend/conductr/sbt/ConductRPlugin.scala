@@ -425,17 +425,17 @@ object ConductrPlugin extends AutoPlugin {
       // This parser is triggering the help of the sandbox sub command if no argument for this command is specified
       // Example: `sandbox run` will execute `sandbox run --help`
       def subHelpSubtask: Parser[SandboxSubtaskHelp] =
-        token("run")
+        token("run" | token("start"))
           .map(SandboxSubtaskHelp)
 
       def subHelpFlagSubtask: Parser[SandboxSubtaskHelp] =
-        ((token("version") | token("run") | token("restart") | token("stop") | token("ps") | token("logs")) ~ (Space ~ (token("-h") | token("--help"))))
+        ((token("version") | token("run" | token("start")) | token("restart") | token("stop") | token("ps") | token("logs")) ~ (Space ~ (token("-h") | token("--help"))))
           .map { case (command, _) => SandboxSubtaskHelp(command) }
 
       def runSubtask: Parser[SandboxRunSubtask] =
-        token("run") ~> sandboxRunArgs
+        token("run" | token("start")) ~> sandboxRunArgs
           .map { args => SandboxRunSubtask(toRunArgs(args)) }
-          .!!!("Usage: sandbox run --help")
+          .!!!("Usage: sandbox run (start) --help")
       def sandboxRunArgs: Parser[Seq[SandboxRunArg]] =
         (conductrRole | env | envCore | envAgent | arg | argCore | argAgent | image | logLevel | nrOfContainers | nrOfInstances | port | feature | noDefaultFeatures | imageVersion).*
       def toRunArgs(args: Seq[SandboxRunArg]): SandboxRunArgs =
@@ -607,7 +607,7 @@ object ConductrPlugin extends AutoPlugin {
       // This parser is triggering the help of the conduct sub command if no argument for this command is specified
       // Example: `conduct load` will execute `conduct load --help`
       def subHelpSubtask: Parser[ConductSubtaskHelp] =
-        (token("load") | token("run") | token("stop") | token("unload") | token("events") | token("logs") | token("acls"))
+        (token("load") | token("run" | token("start")) | token("stop") | token("unload") | token("events") | token("logs") | token("acls"))
           .map(ConductSubtaskHelp)
 
       // Sub command parsers
@@ -624,9 +624,9 @@ object ConductrPlugin extends AutoPlugin {
         hideAutoCompletion(commonArgs | resolveCacheDir | waitTimeout | noWait).*.map(seqToString).?
 
       def runSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
-        token("run") ~> withArgs(runArgs(bundleNames))(bundleId(bundleNames))
+        token("run" | token("start")) ~> withArgs(runArgs(bundleNames))(bundleId(bundleNames))
           .mapArgs { case (args, bundle) => ConductSubtaskSuccess("run", optionalArgs(args) ++ Seq(bundle)) }
-          .!!!("Usage: conduct run --help")
+          .!!!("Usage: conduct run (start) --help")
       def runArgs(bundleNames: Set[String]): Parser[Option[String]] =
         hideAutoCompletion(commonArgs | waitTimeout | noWait | scale | affinity(bundleNames)).*.map(seqToString).?
 
