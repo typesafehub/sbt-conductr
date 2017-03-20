@@ -264,7 +264,7 @@ The `javaOptions` values declare the maximum and minimum heap size for your appl
 ### Bundle configuration
 
 It is possible to produce additional configuration bundles that contain an optional `bundle.conf` the value of which override the main bundle, as
-well as arbitrary shell scripts. These additional configuration files must be placed in your project's src/bundle-configuration/default folder.
+well as arbitrary shell scripts. These additional configuration files must be placed in your project's src/bundle-configuration/default folder. Note that configuration bundles can also be declared using settings (explained [later](https://github.com/typesafehub/sbt-conductr#extending-bundle-configurations)).
 
 The bundle-configuration folder may contain many configurations in order to support development style scenarios, the desired configuration can be specified with the setting ("default" is the default folder name) in the `build.sbt`:
 
