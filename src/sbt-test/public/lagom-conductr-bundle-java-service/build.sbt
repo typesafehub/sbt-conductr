@@ -40,10 +40,8 @@ InputKey[Unit]("verifyIsStarted") := {
   // time it runs.
 }
 
-def bundleStatus(bundleName:String): String ={
-
-  (Process("conduct info") #| Process(Seq("grep", bundleName))  #| Process(Seq("awk", "{print $3 $4 $5}"))  ).!!
-}
+def bundleStatus(bundleName:String): String =
+  (Process("conduct info") #| Process(Seq("grep", bundleName))  #| Process(Seq("awk", "{print $4 $5 $6}"))  ).!!
 
 
 // copy/pasted from https://github.com/lagom/lagom/blob/d9f4df0f56f7c567e88602fa91698b8d8f5de3d9/dev/sbt-plugin/src/sbt-test/sbt-plugin/run-all-javadsl/build.sbt#L63
