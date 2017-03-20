@@ -2,11 +2,9 @@ package impl;
 
 import com.google.inject.AbstractModule;
 import com.lightbend.lagom.javadsl.server.ServiceGuiceSupport;
+import com.lightbend.lagom.javadsl.api.ServiceInfo;
 import api.FooService;
-import play.*;
-import javax.inject.Inject;
-import java.util.Date;
-import java.io.*;
+import impl.FooServiceImpl;
 
 public class Module extends AbstractModule implements ServiceGuiceSupport {
 	@Override

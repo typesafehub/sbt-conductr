@@ -1,17 +1,15 @@
 package impl;
 
 import akka.NotUsed;
-import com.lightbend.lagom.javadsl.api.ServiceCall;
-import java.util.concurrent.CompletableFuture;
-import javax.inject.Inject;
 import api.FooService;
+import com.lightbend.lagom.javadsl.api.ServiceCall;
 
-import akka.stream.javadsl.Source;
+import java.util.concurrent.CompletableFuture;
 
 public class FooServiceImpl implements FooService {
 
   @Override
-  public ServiceCall<NotUsed, NotUsed> foo() {
-    return request -> CompletableFuture.completedFuture(NotUsed.getInstance());
+  public ServiceCall<NotUsed, String> foo() {
+    return request -> CompletableFuture.completedFuture("hardcoded-foo-response");
   }
 }
