@@ -15,7 +15,7 @@ class MyController @Inject()(fooService: FooService) extends Controller {
   }
 
   def proxyToLagom = Action {
-    Ok(fooService.foo().invoke().toCompletableFuture.get(10, TimeUnit.SECONDS))
+    Ok("via-play " + fooService.foo().invoke().toCompletableFuture.get(10, TimeUnit.SECONDS))
   }
 
 }
