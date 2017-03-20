@@ -8,7 +8,7 @@ When installed you should be able to run:
 
 # query the lagom service directly
 $  curl http://192.168.10.1:9000/foo
-hardcoded-foo-response
+hardcoded-foo-scala-response
 
 # query the play service directly
 $  curl http://192.168.10.1:9000/
@@ -16,6 +16,6 @@ Hello world
 
 # query the play service (this causes a downstream call to the lagom service which is located via service locator)
 $  curl http://192.168.10.1:9000/lagom-redirect
-hardcoded-foo-response
+via-play hardcoded-foo-scala-response
 
 ```
