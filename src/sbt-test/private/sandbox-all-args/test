@@ -19,7 +19,7 @@
 > sandbox version
 
 # sandbox long args
-> sandbox run 2.0.2 --no-default-features --port 1111 --port 2222 --image typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr --nr-of-instances 1 --log-level debug --env key1=value1 --env key2=value2 --conductr-role web --conductr-role backend db --feature visualization --feature logging
+> sandbox run 2.0.2 --no-default-features --port 1111 --port 2222 --image typesafe-docker-registry-for-subscribers-only.bintray.io/conductr/conductr --nr-of-instances 1 --log-level debug --env key1=value1 --env key2=value2 --conductr-role web --conductr-role backend db --feature visualization --feature lite-logging
 > sandbox stop
 
 # sandbox short args
