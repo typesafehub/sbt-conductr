@@ -576,7 +576,7 @@ object ConductrPlugin extends AutoPlugin {
             runSubtask(bundleNames) |
             stopSubtask(bundleNames) |
             unloadSubtask(bundleNames) |
-            infoSubtask |
+            infoSubtask(bundleNames) |
             serviceNamesSubtask |
             aclsSubtask |
             eventsSubtask(bundleNames) |
@@ -644,10 +644,10 @@ object ConductrPlugin extends AutoPlugin {
       def unloadArgs: Parser[Option[String]] =
         hideAutoCompletion(commonArgs | waitTimeout | noWait).*.map(seqToString).?
 
-      def infoSubtask: Parser[ConductSubtaskSuccess] =
-        token("info" ~> infoArgs)
-          .map { args => ConductSubtaskSuccess("info", optionalArgs(args)) }
-          .!!!("Usage: conduct info")
+      def infoSubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+        token("info") ~> withArgs(infoArgs)(bundleId(bundleNames).?)
+          .mapArgs { case (args, bundleIdOrName) => ConductSubtaskSuccess("info", optionalArgs(args) ++ bundleIdOrName.fold(Seq.empty[String])(Seq(_))) }
+          .!!!("Usage: conduct info --help")
       def infoArgs: Parser[Option[String]] =
         hideAutoCompletion(commonArgs).*.map(seqToString).?
 
