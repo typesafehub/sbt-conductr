@@ -42,6 +42,7 @@ checkBundleConf := {
   val expectedContents = """|version              = "1"
                             |name                 = "overlays"
                             |compatibilityVersion = "0"
+                            |tags                 = ["0.1.0-SNAPSHOT"]
                             |system               = "overlays"
                             |systemVersion        = "0"
                             |nrOfCpus             = 2.0

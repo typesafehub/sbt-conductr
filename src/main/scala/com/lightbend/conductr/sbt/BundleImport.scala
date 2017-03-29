@@ -246,7 +246,12 @@ object BundleImport {
 
     val compatibilityVersion = SettingKey[String](
       "bundle-compatibility-version",
-      "A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by http://semver.org/. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from http://ometer.com/parallel.html."
+      "A versioning scheme that will be associated with a bundle that describes the level of compatibility with the bundle that went before it. ConductR can use this property to reason about the compatibility of one bundle to another given the same bundle name. By default we take the major version component of a project version where major is defined by http://semver.org/. However you can make this mean anything that you need it to mean in relation to the bundle produced prior to it. We take the notion of a compatibility version from http://ometer.com/parallel.html."
+    )
+
+    val tags = SettingKey[Seq[String]](
+      "bundle-tags",
+      """An array of strings that can be used to further qualify a bundle name. Just as with a name, these strings are intended for human consumption and ConductR makes no assumptions about their value - see "compatibilityVersion" for semantically relevant versioning. Tags are often represented as versions e.g. "1.0.0-beta.1", "version1"" etc. By default we use the project version."""
     )
 
     val conductrTargetVersion = SettingKey[ConductrVersion.Value](

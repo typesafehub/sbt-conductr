@@ -37,6 +37,7 @@ object BundlePlugin extends AutoPlugin {
         checkInitialDelay := 3.seconds,
         checks := Seq.empty,
         compatibilityVersion := (version in Bundle).value.takeWhile(_ != '.'),
+        tags := List((version in Bundle).value),
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
         enableAcls := conductrTargetVersion.value >= ConductrVersion.V2_0,
@@ -62,7 +63,10 @@ object BundlePlugin extends AutoPlugin {
     inConfig(config)(Seq(
       bundleConf := getConfig(config, forAllSettings = true).value,
       executableScriptPath := s"${(normalizedName in config).value}/bin/${(executableScriptName in config).value}",
-      NativePackagerKeys.packageName := (normalizedName in config).value + "-v" + (compatibilityVersion in config).value,
+      NativePackagerKeys.packageName :=
+        (normalizedName in config).value +
+        "-" +
+        (tags in config).value.headOption.getOrElse("v" + (compatibilityVersion in config).value),
       NativePackagerKeys.dist := Def.taskDyn(createBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stage := Def.taskDyn(stageBundle(config, (bundleType in config).value)).value,
       NativePackagerKeys.stagingDirectory := (target in config).value / "stage",
@@ -95,6 +99,7 @@ object BundlePlugin extends AutoPlugin {
   private val startCommandConfigName = taskKey[(Seq[String], Option[String])]("")
   private val checksConfigName = taskKey[(Seq[URI], Option[String])]("")
   private val compatibilityVersionConfigName = taskKey[(String, Option[String])]("")
+  private val tagsConfigName = taskKey[(Seq[String], Option[String])]("")
   private val normalizedNameConfigName = taskKey[(String, Option[String])]("")
   private val nrOfCpusConfigName = taskKey[(Double, Option[String])]("")
   private val systemConfigName = taskKey[(String, Option[String])]("")
@@ -112,6 +117,7 @@ object BundlePlugin extends AutoPlugin {
       startCommandConfigName := (startCommand in config).value -> toConfigName(startCommand in (thisProjectRef.value, config), state.value),
       checksConfigName := (checks in config).value -> toConfigName(checks in (thisProjectRef.value, config), state.value),
       compatibilityVersionConfigName := (compatibilityVersion in config).value -> toConfigName(compatibilityVersion in (thisProjectRef.value, config), state.value),
+      tagsConfigName := (tags in config).value -> toConfigName(tags in (thisProjectRef.value, config), state.value),
       normalizedNameConfigName := (normalizedName in config).value -> toConfigName(normalizedName in (thisProjectRef.value, config), state.value),
       nrOfCpusConfigName := (nrOfCpus in config).value -> toConfigName(nrOfCpus in (thisProjectRef.value, config), state.value),
       systemConfigName := (system in config).value -> toConfigName(system in (thisProjectRef.value, config), state.value),
@@ -446,6 +452,7 @@ object BundlePlugin extends AutoPlugin {
 
     if (valueSuppliedForConfig((normalizedNameConfigName in config).value) ||
       valueSuppliedForConfig((compatibilityVersionConfigName in config).value) ||
+      valueSuppliedForConfig((tagsConfigName in config).value) ||
       valueSuppliedForConfig((systemConfigName in config).value) ||
       valueSuppliedForConfig((systemVersionConfigName in config).value) ||
       valueSuppliedForConfig((nrOfCpusConfigName in config).value) ||
@@ -492,6 +499,7 @@ object BundlePlugin extends AutoPlugin {
         Seq(s"""version              = "${bundleConfVersion.value}"""") ++
           formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
           formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
+          formatValue("""tags                 = %s""", toString((tagsConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
           formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
           formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
           formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
