@@ -3,9 +3,9 @@
 [![GitHub version](https://img.shields.io/badge/version-2.2.6-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
-sbt-conductr is a sbt plugin that provides commands in sbt to:
+sbt-conductr is an sbt plugin that provides commands in sbt to:
  
-* Produce a ConductR bundle
+* Produce a ConductR bundle (a bundle contains everything required to run your service, including your service itself)
 * Start and stop a local ConductR cluster
 * Manage a ConductR cluster within a sbt session
  
@@ -22,38 +22,23 @@ sbt-conductr is a sbt plugin that provides commands in sbt to:
 ## Prerequisite
 
 * [Docker](https://www.docker.com/) (when using Docker based bundles)
-* [conductr-cli](http://conductr.lightbend.com/docs/1.1.x/CLI)
-
-The conductr-cli is used to manage the ConductR cluster.
+* [conductr-cli](http://conductr.lightbend.com/docs/2.0.x/CLI) (used to manage the ConductR cluster)
 
 ## Setup
 
-Add sbt-conductr to your `project/plugins.sbt`:
+Add sbt-conductr to your `project/plugins.sbt` (all versions of Akka, Play and Lagom 1.3 onward):
+
+```scala
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.0")
+```
+
+If your project is using Lagom 1.2.x or prior please use:
 
 ```scala
 addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.6")
 ```
 
-## Plugin Overview
-
-sbt-conductr contains several sbt auto plugins. The following table provides an overview of the auto plugins and when they get triggered.
-
-| Plugin                | Description                                                                              | Scope   | Trigger
-|-----------------------|------------------------------------------------------------------------------------------|---------|--------- 
-| ConductrPlugin        | Uses the conductr-cli commands to manage a ConductR cluster                              | Global  | Always enabled
-| BundlePlugin          | Produce a bundle and bundle configuration for a JavaAppPackaging application.            | Project | JavaAppPackaging
-| PlayBundlePlugin      | Produce a bundle and bundle configuration for a Play application.                        | Project | Play && BundlePlugin
-| LagomPlayBundlePlugin | Produce a bundle and bundle configuration for a Play application inside a Lagom project. | Project | LagomPlay && BundlePlugin
-| LagomBundlePlugin     | Produce a bundle and bundle configuration for a Lagom service.                           | Project | LagomJava && BundlePlugin
-| LagomConductrPlugin   | Adds Lagom concerns to ConductrPlugin                                                    | Global  | ConductrPlugin && LagomBundlePlugin
-
-The `ConductRPlugin` is enabled as soon as `sbt-conductr` has been added to the project. The `BundlePlugin` is triggered for each project that enables a native packager plugin in the `build.sbt`, e.g.:
-
-```scala
-lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
-```
-
-In the context of Play or Lagom you should enable the following plugins to trigger the respective bundle plugin:
+In the context of Play or Lagom you should ensure that plugins are enabled as follows:
 
 | Project            | Description                                                                         |
 |--------------------|-------------------------------------------------------------------------------------|
@@ -64,51 +49,37 @@ In the context of Play or Lagom you should enable the following plugins to trigg
 | Play Java 2.4+     | `lazy val root = (project in file(".")).enablePlugins(PlayJava)`                    |
 | Play Java 2.3      | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayJava)`  |
 
+For anything else:
+
+```scala
+lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging)
+```
+
 ## Command Overview
 
-The following `sbt-conductr` commands are available:
+The following `sbt-conductr` tasks are available:
 
-Property                     | Description
+Task                         | Description
 -----------------------------|------------
 bundle:dist                  | Produce a ConductR bundle for all projects that have the native packager enabled
 configuration:dist           | Produce a bundle configuration for all projects that have the native packager enabled
-sandbox help                 | Get usage information of the sandbox command
-sandbox run                  | Start a local ConductR sandbox
-sandbox stop                 | Stop the local ConductR sandbox
-sandbox version              | Print the conductr-cli version
-conduct help                 | Get usage information of the conduct command
-conduct info                 | Gain information on the cluster
-conduct load                 | Loads a bundle and an optional configuration to the ConductR
-conduct run                  | Runs a bundle given a bundle id with an optional absolute scale value specified with --scale
-conduct stop                 | Stops all executions of a bundle given a bundle id
-conduct unload               | Unloads a bundle entirely (requires that the bundle has stopped executing everywhere)
-conduct logs                 | Retrieves log messages of a given bundle
-conduct events               | Retrieves events of a given bundle
-conduct service-names        | Retrieves the service names available to the service locator
-conduct version              | Print the conductr-cli version
+sandbox                      | Manage the ConductR sandbox in order to run clusters locally
+conduct                      | Interact with ConductR
 install                      | Generates an installation script and then installs all of your projects to the local ConductR sandbox (expected to be running)
 
-Each `sandbox` and `conduct` sub command has a help page particular for the sub command, e.g. `conduct run --help`.
+Type `sandbox -h` and `conduct -h` in order to explore the full functionality offered by these commands. In summary, these commands invoke the ConductR CLI directly from sbt and avoid you having to exit any interactive sbt session.
 
-## ConductR Plugin 
+The following sections illustrate how some of these commands can be used.
 
-With the ConductR plugin it is possible to execute the [conductr-cli](https://github.com/typesafehub/conductr-cli) commands within the sbt session. The [Command Overview](#command-overview) section lists down all available `sandbox` and `conduct` commands.
+### Starting a ConductR cluster
 
-### Starting cluster
-
-To start a three-node ConductR cluster on your local machine use:
+To start a ConductR cluster on your local machine use:
 
 ```console
-sandbox run <CONDUCTR_VERSION> --nr-of-containers 3
+sandbox run <CONDUCTR_VERSION>
 ```
 
 Visit the [ConductR Developer page](https://www.lightbend.com/product/conductr/developer) to pick up the latest ConductR version from the section **Quick Configuration**.
-
-To get an overview of all available `sandbox run` options use:
-
-```
-sandbox run --help
-```
 
 #### Features
 
@@ -122,11 +93,11 @@ The following features are available:
 
 | Name          | Description                                                                         |
 |---------------|-------------------------------------------------------------------------------------|
+| logging       | Out-of-the-box the sandbox starts a simple logging service called `eslite`. This service is automatically enabled without specifying the `logging` feature. This in-memory logging service only captures the log messages within one node. In case you want to retrieve log messages from multiple nodes use the `logging` feature. This will start an Elasticsearch and Kibana service. The Elasticsearch service will capture the stdout and sterr output of your services. To display the log messages use either the `conduct logs` command or the Kibana UI on port 5601.
+| monitoring    | Enables Lightbend Monitoring for your bundles.                   |
 | visualization | Provides a web interface to visualize the ConductR cluster together with the deployed running bundles. |
-| logging       | Out-of-the-box the sandbox starts a simple logging service called `eslite`. This service is automatically enabled without specifying the `logging` feature. This in-memory logging service only captures the log messages within one node. In case you want to retrieve log messages from multiple nodes use the `logging` feature. This will start an elasticsearch and kibana bundle. The elasticsearch bundle will capture the stdout and sterr output of your bundles. To display the log messages use either the `conduct logs` command or the Kibana UI on port 5601. Make sure that your VM has sufficient memory when using this feature. |
-| monitoring    | Enables Lightbend Monitoring for your bundles                   |
 
-### Stopping cluster
+### Stopping a cluster
 
 To stop the ConductR sandbox use:
 
@@ -138,7 +109,7 @@ sandbox stop
 
 The `install` command will introspect your project and its sub-projects and then load and run everything in ConductR at once. The local sandbox is expected to be running and it will first be restarted to ensure that it is in a clean state.
 
-### Generating an installation script
+#### Generating an installation script
 
 Just like the `install` command, the `generateInstallationScript` command also introspects your project but then writes what is required to load and run everything to a script. The command will output the location of the generated script once done. You are encouraged to copy this script and use it as the basis of installing your project for production deployments.
 
@@ -152,11 +123,31 @@ To check the status of your bundles use:
 conduct info
 ```
 
-This will obtain information on the ConductR cluster.
+To inspect a bundle's full configuration use:
 
-### Loading bundles
+```console
+conduct info <my-bundle>
+```
 
-To load a bundle to the ConductR cluster use:
+...where `<my-bundle>` is the identity of your bundle (a bundle id or name).
+
+### Generating and loading bundles
+
+To load a bundle to the ConductR cluster, first generate one if you have not done so already (`install` will generate one). Ensure that you're in the sub-project that you want to generate a bundle for:
+
+```
+project my-sub-project
+```
+
+SBT TIP: type `projects` to list your sub-projects, or type `project <HIT THE TAB KEY>`.
+
+...then generate your sub-project's bundle:
+
+```
+bundle:dist
+```
+
+You are now ready to load your bundle:
 
 ```
 conduct load <HIT THE TAB KEY AND THEN RETURN>
@@ -169,13 +160,13 @@ Using the tab completion feature of sbt will produce a URI representing the loca
 To start a bundle in the cluster use:
 
 ```
-conduct run BUNDLE_NAME
+conduct run <my-bundle>
 ```
 
 This will start the bundle on one instance. To scale it to several instances use the `--scale` option:
 
 ```
-conduct run --scale 3 BUNDLE_NAME
+conduct run --scale 3 <my-bundle>
 ```
 
 As the bundle name you can either use the bundle id or bundle name. Also the name specified doesn't need to exactly match to the name of the bundle. The specified name only needs to be unqiue within the ConductR cluster. So in case you want to run the bundle `this-is-a-very-long-bundle-name` you can just type:
@@ -186,18 +177,30 @@ conduct run t
 
 If multiple bundles with a starting `t` exist then the command is aborted and an error message is displayed.
 
+#### Tags
+
+Tags are an array of strings that can be used to further qualify a bundle name. Tags are often represented as versions e.g. "1.0.0-beta.1", "version1"" etc. By default we use your project's version. Taking the above `run` example further, we can express a tag by using a `:` to delimit it with a name:
+
+```
+conduct run <my-bundle>:<my-tag>
+```
+
+#### More info
+
 To get an overview of all available `conduct run` options use:
 
 ```
 sandbox run --help
 ```
 
+Note that all sub-commands offer help.
+
 ### Stopping bundles
 
 Use the `stop` command to stop a bundle:
 
 ```console
-conduct stop
+conduct stop <my-bundle>
 ```
 
 ### Retrieve log messages of a bundle
@@ -205,16 +208,20 @@ conduct stop
 To retrieve log messages of a bundle use:
 
 ```
-conduct logs BUNDLE_NAME
+conduct logs <my-bundle>
 ```
 
 ## Bundle Plugins
+
+By definition, a bundle is a package of one or more components and has metadata describing them all. Bundle metadata includes the name of your bundle, tags, resource requirements, proxying requirements and more.
+
+A bundle typically has just one component which is your service, although it may have more than one component. The general idea of a bundle is that it is entirely self-contained i.e. ConductR does not need to solicit any more information or data regarding your service to invoke it at runtime. This approach permits ConductR to start your services quickly and reliably given that very few network interactions are required.
 
 The bundle plugin produces ConductR bundles and bundle configurations. sbt-conductr contains several bundle plugin. One of the bundle plugin gets used for your project. Check out the [Plugin Overview](#plugin-overview) section for more information.
 
 ### Producing a bundle
 
-To produce a bundle use:
+To recap, produce a bundle by using the following command within your sub-project:
 
 ```console
 bundle:dist
@@ -222,9 +229,9 @@ bundle:dist
 
 ### Scheduling parameters
 
-An application need to provide ConductR scheduling paramters to produce a bundle successfully. These parameters effectively describe what resources are used by your application or service and are used to determine which machine they will run on.
+A service needs to provide ConductR scheduling parameters to produce a bundle successfully. These parameters effectively describe what resources are used by your service and are used to determine which machine they will run on.
 
-[Play](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/PlayBundlePlugin.scala) and [Lagom](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/LagomBundlePlugin.scala) bundle plugins provide default scheduling paramters. For any other application it is mandatory to specify them. Otherwise the `bundle:dist` command will fail.
+[Play](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/PlayBundlePlugin.scala) and [Lagom](https://github.com/typesafehub/sbt-conductr/blob/master/src/main/scala/com/lightbend/conductr/sbt/LagomBundlePlugin.scala) bundle plugins provide default scheduling parameters. For any other service it is mandatory to specify them, otherwise the `bundle:dist` command will fail.
 
 #### Defaults
 
@@ -242,28 +249,28 @@ An application need to provide ConductR scheduling paramters to produce a bundle
 * Cpus: 0.1
 * Disk space: 200 MB 
 
-#### Set custom scheduling paramters
+#### Set custom scheduling parameters
 
-If the above parameters are inappropriate then we recommend custom scheduling parameters in your `build.sbt` e.g.:
+If the above parameters are inappropriate or you are not using Play or Lagom then we recommend starting with the following custom scheduling parameters in your project's `build.sbt` e.g.:
 
 ```scala
 javaOptions in Universal := Seq(
-  "-J-Xmx64m",
-  "-J-Xms64m"
+  "-J-Xmx128m",
+  "-J-Xms128m"
 )
 
 BundleKeys.nrOfCpus := 0.1
 BundleKeys.memory := 384.MiB
-BundleKeys.diskSpace := 50.MB
+BundleKeys.diskSpace := 200.MB
 ```
 
-The `javaOptions` values declare the maximum and minimum heap size for your application respectively. Profiling your application under load will help you determine an optimal heap size. We recommend declaring the `BundleKeys.memory` value to be at least 384 MiB. `BundleKeys.memory` represents the *resident* memory size of your application, which includes the heap, thread stacks, code caches, the code itself and so forth. On Unix, use the `top` command and observe the resident memory column (`RES`) with your application under load.
+The `javaOptions` values declare the maximum and minimum heap size for your application respectively. Profiling your application under load will help you determine an optimal heap size. We recommend declaring the `BundleKeys.memory` value to be at least 384 MiB noting that this represents the *resident* memory size of your service. Resident memory includes the heap, thread stacks, code caches, the code itself and so forth. On Unix, use the `top` command and observe the resident memory column (`RES`) with your application under load.
 
 `BundleKeys.memory` is used for locating machines with enough resources to run your application, and so it is particularly important to size it before you go to production. Not setting this value correctly can lead to your bundle being killed by the operating system.
 
 ### Bundle configuration
 
-It is possible to produce additional configuration bundles that contain an optional `bundle.conf` the value of which override the main bundle, as
+It is possible to produce additional configuration bundles that contain an optional `bundle.conf` to override the main bundle, as
 well as arbitrary shell scripts. These additional configuration files must be placed in your project's src/bundle-configuration/default folder. Note that configuration bundles can also be declared using settings (explained [later](https://github.com/typesafehub/sbt-conductr#extending-bundle-configurations)).
 
 The bundle-configuration folder may contain many configurations in order to support development style scenarios, the desired configuration can be specified with the setting ("default" is the default folder name) in the `build.sbt`:
@@ -389,7 +396,7 @@ bundleConfVersion     | The version of the bundle.conf file. By default this is 
 bundleType            | The type of configuration that this bundling relates to. By default Universal is used.
 checkInitialDelay     | Initial delay before the check uris are triggered. The `FiniteDuration` value gets rounded up to full seconds. Default is 3 seconds.
 checks                | Declares uris to check to signal to ConductR that the bundle components have started for situations where component doesn't do that. For example `Seq(uri("$WEB_HOST"))` will check that a endpoint named "web" will be checked given its host environment var e.g. `http://192.168.10.1:10773` (for a complete reference of ConductR environment variables, please visit [ConductR's documentation](http://conductr.lightbend.com/docs/2.0.x/BundleEnvironmentVariables)). Once that URL becomes available then ConductR will be signalled that the bundle is ready. Note that a `docker+` prefix should be used when waiting on Docker components so that the Docker build event is waited on e.g. `Seq(uri("docker+$WEB_HOST"))`<br/>Optional params are: 'retry-count': Number of retries, 'retry-delay': Delay in seconds between retries, 'docker-timeout': Timeout in seconds for docker container start. For example: `Seq(uri("$WEB_HOST?retry-count=5&retry-delay=2"))`.
-compatibilityVersion  | A versioning scheme that will be included in a bundle's name that describes the level of compatibility with bundles that go before it. By default we take the major version component of a version as defined by [http://semver.org/]. However you can make this mean anything that you need it to mean in relation to bundles produced prior to it. We take the notion of a compatibility version from [http://ometer.com/parallel.html]."
+compatibilityVersion  | A versioning scheme that will be associated with a bundle that describes the level of compatibility with the bundle that went before it. ConductR can use this property to reason about the compatibility of one bundle to another given the same bundle name. By default we take the major version component of a project version where major is defined by [http://semver.org/]. However you can make this mean anything that you need it to mean in relation to the bundle produced prior to it. We take the notion of a compatibility version from [http://ometer.com/parallel.html]."
 conductrTargetVersion | The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 2.0.
 configurationName     | The name of the directory of the additional configuration to use. Defaults to 'default'
 diskSpace             | The amount of disk space required to host an expanded bundle and configuration. Append the letter k or K to indicate kilobytes, or m or M to indicate megabytes. Required.
@@ -404,8 +411,9 @@ roles                 | The types of node in the cluster that this bundle can be
 startCommand          | Command line args required to start the component. Paths are expressed relative to the component's bin folder. The default is to use the bash script in the bin folder. <br/> Example JVM component: </br> `BundleKeys.startCommand += "-Dakka.cluster.roles.1=frontend"` </br> Example Docker component (should additional args be required): </br> `BundleKeys.startCommand += "dockerArgs -v /var/lib/postgresql/data:/var/lib/postgresql/data"` (this adds arguments to `docker run`). Note that memory heap is controlled by the BundleKeys.memory key and heap flags should not be passed here.
 system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
 systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
+tags                  | An array of strings that can be used to further qualify a bundle name. Just as with a name, these strings are intended for human consumption and ConductR makes no assumptions about their value - see "compatibilityVersion" for semantically relevant versioning. Tags are often represented as versions e.g. "1.0.0-beta.1", "version1"" etc. By default we use the project version.
 
-## Developers
+## Plugin Developers
 
 #### Running unit tests
 
@@ -432,4 +440,4 @@ scripted sbt-conductr/conduct-common-args
 ```
 
 
-&copy; Lightbend Inc., 2014-2016
+&copy; Lightbend Inc., 2014-2017

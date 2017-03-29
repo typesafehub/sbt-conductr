@@ -28,6 +28,7 @@ checkBundleConf := {
   val expectedContents = """|version              = "1"
                             |name                 = "checks"
                             |compatibilityVersion = "0"
+                            |tags                 = ["0.1.0-SNAPSHOT"]
                             |system               = "checks"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1
