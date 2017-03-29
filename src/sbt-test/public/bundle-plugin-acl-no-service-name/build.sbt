@@ -29,6 +29,7 @@ checkBundleConf := {
   val expectedContents = """|version              = "1"
                             |name                 = "acl-no-service-name"
                             |compatibilityVersion = "0"
+                            |tags                 = ["0.1.0-SNAPSHOT"]
                             |system               = "acl-no-service-name"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1
