@@ -15,6 +15,7 @@ checkBundleDist := {
     """version              = "1"
       |name                 = "play25"
       |compatibilityVersion = "0"
+      |tags                 = ["0.1.0-SNAPSHOT"]
       |system               = "play25"
       |systemVersion        = "0"
       |nrOfCpus             = 0.1
