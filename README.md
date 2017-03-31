@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.3.2-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is an sbt plugin that provides commands in sbt to:
@@ -29,13 +29,13 @@ sbt-conductr is an sbt plugin that provides commands in sbt to:
 Add sbt-conductr to your `project/plugins.sbt` (all versions of Akka, Play and Lagom 1.3 onward):
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.0")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.2")
 ```
 
 If your project is using Lagom 1.2.x or prior please use:
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.6")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.2.7")
 ```
 
 In the context of Play or Lagom you should ensure that plugins are enabled as follows:
