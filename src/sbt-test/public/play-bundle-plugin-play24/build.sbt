@@ -16,6 +16,7 @@ checkBundleDist := {
       |name                 = "play24"
       |compatibilityVersion = "0"
       |tags                 = ["0.1.0-SNAPSHOT"]
+      |annotations          = {}
       |system               = "play24"
       |systemVersion        = "0"
       |nrOfCpus             = 0.1

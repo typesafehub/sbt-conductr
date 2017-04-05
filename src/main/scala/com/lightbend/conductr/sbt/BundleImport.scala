@@ -254,6 +254,11 @@ object BundleImport {
       """An array of strings that can be used to further qualify a bundle name. Just as with a name, these strings are intended for human consumption and ConductR makes no assumptions about their value - see "compatibilityVersion" for semantically relevant versioning. Tags are often represented as versions e.g. "1.0.0-beta.1", "version1"" etc. By default we use the project version."""
     )
 
+    val annotations = SettingKey[Option[String]](
+      "bundle-annotations",
+      """A HOCON string representing additional metadata that you may wish to associate with a bundle. Key names should be in accordance with the OCI image annotation conventions: https://github.com/opencontainers/image-spec/blob/master/annotations.md."""
+    )
+
     val conductrTargetVersion = SettingKey[ConductrVersion.Value](
       "bundle-conductr-target-version",
       "The version of ConductR to that this bundle can be deployed on. During bundle creation a compatibility check is made whether this bundle can be deployed on the specified ConductR version. Defaults to 2.0."

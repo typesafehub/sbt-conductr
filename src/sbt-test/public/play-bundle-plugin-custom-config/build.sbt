@@ -21,6 +21,7 @@ checkBundleDist := {
       |name                 = "custom-config"
       |compatibilityVersion = "0"
       |tags                 = ["0.1.0-SNAPSHOT"]
+      |annotations          = {}
       |system               = "custom-config"
       |systemVersion        = "0"
       |nrOfCpus             = 0.1
