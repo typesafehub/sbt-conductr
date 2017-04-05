@@ -17,3 +17,5 @@ BundleKeys.diskSpace := 10.MB
 BundleKeys.endpoints := Map("web" -> Endpoint("http", 0, Set(URI("http://:9001"))))
 
 BundleKeys.configurationName := "web-server"
+
+BundleKeys.annotations := Some("""{a="b"}""")
