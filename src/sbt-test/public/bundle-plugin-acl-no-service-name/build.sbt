@@ -30,6 +30,7 @@ checkBundleConf := {
                             |name                 = "acl-no-service-name"
                             |compatibilityVersion = "0"
                             |tags                 = ["0.1.0-SNAPSHOT"]
+                            |annotations          = {}
                             |system               = "acl-no-service-name"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1

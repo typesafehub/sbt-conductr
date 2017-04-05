@@ -392,6 +392,7 @@ The following bundle settings are provided under the `BundleKeys` object:
 
 Name                  | Description
 ----------------------|-------------
+annotations           | An optional HOCON string representing additional metadata that you may wish to associate with a bundle. Key names should be in accordance with the [OCI image annotation](https://github.com/opencontainers/image-spec/blob/master/annotations.md) conventions.
 bundleConf            | The bundle configuration file contents
 bundleConfVersion     | The version of the bundle.conf file. By default this is 1.
 bundleType            | The type of configuration that this bundling relates to. By default Universal is used.

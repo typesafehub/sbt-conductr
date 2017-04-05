@@ -18,6 +18,8 @@ BundleKeys.memory := 64.MiB
 BundleKeys.minMemoryCheckValue := 64.MiB
 BundleKeys.diskSpace := 10.MB
 
+BundleKeys.annotations := Some("""{a = "b"}""")
+
 BundleKeys.endpoints += "other" -> Endpoint("http", 0, Set(URI("http://:9001/simple-test")))
 BundleKeys.endpoints += "akka-remote" -> Endpoint("tcp")
 BundleKeys.endpoints += "extras" -> Endpoint("http", 0, "ping-service",
@@ -47,6 +49,7 @@ checkBundleConf := {
                             |name                 = "basic"
                             |compatibilityVersion = "0"
                             |tags                 = ["0.1.0-SNAPSHOT"]
+                            |annotations          = {a = "b"}
                             |system               = "basic"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1
