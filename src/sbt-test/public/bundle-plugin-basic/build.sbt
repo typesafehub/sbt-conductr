@@ -49,7 +49,7 @@ checkBundleConf := {
                             |name                 = "basic"
                             |compatibilityVersion = "0"
                             |tags                 = ["0.1.0-SNAPSHOT"]
-                            |annotations          = {a = "b"}
+                            |annotations          = {a=b}
                             |system               = "basic"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1

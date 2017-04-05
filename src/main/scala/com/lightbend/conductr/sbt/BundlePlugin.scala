@@ -12,6 +12,8 @@ import SbtNativePackager.Universal
 import java.io.{ BufferedInputStream, FileInputStream }
 import java.security.MessageDigest
 
+import com.typesafe.config.{ ConfigFactory, ConfigRenderOptions }
+
 import scala.util.matching.Regex
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -499,12 +501,28 @@ object BundlePlugin extends AutoPlugin {
       def toString[T](valueAndConfigName: (T, Option[String]), f: T => String): (String, Option[String]) =
         f(valueAndConfigName._1) -> valueAndConfigName._2
 
+      def formatHocon(value: String): String =
+        "{" +
+          ConfigFactory
+          .parseString(value)
+          .root()
+          .render(
+            ConfigRenderOptions
+              .defaults()
+              .setOriginComments(false)
+              .setJson(false)
+          )
+          .reverse
+          .dropWhile(_ == '\n')
+          .reverse +
+          "}"
+
       val declarations =
         Seq(s"""version              = "${bundleConfVersion.value}"""") ++
           formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
           formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
           formatValue("""tags                 = %s""", toString((tagsConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
-          formatValue("""annotations          = %s""", toString((annotationsConfigName in config).value, (v: Option[String]) => v.getOrElse("{}"))) ++
+          formatValue("""annotations          = %s""", toString((annotationsConfigName in config).value, (v: Option[String]) => v.map(formatHocon).getOrElse("{}"))) ++
           formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
           formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
           formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
