@@ -34,6 +34,7 @@ checkBundleConf := {
                             |name                 = "acl-empty-request-mapping"
                             |compatibilityVersion = "0"
                             |tags                 = ["0.1.0-SNAPSHOT"]
+                            |annotations          = {}
                             |system               = "acl-empty-request-mapping"
                             |systemVersion        = "0"
                             |nrOfCpus             = 0.1

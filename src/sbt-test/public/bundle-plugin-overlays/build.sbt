@@ -43,6 +43,7 @@ checkBundleConf := {
                             |name                 = "overlays"
                             |compatibilityVersion = "0"
                             |tags                 = ["0.1.0-SNAPSHOT"]
+                            |annotations          = {}
                             |system               = "overlays"
                             |systemVersion        = "0"
                             |nrOfCpus             = 2.0

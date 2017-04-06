@@ -392,6 +392,7 @@ The following bundle settings are provided under the `BundleKeys` object:
 
 Name                  | Description
 ----------------------|-------------
+annotations           | An optional [HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) string representing additional metadata that you may wish to associate with a bundle. An example is provided below. Key names should be in accordance with the [OCI image annotation](https://github.com/opencontainers/image-spec/blob/master/annotations.md) conventions. Annotations default to None.
 bundleConf            | The bundle configuration file contents
 bundleConfVersion     | The version of the bundle.conf file. By default this is 1.
 bundleType            | The type of configuration that this bundling relates to. By default Universal is used.
@@ -413,6 +414,22 @@ startCommand          | Command line args required to start the component. Paths
 system                | A logical name that can be used to associate multiple bundles with each other. This could be an application or service association and should include a version e.g. myapp-1.0.0. Defaults to the package name.
 systemVersion         | A version to associate with a system. This setting defaults to the value of compatibilityVersion.
 tags                  | An array of strings that can be used to further qualify a bundle name. Just as with a name, these strings are intended for human consumption and ConductR makes no assumptions about their value - see "compatibilityVersion" for semantically relevant versioning. Tags are often represented as versions e.g. "1.0.0-beta.1", "version1"" etc. By default we use the project version.
+
+#### HOCON
+
+[HOCON](https://github.com/typesafehub/config/blob/master/HOCON.md) is an alternative to JSON that should provides some nice extensions. To illustrate, here are some annotations declared:
+
+```
+BundleKeys.annotations := Some(
+  """
+    |{
+    |  com.mycompany {
+    |    reference-id = "124f534as"
+    |    zones = ["us-east", "us-west"]
+    |  }
+    |}
+  """.stripMargin)
+```
 
 ## Plugin Developers
 
