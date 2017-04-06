@@ -12,6 +12,8 @@ import SbtNativePackager.Universal
 import java.io.{ BufferedInputStream, FileInputStream }
 import java.security.MessageDigest
 
+import com.typesafe.config.{ ConfigFactory, ConfigRenderOptions }
+
 import scala.util.matching.Regex
 import scala.annotation.tailrec
 import scala.concurrent.duration._
@@ -38,6 +40,7 @@ object BundlePlugin extends AutoPlugin {
         checks := Seq.empty,
         compatibilityVersion := (version in Bundle).value.takeWhile(_ != '.'),
         tags := List((version in Bundle).value),
+        annotations := None,
         configurationName := "default",
         endpoints := getDefaultEndpoints(Bundle).value,
         enableAcls := conductrTargetVersion.value >= ConductrVersion.V2_0,
@@ -100,6 +103,7 @@ object BundlePlugin extends AutoPlugin {
   private val checksConfigName = taskKey[(Seq[URI], Option[String])]("")
   private val compatibilityVersionConfigName = taskKey[(String, Option[String])]("")
   private val tagsConfigName = taskKey[(Seq[String], Option[String])]("")
+  private val annotationsConfigName = taskKey[(Option[String], Option[String])]("")
   private val normalizedNameConfigName = taskKey[(String, Option[String])]("")
   private val nrOfCpusConfigName = taskKey[(Double, Option[String])]("")
   private val systemConfigName = taskKey[(String, Option[String])]("")
@@ -118,6 +122,7 @@ object BundlePlugin extends AutoPlugin {
       checksConfigName := (checks in config).value -> toConfigName(checks in (thisProjectRef.value, config), state.value),
       compatibilityVersionConfigName := (compatibilityVersion in config).value -> toConfigName(compatibilityVersion in (thisProjectRef.value, config), state.value),
       tagsConfigName := (tags in config).value -> toConfigName(tags in (thisProjectRef.value, config), state.value),
+      annotationsConfigName := (annotations in config).value -> toConfigName(annotations in (thisProjectRef.value, config), state.value),
       normalizedNameConfigName := (normalizedName in config).value -> toConfigName(normalizedName in (thisProjectRef.value, config), state.value),
       nrOfCpusConfigName := (nrOfCpus in config).value -> toConfigName(nrOfCpus in (thisProjectRef.value, config), state.value),
       systemConfigName := (system in config).value -> toConfigName(system in (thisProjectRef.value, config), state.value),
@@ -453,6 +458,7 @@ object BundlePlugin extends AutoPlugin {
     if (valueSuppliedForConfig((normalizedNameConfigName in config).value) ||
       valueSuppliedForConfig((compatibilityVersionConfigName in config).value) ||
       valueSuppliedForConfig((tagsConfigName in config).value) ||
+      valueSuppliedForConfig((annotationsConfigName in config).value) ||
       valueSuppliedForConfig((systemConfigName in config).value) ||
       valueSuppliedForConfig((systemVersionConfigName in config).value) ||
       valueSuppliedForConfig((nrOfCpusConfigName in config).value) ||
@@ -495,11 +501,28 @@ object BundlePlugin extends AutoPlugin {
       def toString[T](valueAndConfigName: (T, Option[String]), f: T => String): (String, Option[String]) =
         f(valueAndConfigName._1) -> valueAndConfigName._2
 
+      def formatHocon(value: String): String =
+        "{" +
+          ConfigFactory
+          .parseString(value)
+          .root()
+          .render(
+            ConfigRenderOptions
+              .defaults()
+              .setOriginComments(false)
+              .setJson(false)
+          )
+          .reverse
+          .dropWhile(_ == '\n')
+          .reverse +
+          "}"
+
       val declarations =
         Seq(s"""version              = "${bundleConfVersion.value}"""") ++
           formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
           formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
           formatValue("""tags                 = %s""", toString((tagsConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
+          formatValue("""annotations          = %s""", toString((annotationsConfigName in config).value, (v: Option[String]) => v.map(formatHocon).getOrElse("{}"))) ++
           formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
           formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
           formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
