@@ -6,7 +6,9 @@ package com.lightbend.conductr.sbt
 
 import sbt._
 import com.typesafe.sbt.SbtNativePackager.Universal
+
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Try
 import scala.util.matching.Regex
 
 object BundleImport {
@@ -53,7 +55,7 @@ object BundleImport {
       Request(None, Right(r), None)
 
     implicit def request2(r: (String, String)): Request =
-      Request(Some(r._1), Left(r._2), None)
+      Try(Request(Some(r._1), Left(r._2), None)).toOption.getOrElse(Request(None, Left(r._1), Some(r._2)))
     implicit def regexRequest2(r: (String, Regex)): Request =
       Request(Some(r._1), Right(r._2), None)
     implicit def regexToStringRequest2(r: (Regex, String)): Request =
