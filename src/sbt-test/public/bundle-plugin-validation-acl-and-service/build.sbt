@@ -31,7 +31,8 @@ BundleKeys.endpoints += "ping-service" -> Endpoint("http", 0, Some(Set(URI("http
           "GET" -> "^/beg-3".r -> "/other-beg-3",
           "/regex1/[a|b|c]".r,
           "GET" -> "/regex2/[a|b|c]".r,
-          "GET" -> "/regex3/[a|b|c]".r -> "/other-regex-3"
+          "GET" -> "/regex3/[a|b|c]".r -> "/other-regex-3",
+          "/bar-2" -> "/bar-3"
         )),
       RequestAcl(Tcp(9001, 9002)),
       RequestAcl(Udp(19001, 19002))
