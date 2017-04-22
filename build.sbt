@@ -24,6 +24,7 @@ unmanagedSourceDirectories in Compile := List((scalaSource in Compile).value)
 unmanagedSourceDirectories in Test := List((scalaSource in Test).value)
 
 // Plugin dependencies
+addSbtPlugin(Library.assembly)
 addSbtPlugin(Library.nativePackager)
 
 // Library dependencies
