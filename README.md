@@ -255,6 +255,8 @@ A service needs to provide ConductR scheduling parameters to produce a bundle su
 If the above parameters are inappropriate or you are not using Play or Lagom then we recommend starting with the following custom scheduling parameters in your project's `build.sbt` e.g.:
 
 ```scala
+import ByteConversions._
+
 javaOptions in Universal := Seq(
   "-J-Xmx128m",
   "-J-Xms128m"
