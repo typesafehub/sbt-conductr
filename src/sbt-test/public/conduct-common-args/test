@@ -26,6 +26,9 @@
 > conduct version
 > conduct version -h
 > conduct version --help
+> conduct deploy
+> conduct deploy -h
+> conduct deploy --help
 
 # common opts
 > conduct info -h -q -v --long-ids --api-version 2 --local-connection --ip 1.1.1.1 --port 9999 --settings-dir /some/path --custom-settings-file /some/path --custom-plugins-dir /some/path
