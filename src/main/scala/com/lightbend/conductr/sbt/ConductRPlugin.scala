@@ -74,7 +74,7 @@ object ConductrPlugin extends AutoPlugin {
       install := installTask().value
     )
 
-  private final val LatestConductrVersion = "1.1.11"
+  private final val LatestConductrVersion = "2.0.5"
   private final val LatestConductrDocVersion = LatestConductrVersion.dropRight(1) :+ "x" // 1.0.0 to 1.0.x
 
   private final val TypesafePropertiesName = "typesafe.properties"
