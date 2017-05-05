@@ -477,7 +477,7 @@ object BundlePlugin extends AutoPlugin {
           Seq(
             value.map(uri => s""""$uri"""").mkString(
               s"""components = {
-                  |  ${(normalizedName in config).value}-status = {
+                  |  bundle-status = {
                   |    description      = "Status check for the bundle component"
                   |    file-system-type = "universal"
                   |    start-command    = ["check", "--initial-delay", "$checkInitialDelayInSeconds", """.stripMargin,
