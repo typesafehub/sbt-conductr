@@ -583,7 +583,8 @@ object ConductrPlugin extends AutoPlugin {
             logsSubtask(bundleNames) |
             deploySubtask(bundleNames) |
             membersSubtask |
-            agentsSubtask
+            agentsSubtask |
+            loadLicenseSubtask
           )) ?? ConductHelp
         }
         (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
@@ -699,6 +700,11 @@ object ConductrPlugin extends AutoPlugin {
         (token("agents") ~> commonArgs.?)
           .map { args => ConductSubtaskSuccess("agents", optionalArgs(args)) }
           .!!!("Usage: conduct agents")
+
+      def loadLicenseSubtask: Parser[ConductSubtaskSuccess] =
+        (token("load-license") ~> commonArgs.?)
+          .map { args => ConductSubtaskSuccess("load-license", optionalArgs(args)) }
+          .!!!("Usage: conduct load-license")
 
       // Command specific options
       def bundle(file: Option[File]): Parser[URI] =
