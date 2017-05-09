@@ -31,6 +31,8 @@
 > conduct deploy --help
 > conduct members -h
 > conduct members --help
+> conduct agents -h
+> conduct agents --help
 
 # common opts
 > conduct info -h -q -v --long-ids --api-version 2 --local-connection --ip 1.1.1.1 --port 9999 --settings-dir /some/path --custom-settings-file /some/path --custom-plugins-dir /some/path
