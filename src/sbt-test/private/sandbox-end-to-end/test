@@ -1,4 +1,4 @@
-> sandbox run 2.0.2 --nr-of-instances 3:3 --port 1111 --port 2222 --port 2551
+> sandbox run 2.0.5 --nr-of-instances 3:3 --port 1111 --port 2222 --port 2551
 
 # sandbox checks
 > checkInstances3
