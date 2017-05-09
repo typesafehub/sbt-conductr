@@ -1,6 +1,12 @@
 # run sandbox
 > sandbox run 2.0.2
 
+# conduct members
+> conduct members
+
+# conduct agents
+> conduct agents
+
 # conduct info
 > conduct info
 
