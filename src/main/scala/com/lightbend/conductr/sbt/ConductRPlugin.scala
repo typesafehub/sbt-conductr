@@ -580,7 +580,11 @@ object ConductrPlugin extends AutoPlugin {
             serviceNamesSubtask |
             aclsSubtask |
             eventsSubtask(bundleNames) |
-            logsSubtask(bundleNames)
+            logsSubtask(bundleNames) |
+            deploySubtask(bundleNames) |
+            membersSubtask |
+            agentsSubtask |
+            loadLicenseSubtask
           )) ?? ConductHelp
         }
         (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
@@ -607,7 +611,8 @@ object ConductrPlugin extends AutoPlugin {
       // This parser is triggering the help of the conduct sub command if no argument for this command is specified
       // Example: `conduct load` will execute `conduct load --help`
       def subHelpSubtask: Parser[ConductSubtaskHelp] =
-        (token("load") | token("run" | token("start")) | token("stop") | token("unload") | token("events") | token("logs") | token("acls"))
+        (token("load") | token("run" | token("start")) | token("stop") | token("unload") | token("events") |
+          token("logs") | token("acls") | token("deploy"))
           .map(ConductSubtaskHelp)
 
       // Sub command parsers
@@ -679,6 +684,28 @@ object ConductrPlugin extends AutoPlugin {
       def logsArgs: Parser[Option[String]] =
         hideAutoCompletion(commonArgs | waitTimeout | noWait | date | utc | lines).*.map(seqToString).?
 
+      def deploySubtask(bundleNames: Set[String]): Parser[ConductSubtaskSuccess] =
+        token("deploy") ~> withArgs(deployArgs)(bundleId(bundleNames))
+          .mapArgs { case (args, bundleId) => ConductSubtaskSuccess("deploy", optionalArgs(args) ++ Seq(bundleId)) }
+          .!!!("Usage: conduct deploy --help")
+      def deployArgs: Parser[Option[String]] =
+        hideAutoCompletion(commonArgs | waitTimeout | noWait | scheme | basePath).*.map(seqToString).?
+
+      def membersSubtask: Parser[ConductSubtaskSuccess] =
+        (token("members") ~> commonArgs.?)
+          .map { args => ConductSubtaskSuccess("members", optionalArgs(args)) }
+          .!!!("Usage: conduct members")
+
+      def agentsSubtask: Parser[ConductSubtaskSuccess] =
+        (token("agents") ~> commonArgs.?)
+          .map { args => ConductSubtaskSuccess("agents", optionalArgs(args)) }
+          .!!!("Usage: conduct agents")
+
+      def loadLicenseSubtask: Parser[ConductSubtaskSuccess] =
+        (token("load-license") ~> commonArgs.?)
+          .map { args => ConductSubtaskSuccess("load-license", optionalArgs(args)) }
+          .!!!("Usage: conduct load-license")
+
       // Command specific options
       def bundle(file: Option[File]): Parser[URI] =
         Space ~> (basicUri examples file.fold[Set[String]](Set.empty)(f => Set(f.toURI.getPath)))
@@ -706,6 +733,10 @@ object ConductrPlugin extends AutoPlugin {
         token("http")
       def tcpProtocolFamily: Parser[String] =
         token("tcp")
+      def scheme: Parser[String] =
+        (Space ~> token("--scheme" ~ basicString)).map(pairToString)
+      def basePath: Parser[String] =
+        (Space ~> token("--base-path" ~ basicString)).map(pairToString)
 
       // Common optional options
       def commonArgs: Parser[String] =
