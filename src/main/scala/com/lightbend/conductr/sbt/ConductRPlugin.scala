@@ -581,7 +581,8 @@ object ConductrPlugin extends AutoPlugin {
             aclsSubtask |
             eventsSubtask(bundleNames) |
             logsSubtask(bundleNames) |
-            deploySubtask(bundleNames)
+            deploySubtask(bundleNames) |
+            membersSubtask
           )) ?? ConductHelp
         }
         (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
@@ -687,6 +688,11 @@ object ConductrPlugin extends AutoPlugin {
           .!!!("Usage: conduct deploy --help")
       def deployArgs: Parser[Option[String]] =
         hideAutoCompletion(commonArgs | waitTimeout | noWait | scheme | basePath).*.map(seqToString).?
+
+      def membersSubtask: Parser[ConductSubtaskSuccess] =
+        (token("members") ~> commonArgs.?)
+          .map { args => ConductSubtaskSuccess("members", optionalArgs(args)) }
+          .!!!("Usage: conduct members")
 
       // Command specific options
       def bundle(file: Option[File]): Parser[URI] =
