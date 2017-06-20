@@ -1,8 +1,5 @@
 package impl
 
-import java.nio.file.{Files, StandardOpenOption}
-import java.util.Date
-
 import com.typesafe.conductr.bundlelib.lagom.scaladsl.ConductRApplicationComponents
 import com.lightbend.lagom.internal.client.CircuitBreakerMetricsProviderImpl
 import com.lightbend.lagom.internal.spi.CircuitBreakerMetricsProvider
