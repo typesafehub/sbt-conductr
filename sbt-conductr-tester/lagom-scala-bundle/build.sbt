@@ -15,9 +15,6 @@ lazy val `play-service` = (project in file("play-service"))
   .enablePlugins(PlayScala, LagomPlay)
   .settings(
     routesGenerator := InjectedRoutesGenerator,
-    // Need to explicitly add the dependency to lagom-client 1.3.1 because 1.3.1-RC1 is being pulled in
-    libraryDependencies ++= Seq(
-      "com.lightbend.lagom" %% "lagom-scaladsl-client" % "1.3.1",
-      macwire)
+    libraryDependencies += macwire
   )
   .dependsOn(`lagom-service-api`)

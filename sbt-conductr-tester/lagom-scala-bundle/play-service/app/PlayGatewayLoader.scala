@@ -1,4 +1,6 @@
 import api.FooService
+import com.lightbend.lagom.internal.client.CircuitBreakerMetricsProviderImpl
+import com.lightbend.lagom.internal.spi.CircuitBreakerMetricsProvider
 import com.lightbend.lagom.scaladsl.api.{ServiceAcl, ServiceInfo}
 import com.lightbend.lagom.scaladsl.client.LagomServiceClientComponents
 import com.lightbend.lagom.scaladsl.devmode.LagomDevModeComponents
@@ -44,6 +46,10 @@ class PlayGatewayLoader extends ApplicationLoader {
     case Mode.Dev =>
       new PlayGateway(context) with LagomDevModeComponents {}.application
     case _ =>
-      new PlayGateway(context) with ConductRServiceLocatorComponents with ConductRLifecycleComponents {}.application
+      new PlayGateway(context) with ConductRServiceLocatorComponents with ConductRLifecycleComponents {
+        // Workaround for https://github.com/typesafehub/conductr-lib/issues/145
+        override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
+          new CircuitBreakerMetricsProviderImpl(actorSystem)
+      }.application
   }
 }
