@@ -20,9 +20,7 @@ class FooLoader extends LagomApplicationLoader {
 	override def loadDevMode(context: LagomApplicationContext): LagomApplication =
 		new FooApplication(context) with LagomDevModeComponents
 
-	override def describeServices = List(
-		readDescriptor[FooService]
-  )
+	override def describeService = Some(readDescriptor[FooService])
 }
 
 abstract class FooApplication(context: LagomApplicationContext)
