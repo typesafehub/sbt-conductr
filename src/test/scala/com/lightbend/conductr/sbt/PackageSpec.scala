@@ -11,8 +11,8 @@ class PackageSpec extends WordSpec with Matchers {
     }
 
     "return ConductR Lib support for Lagom" in {
-      val result = Library.lagomConductrBundleLib(language = "java", lagomVersion = "1.0.0", scalaVersion = "2.11", conductrLibVersion = "1.1.3")
-      result shouldBe ("com.typesafe.conductr" % s"lagom1-java-conductr-bundle-lib_2.11" % "1.1.3")
+      val result = Library.lagomConductrBundleLib(language = "java", lagomVersion = "1.3.5", scalaVersion = "2.11", conductrLibVersion = "2.0.0")
+      result shouldBe ("com.typesafe.conductr" % s"lagom13-java-conductr-bundle-lib_2.11" % "2.0.0")
     }
   }
 }
