@@ -1,6 +1,6 @@
 # sbt-conductr #
 
-[![GitHub version](https://img.shields.io/badge/version-2.3.5-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
+[![GitHub version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
 sbt-conductr is an sbt plugin that provides commands in sbt to:
@@ -29,7 +29,7 @@ sbt-conductr is an sbt plugin that provides commands in sbt to:
 Add sbt-conductr to your `project/plugins.sbt` (all versions of Akka, Play and Lagom 1.3 onward):
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.3.5")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.4.0")
 ```
 
 If your project is using Lagom 1.2.x or prior please use:
@@ -46,9 +46,7 @@ In the context of Play or Lagom you should ensure that plugins are enabled as fo
 | Lagom Scala 1.3.x  | `lazy val myService = (project in file(".")).enablePlugins(LagomScala)`             |
 | Play Java in Lagom | `lazy val myService = (project in file(".")).enablePlugins(LagomPlay)`              |
 | Play Scala 2.4+    | `lazy val root = (project in file(".")).enablePlugins(PlayScala)`                   |
-| Play Scala 2.3     | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayScala)` |
 | Play Java 2.4+     | `lazy val root = (project in file(".")).enablePlugins(PlayJava)`                    |
-| Play Java 2.3      | `lazy val root = (project in file(".")).enablePlugins(JavaAppPackaging, PlayJava)`  |
 
 For anything else:
 
