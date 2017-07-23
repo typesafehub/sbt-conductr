@@ -1,4 +1,4 @@
-addSbtPlugin("com.lightbend.lagom" % "lagom-sbt-plugin" % "1.3.5")
+addSbtPlugin("com.lightbend.lagom" % "lagom-sbt-plugin" % "1.3.6")
 
 lazy val root = Project("plugins", file(".")).dependsOn(plugin)
 lazy val plugin = file("../../").getCanonicalFile.toURI
