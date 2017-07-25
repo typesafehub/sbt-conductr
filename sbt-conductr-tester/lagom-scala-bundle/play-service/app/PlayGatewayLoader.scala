@@ -46,10 +46,6 @@ class PlayGatewayLoader extends ApplicationLoader {
     case Mode.Dev =>
       new PlayGateway(context) with LagomDevModeComponents {}.application
     case _ =>
-      new PlayGateway(context) with ConductRServiceLocatorComponents with ConductRLifecycleComponents {
-        // Workaround for https://github.com/typesafehub/conductr-lib/issues/145
-        override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
-          new CircuitBreakerMetricsProviderImpl(actorSystem)
-      }.application
+      new PlayGateway(context) with ConductRServiceLocatorComponents with ConductRLifecycleComponents.application
   }
 }

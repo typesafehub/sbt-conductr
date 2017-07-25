@@ -14,12 +14,22 @@ import api.FooService
 class FooLoader extends LagomApplicationLoader {
 
 	override def load(context: LagomApplicationContext): LagomApplication =
-		new FooApplication(context) with ConductRApplicationComponents
+		new FooApplication(context) with ConductRApplicationComponents {
+			// Workaround for https://github.com/typesafehub/conductr-lib/issues/145
+			override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
+				new CircuitBreakerMetricsProviderImpl(actorSystem)
+		}
 
 	override def loadDevMode(context: LagomApplicationContext): LagomApplication =
-		new FooApplication(context) with LagomDevModeComponents
+		new FooApplication(context) with LagomDevModeComponents {
+			// Workaround for https://github.com/typesafehub/conductr-lib/issues/145
+			override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
+				new CircuitBreakerMetricsProviderImpl(actorSystem)
+		}
 
-	override def describeService = Some(readDescriptor[FooService])
+  override def describeServices = List(
+    readDescriptor[FooService]
+  )
 }
 
 abstract class FooApplication(context: LagomApplicationContext)

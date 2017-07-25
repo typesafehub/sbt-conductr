@@ -1,0 +1,22 @@
+##
+## This test starts a sandbox, deploys a LagomScala service and executes an HTTP request through the Service
+## Gateway to ensure the service is reachable. It intentionally uses an old version of Lagom and deprecated APIs,
+## to test for backward compatibility.
+## In the process, it ensures the bundle is listed in `conduct info` and also ensures an `install.sh`
+## script is created.
+##
+
+> sandbox run 2.0.5
+
+> install
+
+> verifyConductInfo
+
+> verifyIsStarted lagom-service-impl
+
+> assertRequest 9000 /foo foo-response-hardcoded in FooServiceImpl
+
+> sandbox stop
+
+> generateInstallationScript
+$ exists target/install.sh

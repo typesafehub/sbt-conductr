@@ -1,4 +1,4 @@
-addSbtPlugin("com.lightbend.lagom" % "lagom-sbt-plugin" % "1.3.5")
+addSbtPlugin("com.lightbend.lagom" % "lagom-sbt-plugin" % "1.3.6")
 
 addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % sys.props("project.version"))
 
