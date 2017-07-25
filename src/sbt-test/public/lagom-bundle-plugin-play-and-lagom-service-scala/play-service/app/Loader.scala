@@ -40,10 +40,6 @@ class MyLoader extends ApplicationLoader {
     case Mode.Dev =>
       new MyApplication(context) with LagomDevModeComponents {}.application
     case _ =>
-      new MyApplication(context) with ConductRApplicationComponents {
-        // Workaround for https://github.com/typesafehub/conductr-lib/issues/145
-        override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
-          new CircuitBreakerMetricsProviderImpl(actorSystem)
-      }.application
+      new MyApplication(context) with ConductRApplicationComponents {}.application
   }
 }

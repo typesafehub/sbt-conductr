@@ -11,11 +11,7 @@ import api.FooService
 class FooLoader extends LagomApplicationLoader {
 
 	override def load(context: LagomApplicationContext): LagomApplication =
-		new FooApplication(context) with ConductRApplicationComponents {
-			// Workaround for https://github.com/typesafehub/conductr-lib/issues/145
-			override lazy val circuitBreakerMetricsProvider: CircuitBreakerMetricsProvider =
-				new CircuitBreakerMetricsProviderImpl(actorSystem)
-		}
+		new FooApplication(context) with ConductRApplicationComponents
 
 	override def loadDevMode(context: LagomApplicationContext): LagomApplication =
 		new FooApplication(context) with LagomDevModeComponents
