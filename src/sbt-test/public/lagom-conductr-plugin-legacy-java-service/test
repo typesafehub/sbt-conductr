@@ -6,7 +6,7 @@
 ## script is created.
 ##
 
-> sandbox run 2.0.5
+> sandbox run 2.0.5 --no-default-features -f proxying -f oci-in-docker
 
 > install
 

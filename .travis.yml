@@ -30,6 +30,7 @@ install:
   - conduct load -q visualizer
   - conduct load -q conductr-elasticsearch
   - conduct load -q conductr-kibana
+  - conduct load -q conductr-haproxy conductr-haproxy-dev-mode
   - conduct load -q continuous-delivery
   - sandbox stop
   # Tests go faster if we do this... less interactions with bintray etc.
