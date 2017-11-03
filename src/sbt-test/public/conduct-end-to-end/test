@@ -1,5 +1,5 @@
 # run sandbox
-> sandbox run 2.0.5
+> sandbox run 2.0.5  --no-default-features -f lite-logging
 
 # conduct members
 > conduct members

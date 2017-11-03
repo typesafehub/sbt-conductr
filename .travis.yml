@@ -20,12 +20,18 @@ install:
   # Prep our sandbox with some temporary credentials for CI
   - ./bin/create-credentials.sh
   # Warm up some caches so that our tests don't timeout
-  - sandbox run 2.0.5 -f visualization -f monitoring > /dev/null
+  - sandbox run 2.0.5 --no-default-features > /dev/null
   - conduct load -q cassandra
   - conduct load -q cinnamon-grafana-docker
+  - conduct load -q cinnamon-grafana
   - conduct load -q eslite
   - conduct load -q reactive-maps-backend-region
   - conduct load -q reactive-maps-backend-summary
+  - conduct load -q visualizer
+  - conduct load -q conductr-elasticsearch
+  - conduct load -q conductr-kibana
+  - conduct load -q conductr-haproxy conductr-haproxy-dev-mode
+  - conduct load -q continuous-delivery
   - sandbox stop
   # Tests go faster if we do this... less interactions with bintray etc.
   - export CONDUCTR_OFFLINE_MODE=1

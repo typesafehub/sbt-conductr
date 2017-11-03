@@ -20,9 +20,9 @@ BundleKeys.diskSpace := 10.MB
 
 def resolveRunningContainers = """sandbox ps -q""".lines_!
 
-val checkInstances3 = taskKey[Unit]("Check that 6 instances of cores and agents are running.")
-checkInstances3 := {
-  resolveRunningContainers should have size 6
+val checkInstances2 = taskKey[Unit]("Check that 4 instances of cores and agents are running.")
+checkInstances2 := {
+  resolveRunningContainers should have size 4
 }
 
 /**

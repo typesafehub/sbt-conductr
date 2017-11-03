@@ -1,10 +1,10 @@
-> sandbox run 2.0.5 --no-default-features --nr-of-instances 3:3
+> sandbox run 2.0.8 --no-default-features --nr-of-instances 3
 
 > checkConductrRolesByBundle
 
 > sandbox stop
 
-> sandbox run 2.0.5 --no-default-features --nr-of-instances 3:3 --conductr-role new-role --conductr-role other-role
+> sandbox run 2.0.8 --no-default-features --nr-of-instances 3 --conductr-role new-role --conductr-role other-role
 
 > checkConductrRolesBySandboxKey
 
