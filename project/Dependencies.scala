@@ -5,7 +5,7 @@
 import sbt._
 
 object Version {
-  val nativePackager    = "1.0.6"
+  val nativePackager    = "1.3.2"
   val play              = "2.3.10" // Using Play 2.3 to use Scala 2.10 library
   val scalaTest         = "2.2.6"
   val scala             = "2.10.6"
