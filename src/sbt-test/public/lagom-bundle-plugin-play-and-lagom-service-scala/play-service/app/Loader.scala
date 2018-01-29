@@ -1,15 +1,16 @@
 import com.lightbend.lagom.internal.client.CircuitBreakerMetricsProviderImpl
 import com.lightbend.lagom.internal.spi.CircuitBreakerMetricsProvider
-import com.lightbend.lagom.scaladsl.api.{ServiceAcl, ServiceInfo}
+import com.lightbend.lagom.scaladsl.api.{LagomConfigComponent, ServiceAcl, ServiceInfo}
 import com.lightbend.lagom.scaladsl.client.LagomServiceClientComponents
 import com.lightbend.lagom.scaladsl.devmode.LagomDevModeComponents
 import com.typesafe.conductr.bundlelib.lagom.scaladsl.ConductRApplicationComponents
 import play.api.{ApplicationLoader, BuiltInComponentsFromContext, Mode}
 import play.api.ApplicationLoader.Context
+import play.filters.HttpFiltersComponents
 import play.api.i18n.I18nComponents
 import play.api.libs.ws.ahc.AhcWSComponents
 import com.softwaremill.macwire._
-import controllers.{Assets, MyController}
+import controllers.{Assets, AssetsComponents, MyController}
 import router.Routes
 
 import scala.collection.immutable
@@ -17,6 +18,9 @@ import scala.concurrent.ExecutionContext
 
 abstract class MyApplication(context: Context) extends BuiltInComponentsFromContext(context)
   with AhcWSComponents
+  with AssetsComponents
+  with HttpFiltersComponents
+  with LagomConfigComponent
   with LagomServiceClientComponents {
 
   override lazy val serviceInfo: ServiceInfo = ServiceInfo(
@@ -32,7 +36,6 @@ abstract class MyApplication(context: Context) extends BuiltInComponentsFromCont
   }
 
   lazy val myController = wire[MyController]
-  lazy val assets = wire[Assets]
 }
 
 class MyLoader extends ApplicationLoader {
