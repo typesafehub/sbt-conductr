@@ -29,7 +29,7 @@ sbt-conductr is an sbt plugin that provides commands in sbt to:
 Add sbt-conductr to your `project/plugins.sbt` (all versions of Akka, Play and Lagom 1.3 onward):
 
 ```scala
-addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.5.1")
+addSbtPlugin("com.lightbend.conductr" % "sbt-conductr" % "2.6.0")
 ```
 
 If your project is using Lagom 1.2.x or prior please use:
