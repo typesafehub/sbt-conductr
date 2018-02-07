@@ -18,6 +18,8 @@ import scala.util.matching.Regex
 import scala.annotation.tailrec
 import scala.concurrent.duration._
 
+import Path.relativeTo
+
 object BundlePlugin extends AutoPlugin {
   import BundleImport._
   import BundleKeys._
@@ -187,6 +189,7 @@ object BundlePlugin extends AutoPlugin {
 
   private def createBundle(config: Configuration, bundleTypeConfig: Configuration): Def.Initialize[Task[File]] = Def.task {
     validateSettings(config).value
+    val streamsValue = streams.value
 
     val bundleTarget = (target in config).value
     val configTarget = bundleTarget / config.name / "tmp"
@@ -199,13 +202,14 @@ object BundlePlugin extends AutoPlugin {
       bundleTarget,
       (packageName in config).value,
       bundleMappings,
-      f => streams.value.log.info(s"Bundle has been created: $f")
+      f => streamsValue.log.info(s"Bundle has been created: $f")
     )
   }
 
   // Creates a bundle configuration in the specified config target directory
   private def createConfiguration(config: Configuration): Def.Initialize[Task[File]] = Def.task {
     validateSettings(config).value
+    val streamsValue = streams.value
 
     val bundleTarget = (target in config).value
     val configurationTarget = (NativePackagerKeys.stage in config).value
@@ -215,7 +219,7 @@ object BundlePlugin extends AutoPlugin {
       bundleTarget,
       (configurationName in config).value,
       bundleMappings,
-      f => streams.value.log.info(s"Bundle configuration has been created: $f")
+      f => streamsValue.log.info(s"Bundle configuration has been created: $f")
     )
   }
 
@@ -455,6 +459,26 @@ object BundlePlugin extends AutoPlugin {
     def valueSuppliedForConfig[T](valueAndConfigName: (T, Option[String])): Boolean =
       forAllSettings || valueAndConfigName._2.isDefined
 
+    val bundleConfVersionValue = bundleConfVersion.value
+    val normalizedNameConfigNameValue = (normalizedNameConfigName in config).value
+    val compatibilityVersionConfigNameValue = (compatibilityVersionConfigName in config).value
+    val tagsConfigNameValue = (tagsConfigName in config).value
+    val annotationsConfigNameValue = (annotationsConfigName in config).value
+    val systemConfigNameValue = (systemConfigName in config).value
+    val systemVersionConfigNameValue = (systemVersionConfigName in config).value
+    val nrOfCpusConfigNameValue = (nrOfCpusConfigName in config).value
+    val memoryConfigNameValue = (memoryConfigName in config).value
+    val diskSpaceConfigNameValue = (diskSpaceConfigName in config).value
+    val rolesConfigNameValue = (rolesConfigName in config).value
+    val normalizedNameValue = (normalizedName in config).value
+    val projectInfoConfigNameValue = (projectInfoConfigName in config).value
+    val bundleTypeConfigNameValue = (bundleTypeConfigName in config).value
+    val startCommandConfigNameValue = (startCommandConfigName in config).value
+    val endpointsConfigNameValue = (endpointsConfigName in config).value
+
+    val checksConfigNameValue = (checksConfigName in config).value
+    val checkInitialDelayValue = (checkInitialDelay in config).value
+
     if (valueSuppliedForConfig((normalizedNameConfigName in config).value) ||
       valueSuppliedForConfig((compatibilityVersionConfigName in config).value) ||
       valueSuppliedForConfig((tagsConfigName in config).value) ||
@@ -470,9 +494,8 @@ object BundlePlugin extends AutoPlugin {
       valueSuppliedForConfig((startCommandConfigName in config).value) ||
       valueSuppliedForConfig((endpointsConfigName in config).value)) {
 
-      val checkComponents = (checksConfigName in config).value match {
+      val checkComponents = checksConfigNameValue match {
         case (value, configName) if (forAllSettings || configName.isDefined) && value.nonEmpty =>
-          val checkInitialDelayValue = (checkInitialDelay in config).value
           val checkInitialDelayInSeconds = Math.max(1, checkInitialDelayValue.toSeconds)
           Seq(
             value.map(uri => s""""$uri"""").mkString(
@@ -518,22 +541,22 @@ object BundlePlugin extends AutoPlugin {
           "}"
 
       val declarations =
-        Seq(s"""version              = "${bundleConfVersion.value}"""") ++
-          formatValue("""name                 = "%s"""", (normalizedNameConfigName in config).value) ++
-          formatValue("""compatibilityVersion = "%s"""", (compatibilityVersionConfigName in config).value) ++
-          formatValue("""tags                 = %s""", toString((tagsConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
-          formatValue("""annotations          = %s""", toString((annotationsConfigName in config).value, (v: Option[String]) => v.map(formatHocon).getOrElse("{}"))) ++
-          formatValue("""system               = "%s"""", (systemConfigName in config).value) ++
-          formatValue("""systemVersion        = "%s"""", (systemVersionConfigName in config).value) ++
-          formatValue("nrOfCpus             = %s", (nrOfCpusConfigName in config).value) ++
-          formatValue("memory               = %s", toString((memoryConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
-          formatValue("diskSpace            = %s", toString((diskSpaceConfigName in config).value, (v: Bytes) => v.underlying.toString)) ++
-          formatValue(s"roles                = %s", toString((rolesConfigName in config).value, (v: Set[String]) => formatSeq(v))) ++
-          Seq("components = {", s"  ${(normalizedName in config).value} = {") ++
-          formatValue(s"""    description      = "%s"""", toString((projectInfoConfigName in config).value, (v: ModuleInfo) => v.description)) ++
-          formatValue(s"""    file-system-type = "%s"""", (bundleTypeConfigName in config).value) ++
-          formatValue(s"""    start-command    = %s""", toString((startCommandConfigName in config).value, (v: Seq[String]) => formatSeq(v))) ++
-          formatValue(s"""    endpoints = %s""", toString((endpointsConfigName in config).value, (v: Map[String, Endpoint]) => formatEndpoints(v))) ++
+        Seq(s"""version              = "$bundleConfVersionValue"""") ++
+          formatValue("""name                 = "%s"""", normalizedNameConfigNameValue) ++
+          formatValue("""compatibilityVersion = "%s"""", compatibilityVersionConfigNameValue) ++
+          formatValue("""tags                 = %s""", toString(tagsConfigNameValue, (v: Seq[String]) => formatSeq(v))) ++
+          formatValue("""annotations          = %s""", toString(annotationsConfigNameValue, (v: Option[String]) => v.map(formatHocon).getOrElse("{}"))) ++
+          formatValue("""system               = "%s"""", systemConfigNameValue) ++
+          formatValue("""systemVersion        = "%s"""", systemVersionConfigNameValue) ++
+          formatValue("nrOfCpus             = %s", nrOfCpusConfigNameValue) ++
+          formatValue("memory               = %s", toString(memoryConfigNameValue, (v: Bytes) => v.underlying.toString)) ++
+          formatValue("diskSpace            = %s", toString(diskSpaceConfigNameValue, (v: Bytes) => v.underlying.toString)) ++
+          formatValue(s"roles                = %s", toString(rolesConfigNameValue, (v: Set[String]) => formatSeq(v))) ++
+          Seq("components = {", s"  $normalizedNameValue = {") ++
+          formatValue(s"""    description      = "%s"""", toString(projectInfoConfigNameValue, (v: ModuleInfo) => v.description)) ++
+          formatValue(s"""    file-system-type = "%s"""", bundleTypeConfigNameValue) ++
+          formatValue(s"""    start-command    = %s""", toString(startCommandConfigNameValue, (v: Seq[String]) => formatSeq(v))) ++
+          formatValue(s"""    endpoints = %s""", toString(endpointsConfigNameValue, (v: Map[String, Endpoint]) => formatEndpoints(v))) ++
           Seq("  }", "}") ++
           checkComponents
 

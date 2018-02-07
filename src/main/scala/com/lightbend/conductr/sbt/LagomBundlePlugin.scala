@@ -119,7 +119,7 @@ object LagomBundlePlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   // Configuration to add api tools library dependencies
-  private val apiToolsConfig = config("api-tools").hide
+  private val ApiToolsConfig = config("api-tools").hide
 
   override def projectSettings =
     bundleSettings(Bundle) ++ Seq(
@@ -130,12 +130,12 @@ object LagomBundlePlugin extends AutoPlugin {
       BundleKeys.nrOfCpus := PlayBundleKeyDefaults.nrOfCpus,
       BundleKeys.memory := PlayBundleKeyDefaults.residentMemory,
       BundleKeys.diskSpace := PlayBundleKeyDefaults.diskSpace,
-      ivyConfigurations += apiToolsConfig,
+      ivyConfigurations += ApiToolsConfig,
       // scalaBinaryVersion.value uses the binary compatible scala version from the Lagom project
       LagomBundleKeys.conductrBundleLibVersion := Version.conductrBundleLib,
       LagomBundleKeys.endpointsPort := 9000,
-      libraryDependencies += LagomImport.component("api-tools") % apiToolsConfig,
-      manageClasspath(apiToolsConfig)
+      libraryDependencies += LagomImport.component("api-tools") % ApiToolsConfig,
+      manageClasspath(ApiToolsConfig)
     )
 
   /**
@@ -164,7 +164,10 @@ object LagomBundlePlugin extends AutoPlugin {
 
   /** Ask SBT to manage the classpath for the given configuration. */
   private def manageClasspath(config: Configuration) =
-    managedClasspath in config <<= (classpathTypes in config, update) map { (ct, report) =>
+    (managedClasspath in config) := {
+      val ct = (classpathTypes in config).value
+      val report = update.value
+
       Classpaths.managedJars(config, ct, report)
     }
 
@@ -207,17 +210,20 @@ object LagomBundlePlugin extends AutoPlugin {
   private def collectEndpoints(config: Configuration): Def.Initialize[Task[Map[String, Endpoint]]] = Def.taskDyn {
     Def.task {
       val manualEndpoints = (BundleKeys.endpoints in config).value
+      val scalaInstanceLoader = scalaInstance.value.loader
+      val managedClassPathValue = (managedClasspath in ApiToolsConfig).value
+      val fullClassPathValue = (fullClasspath in Compile).value
       if (manualEndpoints != BundlePlugin.getDefaultEndpoints(config).value)
         manualEndpoints
       else {
         val classpath = toClasspathUrls(
           // managed classpath in api tools config contains the api tools library dependencies
-          (managedClasspath in apiToolsConfig).value ++
+          managedClassPathValue ++
             // full classpath containing the Lagom services, Lagom framework and all its dependencies
-            (fullClasspath in Compile).value
+            fullClassPathValue
         )
         // Create class loader based on a classpath that contains all project related + api tools library classes
-        val classLoader = new java.net.URLClassLoader(classpath, scalaInstance.value.loader)
+        val classLoader = new java.net.URLClassLoader(classpath, scalaInstanceLoader)
         // Lookup Lagom services
         val servicesAsString = ServiceDetector.services(classLoader)
         // Convert services string to `Map[String, Endpoint]`
@@ -379,7 +385,7 @@ private object ServiceDetector {
   def services(classLoader: ClassLoader): String =
     withContextClassloader(classLoader) { loader =>
       Reflection.getSingletonObject[ServiceDetector](loader, "com.lightbend.lagom.internal.api.tools.ServiceDetector$") match {
-        case Failure(t)               => fail(s"Endpoints can not be resolved from Lagom project. Error: ${t.getMessage}")
+        case Failure(t)               => sys.error("No mapping for Endpoints can not be resolved from Lagom project. Error: ${t.getMessage}")
         case Success(serviceDetector) => serviceDetector.services(loader)
       }
     }

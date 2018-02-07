@@ -8,7 +8,6 @@ import sbt._
 import sbt.Keys._
 import sbt.complete.DefaultParsers._
 import sbt.complete.Parser
-import sbt.ProcessLogger
 import com.typesafe.sbt.packager.Keys._
 
 import language.postfixOps
@@ -17,6 +16,7 @@ import java.io.IOException
 import scala.annotation.tailrec
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration._
+import scala.sys.process.{ Process, ProcessLogger, stringToProcess }
 
 /**
  * An sbt plugin that interact's with ConductR's controller and potentially other components.
@@ -24,7 +24,14 @@ import scala.concurrent.duration._
 object ConductrPlugin extends AutoPlugin {
   import BundlePlugin.autoImport._
   import ConductrImport._
+
+  // SBT 0.13
   import sbinary.DefaultProtocol.FileFormat
+
+  // SBT 1.0
+  import sjsonnew.BasicJsonProtocol._
+
+  libraryDependencies += "com.eed3si9n" %% "sjson-new-spray" % "0.8.2"
 
   val autoImport = ConductrImport
   import ConductrKeys._
@@ -53,10 +60,10 @@ object ConductrPlugin extends AutoPlugin {
       // accurately grab artifact revisions.
       isSbtBuild := Keys.sbtPlugin.?.value.getOrElse(false) && (Keys.baseDirectory in ThisProject).value.getName == "project",
 
-      discoveredDist <<= (dist in Bundle).storeAs(discoveredDist).triggeredBy(dist in Bundle),
-      discoveredConfigDist <<= (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration),
+      discoveredDist := (dist in Bundle).storeAs(discoveredDist).triggeredBy(dist in Bundle).value,
+      discoveredConfigDist := (dist in BundleConfiguration).storeAs(discoveredConfigDist).triggeredBy(dist in BundleConfiguration).value,
 
-      conduct := conductTask.value.evaluated
+      conduct := conductTask.evaluated
     )
 
   override def buildSettings: Seq[Setting[_]] =
@@ -66,7 +73,7 @@ object ConductrPlugin extends AutoPlugin {
       Keys.aggregate in install := false,
       Keys.aggregate in sandbox := false,
 
-      sandbox := sandboxTask.value.evaluated,
+      sandbox := sandboxTask.evaluated,
       sandboxRunTaskInternal := sandboxRunTask(ScopeFilter(inAnyProject, inAnyConfiguration)).value,
 
       installationData := installationDataTask.value,
@@ -170,6 +177,14 @@ object ConductrPlugin extends AutoPlugin {
   }
 
   private def installTask(): Def.Initialize[Task[Unit]] = Def.task {
+    val logger = new ProcessLogger {
+      override def err(s: => String): Unit = streams.value.log.error(s)
+
+      override def out(s: => String): Unit = streams.value.log.info(s)
+
+      override def buffer[T](f: => T): T = f
+    }
+
     withProcessHandling {
       val nrOfInstances = "sandbox ps -q".lines_!.size
       if (nrOfInstances > 0) {
@@ -188,7 +203,7 @@ object ConductrPlugin extends AutoPlugin {
           println(s"Deploying $bundleName...")
           val bundleArg = InstallationData.nameOrPath(bundle)
           val bundleConfigArg = bundleConfigFile.mkString("", "", " ")
-          s"conduct load $bundleArg $bundleConfigArg--long-ids -q".lines_!.headOption match {
+          s"conduct load $bundleArg $bundleConfigArg--long-ids -q".lines_!(logger).headOption match {
             case Some(bundleId) =>
               runProcess(Seq("conduct", "run", bundleId, "--no-wait", "-q"), s"Bundle $bundleArg could not run")
             case None =>
@@ -587,18 +602,27 @@ object ConductrPlugin extends AutoPlugin {
             loadLicenseSubtask
           )) ?? ConductHelp
         }
-        (Keys.resolvedScoped, init) { (ctx, parser) => s: State =>
-          val bundle = loadFromContext(discoveredDist, ctx, s)
-          val bundleConfig = loadFromContext(discoveredConfigDist, ctx, s)
-          val bundleNames =
-            withProcessHandling {
-              "conduct info"
-                .lines_!(NoProcessLogging)
-                .slice(1, 11) //                         No more than this number of lines please, and no header...
-                .flatMap(_.split("\\s+").slice(1, 2)) // Just the second column i.e. the name
-                .toSet
-            }(Set.empty[String])
-          parser(bundle, bundleConfig, bundleNames)
+
+        val parserData = Def.setting {
+          val ctx = Keys.resolvedScoped.value
+          val parser = init.value
+
+          ctx -> parser
+        }
+
+        Def.map(parserData) {
+          case (ctx, parser) => s: State =>
+            val bundle = loadFromContext(discoveredDist, ctx, s)
+            val bundleConfig = loadFromContext(discoveredConfigDist, ctx, s)
+            val bundleNames =
+              withProcessHandling {
+                "conduct info"
+                  .lines_!(NoProcessLogging)
+                  .slice(1, 11) //                         No more than this number of lines please, and no header...
+                  .flatMap(_.split("\\s+").slice(1, 2)) // Just the second column i.e. the name
+                  .toSet
+              }(Set.empty[String])
+            parser(bundle, bundleConfig, bundleNames)
         }
       }
 
@@ -897,9 +921,11 @@ object ConductrPlugin extends AutoPlugin {
   )
 
   private object NoProcessLogging extends ProcessLogger {
-    override def info(s: => String): Unit = ()
-    override def error(s: => String): Unit = ()
-    override def buffer[T](f: => T): T = f
+    def out(s: => String): Unit = {}
+
+    def err(s: => String): Unit = {}
+
+    def buffer[T](f: => T): T = f
   }
 
   private[sbt] object ProcessConverters {

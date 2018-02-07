@@ -34,7 +34,7 @@ object DevModeBuild {
     val builder = new AsyncHttpClientConfig.Builder(config)
     val wsClient:WSClient = new NingWSClient(builder.build())
     val future = wsClient.url(uri).get().map(_.body)
-    Await.ready(future, Duration(1, "seconds"))
+    Await.ready(future, Duration(10, "seconds"))
     future.value.get
   }
 
