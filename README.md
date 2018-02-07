@@ -3,6 +3,8 @@
 [![GitHub version](https://img.shields.io/badge/version-2.6.0-blue.svg)](https://github.com/typesafehub/sbt-conductr/releases)
 [![Build Status](https://api.travis-ci.org/typesafehub/sbt-conductr.png?branch=master)](https://travis-ci.org/typesafehub/sbt-conductr)
 
+*Note that this project is EOL as of 2018-01-31.*
+
 sbt-conductr is an sbt plugin that provides commands in sbt to:
  
 * Produce a ConductR bundle (a bundle contains everything required to run your service, including your service itself)
