@@ -2,6 +2,7 @@ import bintray.Keys._
 import scalariform.formatter.preferences._
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+import ReleaseTransformations._
 
 lazy val `sbt-conductr` = project.in(file("."))
 
@@ -57,6 +58,21 @@ bintrayPublishSettings
 repository in bintray := "sbt-plugins"
 bintrayOrganization in bintray := Some("sbt-conductr")
 
+releaseCrossBuild := false
+releaseProcess := Seq[ReleaseStep](
+  checkSnapshotDependencies,
+  inquireVersions,
+  runClean,
+  releaseStepCommand("^test"),
+  setReleaseVersion,
+  commitReleaseVersion,
+  tagRelease,
+  releaseStepCommand("^publish"),
+  setNextVersion,
+  commitNextVersion,
+  pushChanges
+)
+
 // Scripted test settings
 scriptedSettings
 scriptedLaunchOpts += s"-Dproject.version=${version.value}"
@@ -65,3 +81,4 @@ scriptedLaunchOpts += s"-Dproject.version=${version.value}"
 addCommandAlias("test-013", s";^^${Version.sbt013};test;scripted public/*")
 // We only test a subset for 1.0, since many tests use older Play/Lagom versions
 addCommandAlias("test-10", s";^^${Version.sbt10};test;scripted public/bundle-plugin-*")
+
