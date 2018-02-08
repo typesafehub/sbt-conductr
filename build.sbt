@@ -63,11 +63,11 @@ releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
   inquireVersions,
   runClean,
-  releaseStepCommand("^test"),
+  releaseStepCommandAndRemaining("^test"),
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,
-  releaseStepCommand("^publish"),
+  releaseStepCommandAndRemaining("^publish"),
   setNextVersion,
   commitNextVersion,
   pushChanges
