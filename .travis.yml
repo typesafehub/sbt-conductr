@@ -8,6 +8,10 @@ python: 3.5
 language: scala
 services: docker
 
+env:
+  - SBT_COMMAND=test-013
+  - SBT_COMMAND=test-10
+
 install:
   - sudo apt-get -qqy update
   - sudo apt-get -qqy install python3-setuptools
@@ -36,4 +40,4 @@ install:
   # Tests go faster if we do this... less interactions with bintray etc.
   - export CONDUCTR_OFFLINE_MODE=1
 
-script: sbt "scripted public/*"
+script: sbt "$SBT_COMMAND"

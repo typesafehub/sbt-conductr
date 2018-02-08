@@ -10,9 +10,14 @@ sbtPlugin := true
 name := "sbt-conductr"
 organization := "com.lightbend.conductr"
 
+crossSbtVersions := Vector(Version.sbt013, Version.sbt10)
+
 // Scala settings
-scalaVersion := Version.scala
-crossScalaVersions := List(scalaVersion.value, "2.11.8")
+scalaVersion := (CrossVersion partialVersion (sbtVersion in pluginCrossBuild).value match {
+  case Some((0, 13)) => Version.scala210
+  case Some((1, _))  => Version.scala212
+  case _             => sys error s"Unhandled sbt version ${(sbtVersion in pluginCrossBuild).value}"
+})
 scalacOptions ++= List(
   "-unchecked",
   "-deprecation",
@@ -24,12 +29,17 @@ unmanagedSourceDirectories in Compile := List((scalaSource in Compile).value)
 unmanagedSourceDirectories in Test := List((scalaSource in Test).value)
 
 // Plugin dependencies
-addSbtPlugin(Library.nativePackager)
+libraryDependencies += {
+  val currentSbtVersion = (sbtBinaryVersion in pluginCrossBuild).value
+  Defaults.sbtPluginExtra(Library.nativePackager, currentSbtVersion, scalaBinaryVersion.value)
+}
 
 // Library dependencies
 libraryDependencies ++= List(
+  Library.config,
   Library.playJson,
-  Library.scalaTest
+  Library.scalaTest,
+  Library.sjsonnew
 )
 
 // Scalariform settings
@@ -49,4 +59,9 @@ bintrayOrganization in bintray := Some("sbt-conductr")
 
 // Scripted test settings
 scriptedSettings
-scriptedLaunchOpts <+= version apply { v => s"-Dproject.version=$v" }
+scriptedLaunchOpts += s"-Dproject.version=${version.value}"
+
+// Test aliases
+addCommandAlias("test-013", s";^^${Version.sbt013};test;scripted public/*")
+// We only test a subset for 1.0, since many tests use older Play/Lagom versions
+addCommandAlias("test-10", s";^^${Version.sbt10};test;scripted public/bundle-plugin-*")
