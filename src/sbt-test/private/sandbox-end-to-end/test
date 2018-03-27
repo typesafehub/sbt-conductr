@@ -1,4 +1,4 @@
-> sandbox run 2.0.8 --nr-of-instances 2:2 --port 1111 --port 2222 --port 2551 --no-default-features -f lite-logging -f oci-in-docker -f proxying
+> sandbox run 2.1.15 --nr-of-instances 2:2 --port 1111 --port 2222 --port 2551 --no-default-features -f lite-logging -f oci-in-docker -f proxying
 
 # sandbox checks
 > checkInstances2
